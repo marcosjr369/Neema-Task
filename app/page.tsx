@@ -44,7 +44,7 @@ export default function Home() {
 
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors text-sm font-medium"
+              className="px-4 py-2 bg-pink-500 cursor-pointer text-white rounded-lg hover:bg-pink-600 transition-colors text-sm font-medium"
             >
               Nova tarefa
             </button>
@@ -75,7 +75,7 @@ export default function Home() {
             <p className="text-gray-500 text-sm mb-6">Comece criando sua primeira tarefa</p>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-6 py-2.5 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors text-sm font-medium"
+              className="px-6 py-2.5 cursor-pointer bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors text-sm font-medium"
             >
               Criar tarefa
             </button>
