@@ -121,7 +121,7 @@ export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
 
         <button
           onClick={() => onStatusChange(task.id, config.next.status)}
-          className={`inline-flex items-center gap-1.5 text-sm font-medium ${config.next.color} hover:opacity-80 transition-opacity`}
+          className={`inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium ${config.next.color} hover:opacity-80 transition-opacity`}
         >
           <NextIcon size={16} />
           <span>{config.next.label}</span>
