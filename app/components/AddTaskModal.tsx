@@ -1,25 +1,26 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Tag, Clock, Plus } from 'lucide-react'
+import { X, Tag, Calendar, Plus } from 'lucide-react'
+import { Task } from '../types'
 
 type Props = {
   isOpen: boolean
   onClose: () => void
-  onAdd: (task: any) => void
+  onAdd: (task: Task) => void
 }
 
 export default function AddTaskModal({ isOpen, onClose, onAdd }: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [period, setPeriod] = useState('')
+  const [deadline, setDeadline] = useState('')
   const [tagInput, setTagInput] = useState('')
   const [tags, setTags] = useState<string[]>([])
 
   if (!isOpen) return null
 
   const handleAddTag = () => {
-    if (tagInput.trim()) {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       setTags([...tags, tagInput.trim()])
       setTagInput('')
     }
@@ -35,17 +36,24 @@ export default function AddTaskModal({ isOpen, onClose, onAdd }: Props) {
       id: Date.now().toString(),
       title,
       description,
-      period: period || 'Sem período definido',
+      period: deadline
+        ? new Date(deadline).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'Sem prazo definido',
+      deadline: deadline || undefined,
       tags,
       status: 'todo',
-      createdAt: Date.now()
+      createdAt: Date.now(),
     })
     setTitle('')
     setDescription('')
-    setPeriod('')
+    setDeadline('')
     setTags([])
     onClose()
   }
+
+  const minDatetime = new Date()
+  minDatetime.setSeconds(0, 0)
+  const minDatetimeStr = minDatetime.toISOString().slice(0, 16)
 
   return (
     <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
@@ -63,7 +71,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd }: Props) {
             <input
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={e => setTitle(e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
               placeholder="Ex: Implementar autenticação"
               required
@@ -74,7 +82,7 @@ export default function AddTaskModal({ isOpen, onClose, onAdd }: Props) {
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição</label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={e => setDescription(e.target.value)}
               rows={3}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 resize-none"
               placeholder="Descreva os detalhes da tarefa..."
@@ -82,17 +90,24 @@ export default function AddTaskModal({ isOpen, onClose, onAdd }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Período</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Prazo de conclusão
+            </label>
             <div className="relative">
-              <Clock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
-                type="text"
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                placeholder="Ex: 2 dias"
+                type="datetime-local"
+                value={deadline}
+                onChange={e => setDeadline(e.target.value)}
+                min={minDatetimeStr}
                 className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
               />
             </div>
+            {deadline && (
+              <p className="text-xs text-gray-400 mt-1.5">
+                🔔 Será notificado quando o prazo estiver próximo e ao expirar
+              </p>
+            )}
           </div>
 
           <div>
@@ -103,8 +118,8 @@ export default function AddTaskModal({ isOpen, onClose, onAdd }: Props) {
                 <input
                   type="text"
                   value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                   placeholder="Adicionar tag"
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
                 />

@@ -1,50 +1,118 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Clock, Tag, ArrowRight, Check, RotateCcw, MoreVertical, Trash2} from 'lucide-react'
-import { Task } from '../types'
+import { useState } from "react";
+import {
+  Clock,
+  Tag,
+  ArrowRight,
+  Check,
+  RotateCcw,
+  MoreVertical,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
+import { Task } from "../types";
 
 type Props = {
-  task: Task
-  onStatusChange: (taskId: string, newStatus: 'todo' | 'doing' | 'done') => void
-  onDelete: (taskId: string) => void
+  task: Task;
+  onStatusChange: (
+    taskId: string,
+    newStatus: "todo" | "doing" | "done",
+  ) => void;
+  onDelete: (taskId: string) => void;
+};
+
+function formatDeadline(deadline: string) {
+  return new Date(deadline).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
+function getDeadlineStatus(
+  deadline: string | undefined,
+  status: Task["status"],
+) {
+  if (!deadline || status === "done") return null;
+  const diffMs = new Date(deadline).getTime() - Date.now();
+  if (diffMs < 0) return "expired";
+  if (diffMs < 60 * 60 * 1000) return "urgent";
+  if (diffMs < 24 * 60 * 60 * 1000) return "soon";
+  return "ok";
+}
+
+const deadlineStyles = {
+  expired: "text-red-600 bg-red-50",
+  urgent: "text-orange-600 bg-orange-50",
+  soon: "text-amber-600 bg-amber-50",
+  ok: "text-gray-500 bg-gray-50",
+};
+
+const deadlineLabel = {
+  expired: "Atrasado · ",
+  urgent: "Urgente · ",
+  soon: "Hoje · ",
+  ok: "",
+};
+
 export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
-  const [showMenu, setShowMenu] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
+  const [showMenu, setShowMenu] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const statusConfig = {
     todo: {
-      next: { status: 'doing' as const, icon: ArrowRight, label: 'Iniciar', color: 'text-pink-600' },
-      border: 'border-l-pink-400'
+      next: {
+        status: "doing" as const,
+        icon: ArrowRight,
+        label: "Iniciar",
+        color: "text-pink-600",
+      },
+      border: "border-l-pink-400",
     },
     doing: {
-      next: { status: 'done' as const, icon: Check, label: 'Concluir', color: 'text-green-600' },
-      border: 'border-l-amber-400'
+      next: {
+        status: "done" as const,
+        icon: Check,
+        label: "Concluir",
+        color: "text-green-600",
+      },
+      border: "border-l-amber-400",
     },
     done: {
-      next: { status: 'todo' as const, icon: RotateCcw, label: 'Reabrir', color: 'text-gray-500' },
-      border: 'border-l-emerald-400'
-    }
-  }
+      next: {
+        status: "todo" as const,
+        icon: RotateCcw,
+        label: "Reabrir",
+        color: "text-gray-500",
+      },
+      border: "border-l-emerald-400",
+    },
+  };
 
-  const config = statusConfig[task.status]
-  const NextIcon = config.next.icon
+  const config = statusConfig[task.status];
+  const NextIcon = config.next.icon;
+  const deadlineStatus = getDeadlineStatus(task.deadline, task.status);
 
   const handleDelete = () => {
-    onDelete(task.id)
-    setShowMenu(false)
-    setShowConfirm(false)
-  }
+    onDelete(task.id);
+    setShowMenu(false);
+    setShowConfirm(false);
+  };
 
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${config.border} shadow-sm hover:shadow-md transition-all relative`}>
+    <div
+      className={`bg-white rounded-xl border border-gray-200 border-l-4 ${config.border} shadow-sm hover:shadow-md transition-all relative`}
+    >
       <div className="p-5">
         <div className="flex items-start justify-between mb-3">
-          <h3 className="font-medium text-gray-900 leading-tight">{task.title}</h3>
+          <h3 className="font-medium text-gray-900 leading-tight">
+            {task.title}
+          </h3>
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowMenu(!showMenu)}
               className="text-gray-400 cursor-pointer hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
             >
@@ -56,8 +124,8 @@ export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
                 <div className="absolute right-0 top-6 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                   <button
                     onClick={() => {
-                      setShowConfirm(true)
-                      setShowMenu(false)
+                      setShowConfirm(true);
+                      setShowMenu(false);
                     }}
                     className="w-full cursor-pointer px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                   >
@@ -65,8 +133,8 @@ export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
                     Eliminar tarefa
                   </button>
                 </div>
-                <div 
-                  className="fixed inset-0 z-10" 
+                <div
+                  className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
               </>
@@ -75,20 +143,24 @@ export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
             {showConfirm && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
                 <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Eliminar tarefa</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Eliminar tarefa
+                  </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Tem certeza que deseja eliminar {task.title}? Esta ação não pode ser desfeita.
+                    Tem certeza que deseja eliminar{" "}
+                    <strong>"{task.title}"</strong>? Esta ação não pode ser
+                    desfeita.
                   </p>
                   <div className="flex gap-3 justify-end">
                     <button
                       onClick={() => setShowConfirm(false)}
-                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                      className="px-4 py-2 text-sm cursor-pointer text-gray-700 hover:bg-gray-100 rounded-lg"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={handleDelete}
-                      className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600"
+                      className="px-4 py-2 text-sm cursor-pointer bg-red-500 text-white rounded-lg hover:bg-red-600"
                     >
                       Eliminar
                     </button>
@@ -99,19 +171,40 @@ export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
           </div>
         </div>
 
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{task.description}</p>
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+          {task.description}
+        </p>
 
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <Clock size={14} className="text-gray-400" />
+        {task.deadline && deadlineStatus && (
+          <div
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg mb-4 w-fit ${deadlineStyles[deadlineStatus]}`}
+          >
+            {deadlineStatus === "expired" || deadlineStatus === "urgent" ? (
+              <AlertTriangle size={13} />
+            ) : (
+              <Clock size={13} />
+            )}
+            <span className="font-medium">
+              {deadlineLabel[deadlineStatus]}
+              {formatDeadline(task.deadline)}
+            </span>
+          </div>
+        )}
+
+        {!task.deadline && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
+            <Clock size={14} />
             <span>{task.period}</span>
           </div>
-        </div>
+        )}
 
         {task.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {task.tags.map(tag => (
-              <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md text-xs">
+            {task.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md text-xs"
+              >
                 <Tag size={12} className="text-gray-500" />
                 {tag}
               </span>
@@ -128,5 +221,5 @@ export default function TaskCard({ task, onStatusChange, onDelete }: Props) {
         </button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,34 +1,59 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { columns } from './data/columns'
 import KanbanColumn from './components/KanbanColumn'
 import AddTaskModal from './components/AddTaskModal'
+import NotificationModal from './components/NotificationModal'
 import { useLocalStorage } from './hook/useLocalStorage'
+import { useNotifications } from './hook/useNotifications'
 import { Task } from './types'
 import { LayoutGrid } from 'lucide-react'
 
 export default function Home() {
   const [tasks, setTasks] = useLocalStorage<Task[]>('neema-tasks', [])
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [showNotifModal, setShowNotifModal] = useState(false)
+
+  const handleNotified = useCallback(
+    (taskId: string) => {
+      setTasks(tasks.map(t => (t.id === taskId ? { ...t, notified: true } : t)))
+    },
+    [tasks, setTasks]
+  )
+
+  const { requestPermission } = useNotifications(tasks, handleNotified)
+
+  useEffect(() => {
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'default') {
+      const timer = setTimeout(() => setShowNotifModal(true), 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
+  const handleAllow = async () => {
+    setShowNotifModal(false)
+    await requestPermission()
+  }
+
+  const handleDeny = () => {
+    setShowNotifModal(false)
+  }
 
   const handleAddTask = (newTask: Task) => {
     setTasks([...tasks, newTask])
   }
 
-  const handleStatusChange = (taskId: string, newStatus: 'todo' | 'doing' | 'done') => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
-    ))
+  const handleStatusChange = (taskId: string, newStatus: Task['status']) => {
+    setTasks(tasks.map(task => task.id === taskId ? { ...task, status: newStatus } : task))
   }
 
   const handleDeleteTask = (taskId: string) => {
     setTasks(tasks.filter(task => task.id !== taskId))
   }
 
-  const getTasksByStatus = (status: string) => {
-    return tasks.filter(task => task.status === status)
-  }
+  const getTasksByStatus = (status: string) => tasks.filter(task => task.status === status)
 
   return (
     <div className="min-h-screen bg-white">
@@ -41,7 +66,6 @@ export default function Home() {
               </div>
               <h1 className="text-xl text-gray-900">Neema Tasks</h1>
             </div>
-
             <button
               onClick={() => setIsModalOpen(true)}
               className="px-4 py-2 bg-pink-500 cursor-pointer text-white rounded-lg hover:bg-pink-600 transition-colors text-sm font-medium"
@@ -87,6 +111,12 @@ export default function Home() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAdd={handleAddTask}
+      />
+
+      <NotificationModal
+        isOpen={showNotifModal}
+        onAllow={handleAllow}
+        onDeny={handleDeny}
       />
     </div>
   )
