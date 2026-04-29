@@ -14,7 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Neema Task",
-  description: "Tarefas para organização da startup utilizando metodologia Kanban",
+  description:
+    "Tarefas para organização da startup utilizando metodologia Kanban",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
