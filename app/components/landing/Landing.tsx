@@ -4,10 +4,9 @@ import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   BookOpenIcon, BriefcaseIcon, BuildingsIcon, CheckCircleIcon, CheckIcon, CoffeeIcon, CrownIcon, FireIcon,
-  LightningIcon, ListChecksIcon, PaperclipIcon, PlantIcon, TargetIcon, TimerIcon, TrophyIcon, UsersThreeIcon,
-  type Icon,
+  LightningIcon, PaperclipIcon, PlantIcon, TargetIcon, TimerIcon, TrophyIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
-import Mascot from '../ui/Mascot'
+import Mascot, { type MascotMood, type MascotPose } from '../ui/Mascot'
 import ProgressRing from '../ui/ProgressRing'
 
 /*
@@ -69,7 +68,7 @@ function Header() {
     <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-[border-color] ${scrolled ? 'border-b-2 border-line' : 'border-b-2 border-transparent'}`}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
-          <Mascot size={40} />
+          <span data-marcos-logo className="inline-flex"><Mascot size={40} /></span>
           <span className="text-2xl font-black tracking-tight text-brand">marcos tasks</span>
         </Link>
         <div className="flex items-center gap-2">
@@ -88,33 +87,75 @@ function Header() {
 function Hero() {
   return (
     <section className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-2">
-      {/* ilustração: o Marcos a dançar rodeado do que a app faz */}
-      <div className="relative mx-auto flex h-[380px] w-full max-w-md items-end justify-center sm:h-[440px]">
-        <span className="absolute inset-x-10 bottom-8 top-16 rounded-full bg-brand-light blur-2xl" aria-hidden />
-        <Floating icon={ListChecksIcon} color="#12B5A6" className="left-2 top-10" delay={0} rotate={-10} />
-        <Floating icon={TimerIcon} color="#F2545B" className="right-4 top-4" delay={0.5} rotate={8} size={64} />
-        <Floating icon={LightningIcon} color="#E0A419" className="left-[38%] top-0" delay={1.1} rotate={6} size={48} />
-        <Floating icon={TrophyIcon} color="#E0A419" className="right-0 top-[48%]" delay={0.8} rotate={12} />
-        <Floating icon={FireIcon} color="#FF8A3D" className="left-0 top-[55%]" delay={1.4} rotate={-8} />
-        <Floating icon={CoffeeIcon} color="#4C7DFF" className="bottom-6 right-10" delay={0.3} rotate={-6} size={48} />
-        <div className="relative animate-hop">
-          <Mascot size={330} pose="dance" mood="excited" />
-        </div>
-      </div>
-
+      <HeroStage />
       <div className="text-center lg:text-left">
         <h1 className="mx-auto max-w-lg text-4xl font-black leading-tight tracking-tight text-ink sm:text-5xl lg:mx-0 animate-rise">
           A forma mais divertida de <span className="text-brand">focar</span>, fazer pausas e <span className="text-accent">acabar tarefas</span>!
         </h1>
-        <p className="mx-auto mt-4 max-w-md text-lg font-semibold text-muted lg:mx-0 animate-rise" style={{ animationDelay: '150ms' }}>
+        <p className="mx-auto mt-4 max-w-md text-lg font-semibold text-muted lg:mx-0 animate-rise" style={{ animationDelay: '120ms' }}>
           Cronómetro de foco, XP, sequências e ranking. Sozinho ou com a tua equipa.
         </p>
-        <div className="mx-auto mt-8 flex max-w-sm flex-col gap-3 lg:mx-0 animate-rise" style={{ animationDelay: '300ms' }}>
+        <div className="mx-auto mt-8 flex max-w-sm flex-col gap-3 lg:mx-0 animate-rise" style={{ animationDelay: '240ms' }}>
           <Link href={START} className="btn btn-primary w-full py-4 text-base">Começar agora</Link>
           <Link href={LOGIN} className="btn btn-ghost w-full py-4 text-base text-brand">Já tenho uma conta</Link>
         </div>
       </div>
     </section>
+  )
+}
+
+/** Poses que o Marcos vai trocando no hero, com o que diz em cada uma */
+const SCENES: { pose: MascotPose; mood: MascotMood; say: string }[] = [
+  { pose: 'wave', mood: 'happy', say: 'Olá! Eu sou o Marcos.' },
+  { pose: 'dance', mood: 'excited', say: 'Bora focar?' },
+  { pose: 'thumbs', mood: 'happy', say: 'Tarefa feita!' },
+  { pose: 'celebrate', mood: 'excited', say: '+15 XP!' },
+]
+
+/** Emblema colorido a flutuar à volta do Marcos */
+function Badge({ icon: I, bg, className, delay, rotate }: { icon: Icon; bg: string; className: string; delay: number; rotate: number }) {
+  return (
+    <span
+      className={`absolute flex h-14 w-14 items-center justify-center rounded-2xl text-white animate-float sm:h-16 sm:w-16 ${className}`}
+      style={{ background: bg, boxShadow: 'inset 0 -5px 0 #0002', animationDelay: `${delay}s`, ['--r' as string]: `${rotate}deg` }}
+      aria-hidden
+    >
+      <I size={30} weight="fill" />
+    </span>
+  )
+}
+
+/** O Marcos num palco colorido; muda de pose sozinho ou ao clicar */
+function HeroStage() {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setN(v => v + 1), 3600)
+    return () => clearInterval(id)
+  }, [n])
+  const scene = SCENES[n % SCENES.length]
+  return (
+    <div className="relative mx-auto flex h-[380px] w-full max-w-md items-end justify-center sm:h-[460px]">
+      {/* fundo: círculo suave */}
+      <span className="absolute bottom-2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-brand-light sm:h-[360px] sm:w-[360px]" aria-hidden />
+
+      <Badge icon={LightningIcon} bg="#FFC53D" className="left-[6%] top-[18%]" delay={0} rotate={-10} />
+      <Badge icon={FireIcon} bg="#FF8A3D" className="right-[8%] top-[10%]" delay={0.8} rotate={8} />
+      <Badge icon={CheckIcon} bg="#12B5A6" className="bottom-[14%] left-[4%]" delay={1.5} rotate={6} />
+
+      {/* balão de fala */}
+      <div key={`say-${n}`} className="absolute left-1/2 top-[6%] z-10 animate-bubble">
+        <div className="relative whitespace-nowrap rounded-2xl border-2 border-line bg-white px-4 py-2.5 text-lg font-extrabold text-ink shadow-[0_4px_0_#E9E7F2]">
+          {scene.say}
+          <span className="absolute -bottom-[9px] left-6 h-4 w-4 rotate-45 border-b-2 border-r-2 border-line bg-white" />
+        </div>
+      </div>
+
+      <button type="button" onClick={() => setN(v => v + 1)} className="relative mb-2 cursor-pointer" aria-label="Ver o Marcos noutra pose">
+        <div key={n} className="animate-hop">
+          <Mascot size={330} pose={scene.pose} mood={scene.mood} />
+        </div>
+      </button>
+    </div>
   )
 }
 
@@ -281,7 +322,62 @@ function TeamArt() {
   )
 }
 
+/**
+ * O Marcos salta do logótipo do cabeçalho e voa em curva até ao palco da chamada final,
+ * dando uma cambalhota pelo caminho. Com movimento reduzido, aparece logo no sítio.
+ */
+function flyFromLogo(target: HTMLElement) {
+  const show = () => { target.style.opacity = '1' }
+  const logo = document.querySelector<HTMLElement>('[data-marcos-logo]')
+  if (!logo || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return show()
+
+  const a = logo.getBoundingClientRect()
+  const b = target.getBoundingClientRect()
+  const dx = a.left + a.width / 2 - (b.left + b.width / 2)
+  const dy = a.top + a.height / 2 - (b.top + b.height / 2)
+  const s0 = Math.max(0.12, (a.height * 2.2) / b.height)
+  // ponto de controlo da curva: segue para o lado do palco quase à altura do logótipo e depois cai
+  const cx = dx * 0.1
+  const cy = dy + 60
+  const steps = 16
+  const frames = Array.from({ length: steps + 1 }, (_, i) => {
+    const t = i / steps
+    const x = (1 - t) ** 2 * dx + 2 * (1 - t) * t * cx
+    const y = (1 - t) ** 2 * dy + 2 * (1 - t) * t * cy
+    const s = s0 + (1 - s0) * t
+    return { transform: `translate(${x}px, ${y}px) scale(${s}) rotate(${360 * t}deg)`, opacity: 1, offset: t }
+  })
+
+  logo.style.opacity = '0'
+  const flight = target.animate(frames, { duration: 1300, easing: 'cubic-bezier(0.45, 0, 0.3, 1)' })
+  flight.onfinish = () => {
+    show()
+    // aterragem com "squash" e o logótipo volta a aparecer
+    target.animate(
+      [{ transform: 'scale(1.15, 0.85)' }, { transform: 'scale(0.95, 1.06)' }, { transform: 'scale(1)' }],
+      { duration: 380, easing: 'ease-out' },
+    )
+    logo.style.opacity = ''
+    logo.animate([{ transform: 'scale(0)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' })
+  }
+}
+
 function FinalCta() {
+  const landing = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = landing.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        io.disconnect()
+        flyFromLogo(el)
+      },
+      { threshold: 0.6 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
   return (
     <section className="relative overflow-hidden bg-white pt-20">
       <div className="mx-auto max-w-3xl px-5 text-center">
@@ -300,7 +396,10 @@ function FinalCta() {
         <Floating icon={TrophyIcon} color="#E0A419" className="right-[14%] top-8" delay={0.5} rotate={10} />
         <Floating icon={CheckCircleIcon} color="#12B5A6" className="right-[28%] top-28" delay={1.2} rotate={-6} size={48} />
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-          <Mascot size={240} pose="jump" mood="excited" />
+          {/* invisível até chegar a voar do logótipo */}
+          <div ref={landing} className="opacity-0">
+            <Mascot size={240} pose="jump" mood="excited" />
+          </div>
         </div>
       </div>
     </section>
