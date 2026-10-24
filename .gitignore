@@ -41,3 +41,10 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# dados locais do backend provisório (JSON + anexos)
+/.data
+!.env.example
+
+# chaves temporárias do Clerk (modo sem chaves em desenvolvimento)
+/.clerk

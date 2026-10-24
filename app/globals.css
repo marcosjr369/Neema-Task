@@ -1,51 +1,310 @@
+/* Ordem das camadas: os estilos do Clerk (login) ficam abaixo das classes da app, para as podermos usar por cima */
+@layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-nunito);
+
+  --color-brand: #7B61FF;
+  --color-brand-dark: #5B43D6;
+  --color-brand-light: #EEEAFF;
+  --color-accent: #12B5A6;
+  --color-accent-dark: #0D9488;
+  --color-accent-light: #DCF7F3;
+  --color-warm: #FF8A3D;
+  --color-warm-dark: #DB6A1F;
+  --color-warm-light: #FFEDE0;
+  --color-danger: #F2545B;
+  --color-danger-dark: #CF3540;
+  --color-danger-light: #FDE4E5;
+  --color-gold: #FFC53D;
+  --color-gold-dark: #E0A419;
+  --color-pink: #EC5BA6;
+  --color-pink-dark: #C93F87;
+  --color-ink: #2B2840;
+  --color-body: #4A4763;
+  --color-muted: #A3A0B8;
+  --color-line: #E9E7F2;
+  --color-snow: #F7F6FC;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: #ffffff;
+  color: var(--color-body);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-nunito), system-ui, sans-serif;
 }
 
-@layer base {
-  body {
-    @apply antialiased;
+@layer components {
+  /* Botão "3D" com borda inferior que afunda ao carregar */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-[15px] font-extrabold uppercase tracking-wide
+      border-b-4 transition-[transform,border,filter] duration-75 select-none cursor-pointer
+      active:translate-y-[2px] active:border-b-2 disabled:cursor-not-allowed disabled:opacity-100;
+  }
+  .btn-primary {
+    @apply bg-brand border-brand-dark text-white hover:brightness-105;
+  }
+  .btn-accent {
+    @apply bg-accent border-accent-dark text-white hover:brightness-105;
+  }
+  .btn-warm {
+    @apply bg-warm border-warm-dark text-white hover:brightness-105;
+  }
+  .btn-danger {
+    @apply bg-danger border-danger-dark text-white hover:brightness-105;
+  }
+  .btn-ghost {
+    @apply bg-white border-2 border-b-4 border-line text-accent hover:bg-snow active:border-b-2;
+  }
+  .btn-disabled {
+    @apply bg-line border-line text-muted active:translate-y-0 active:border-b-4;
+  }
+
+  .card {
+    @apply bg-white border-2 border-line rounded-2xl;
+  }
+
+  .input {
+    @apply w-full rounded-xl border-2 border-line bg-snow px-4 py-3 text-[15px] font-semibold text-ink
+      placeholder:text-muted outline-none focus:border-accent focus:bg-white transition-colors;
+  }
+
+  .label {
+    @apply mb-2 block text-xs font-extrabold uppercase tracking-wider text-muted;
+  }
+
+  .chip {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-xl border-2 border-b-4 border-line bg-white px-3 py-1.5
+      text-sm font-bold text-body cursor-pointer select-none active:translate-y-[2px] active:border-b-2 transition-transform;
   }
 }
 
-/* Custom scrollbar for a cleaner look */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #fce4f0;
+@keyframes pop-in {
+  0% { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-4deg); }
+}
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes toast-in {
+  from { transform: translate(-50%, -16px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #f9a8d4;
-  border-radius: 4px;
+.animate-pop-in { animation: pop-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.animate-slide-up { animation: slide-up 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+.animate-fade-in { animation: fade-in 0.2s ease-out both; }
+.animate-bounce-soft { animation: bounce-soft 2.4s ease-in-out infinite; }
+.animate-toast-in { animation: toast-in 0.25s ease-out both; }
+
+/* ─── Mascote (Marcos) ───────────────────────────────────────────────
+   Coordenadas do SVG (viewBox 0 0 200 260): pés em y=250, ombros (64,118)/(136,118),
+   cotovelos (…,144), ancas (88,170)/(112,170). */
+.mk-breathe { transform-box: view-box; transform-origin: 100px 250px; animation: mk-breathe 3s ease-in-out infinite; }
+.mk-blink { transform-box: fill-box; transform-origin: center; animation: mk-blink 4s infinite; }
+.mk-talk { transform-box: fill-box; transform-origin: center; animation: mk-talk 0.22s ease-in-out infinite alternate; }
+.mk-tear { transform-box: fill-box; transform-origin: top center; animation: mk-tear 1.8s ease-in infinite; }
+.mk-tear-late { animation-delay: 0.9s; }
+.mk-wave { transform-box: view-box; transform-origin: 136px 144px; animation: mk-wave 0.45s ease-in-out infinite alternate; }
+
+.mk-jump { transform-box: view-box; transform-origin: 100px 250px; animation: mk-jump 2.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.mk-shadow-jump { transform-box: fill-box; transform-origin: center; animation: mk-shadow-jump 2.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.mk-bounce { transform-box: view-box; transform-origin: 100px 250px; animation: mk-bounce 0.8s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.mk-shadow-bounce { transform-box: fill-box; transform-origin: center; animation: mk-shadow-bounce 0.8s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.mk-cheer-l { transform-box: view-box; transform-origin: 64px 118px; animation: mk-cheer-l 0.4s ease-in-out infinite alternate; }
+.mk-cheer-r { transform-box: view-box; transform-origin: 136px 118px; animation: mk-cheer-r 0.4s ease-in-out infinite alternate; }
+
+.mk-dance { transform-box: view-box; transform-origin: 100px 250px; animation: mk-dance 0.9s ease-in-out infinite; }
+.mk-dance-l { transform-box: view-box; transform-origin: 64px 118px; animation: mk-dance-l 0.9s ease-in-out infinite; }
+.mk-dance-r { transform-box: view-box; transform-origin: 136px 118px; animation: mk-dance-r 0.9s ease-in-out infinite; }
+.mk-step-l { transform-box: view-box; transform-origin: 88px 170px; animation: mk-step 0.9s ease-in-out infinite; }
+.mk-step-r { transform-box: view-box; transform-origin: 112px 170px; animation: mk-step 0.9s ease-in-out infinite; animation-delay: -0.45s; }
+
+.mk-walk { transform-box: view-box; transform-origin: 100px 250px; animation: mk-walk 0.5s ease-in-out infinite; }
+.mk-stride-l { transform-box: view-box; transform-origin: 88px 170px; animation: mk-stride 1s ease-in-out infinite; }
+.mk-stride-r { transform-box: view-box; transform-origin: 112px 170px; animation: mk-stride 1s ease-in-out infinite; animation-delay: -0.5s; }
+.mk-swing-l { transform-box: view-box; transform-origin: 64px 118px; animation: mk-swing 1s ease-in-out infinite; animation-delay: -0.5s; }
+.mk-swing-r { transform-box: view-box; transform-origin: 136px 118px; animation: mk-swing 1s ease-in-out infinite; }
+
+@keyframes mk-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.5px) scale(1.012, 0.994); } }
+@keyframes mk-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+@keyframes mk-talk { from { transform: scaleY(0.3); } to { transform: scaleY(1.2); } }
+@keyframes mk-tear { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 20% { opacity: 1; transform: translateY(0) scale(1); } 100% { transform: translateY(22px) scale(1); opacity: 0; } }
+@keyframes mk-wave { from { transform: rotate(8deg); } to { transform: rotate(-28deg); } }
+@keyframes mk-jump {
+  0%, 50%, 100% { transform: translateY(0) scale(1, 1); }
+  58% { transform: translateY(0) scale(1.1, 0.88); }
+  70% { transform: translateY(-34px) scale(0.94, 1.08); }
+  80% { transform: translateY(-36px) scale(0.98, 1.02); }
+  90% { transform: translateY(0) scale(1.08, 0.92); }
+  95% { transform: translateY(0) scale(0.98, 1.02); }
+}
+@keyframes mk-shadow-jump { 0%, 50%, 100% { transform: scaleX(1); opacity: 1; } 75% { transform: scaleX(0.55); opacity: 0.45; } 90% { transform: scaleX(1.1); opacity: 1; } }
+@keyframes mk-bounce {
+  0%, 100% { transform: translateY(0) scale(1.08, 0.9); }
+  15% { transform: translateY(0) scale(1, 1); }
+  50% { transform: translateY(-30px) scale(0.95, 1.06); }
+  85% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes mk-shadow-bounce { 0%, 100% { transform: scaleX(1.1); opacity: 1; } 50% { transform: scaleX(0.55); opacity: 0.45; } }
+@keyframes mk-cheer-l { from { transform: rotate(-6deg); } to { transform: rotate(10deg); } }
+@keyframes mk-cheer-r { from { transform: rotate(6deg); } to { transform: rotate(-10deg); } }
+@keyframes mk-dance {
+  0%, 100% { transform: translate(-4px, 0) rotate(-5deg); }
+  25% { transform: translate(0, -6px) rotate(0deg); }
+  50% { transform: translate(4px, 0) rotate(5deg); }
+  75% { transform: translate(0, -6px) rotate(0deg); }
+}
+@keyframes mk-dance-l { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-70deg); } }
+@keyframes mk-dance-r { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-80deg); } }
+@keyframes mk-step { 0%, 50%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-8px) rotate(-6deg); } }
+@keyframes mk-walk { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes mk-stride { 0%, 100% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } }
+@keyframes mk-swing { 0%, 100% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } }
+
+/* ─── Movimento geral (entrada, passos, feedback) ────────────────────── */
+@keyframes hop {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  30% { transform: translateY(0) scale(1.08, 0.9); }
+  55% { transform: translateY(-22px) scale(0.95, 1.06); }
+  80% { transform: translateY(0) scale(1.05, 0.95); }
+}
+@keyframes wiggle { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-8deg); } 40% { transform: rotate(7deg); } 60% { transform: rotate(-5deg); } 80% { transform: rotate(3deg); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+@keyframes step-in-right { from { transform: translateX(48px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes step-in-left { from { transform: translateX(-48px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes bubble-in { 0% { transform: scale(0.6); opacity: 0; } 70% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); } 50% { transform: translateY(-14px) rotate(var(--r, 0deg)); } }
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(var(--spin, 540deg)); opacity: 1; }
+}
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(123 97 255 / 0.45); } 100% { box-shadow: 0 0 0 16px rgb(123 97 255 / 0); } }
+@keyframes caret { 50% { opacity: 0; } }
+
+.animate-hop { animation: hop 0.7s cubic-bezier(0.3, 0.7, 0.4, 1.4) both; }
+.animate-wiggle { animation: wiggle 0.6s ease-in-out both; }
+.animate-shake { animation: shake 0.4s ease-in-out both; }
+.animate-step-right { animation: step-in-right 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.animate-step-left { animation: step-in-left 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.animate-rise { animation: rise 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1) both; }
+.animate-bubble { animation: bubble-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; transform-origin: left center; }
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-pulse-ring { animation: pulse-ring 1.6s ease-out infinite; }
+@keyframes letter {
+  0% { transform: translateY(28px) scale(0.4); opacity: 0; }
+  60% { transform: translateY(-8px) scale(1.12); opacity: 1; }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(24px, -18px) scale(1.08); }
+  66% { transform: translate(-16px, 12px) scale(0.95); }
+}
+@keyframes spin-slow { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+.animate-spin-slow { animation: spin-slow 14s linear infinite; }
+/* landing: faixa contínua, barra a encher e conteúdo que aparece ao fazer scroll */
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes grow { 0% { width: 8%; } 70%, 100% { width: 78%; } }
+.animate-marquee { animation: marquee 32s linear infinite; }
+.animate-grow { animation: grow 3.2s ease-in-out infinite; }
+.reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.1); }
+.reveal.is-visible { opacity: 1; transform: none; }
+.animate-letter { display: inline-block; animation: letter 0.6s cubic-bezier(0.3, 0.8, 0.4, 1.4) both; }
+.animate-blob { animation: blob 14s ease-in-out infinite; }
+.typing-caret::after { content: '▍'; margin-left: 1px; color: var(--color-brand); animation: caret 0.8s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pop-in,
+  .animate-slide-up,
+  .animate-bounce-soft,
+  .animate-toast-in,
+  .animate-hop,
+  .animate-wiggle,
+  .animate-shake,
+  .animate-step-right,
+  .animate-step-left,
+  .animate-rise,
+  .animate-bubble,
+  .animate-float,
+  .animate-pulse-ring,
+  .animate-letter,
+  .animate-marquee,
+  .animate-grow,
+  .animate-spin-slow,
+  .mk-jump,
+  .mk-shadow-jump,
+  .mk-bounce,
+  .mk-shadow-bounce,
+  .mk-cheer-l,
+  .mk-cheer-r,
+  .mk-dance,
+  .mk-dance-l,
+  .mk-dance-r,
+  .mk-step-l,
+  .mk-step-r,
+  .mk-walk,
+  .mk-stride-l,
+  .mk-stride-r,
+  .mk-swing-l,
+  .mk-swing-r {
+    animation: none;
+  }
+  .reveal { opacity: 1; transform: none; transition: none; }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #f472b6;
+/* ─── Formulário do Clerk (login) ─────────────────────────────────────
+   Fora das camadas de propósito: ganha aos estilos do Clerk. Campos e botões
+   com a mesma altura dos botões da app (56px), usando as classes estáveis cl-*. */
+.cl-formFieldInput {
+  box-sizing: border-box !important;
+  height: 3.5rem !important;
+  min-height: 3.5rem !important;
+  padding: 0 1.25rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+}
+.cl-socialButtonsBlockButton,
+.cl-formButtonPrimary,
+.cl-alternativeMethodsBlockButton {
+  box-sizing: border-box !important;
+  height: 3.5rem !important;
+  min-height: 3.5rem !important;
+}
+/* Os contentores do Clerk cortam o que passa do limite: sem isto a borda de cima e os
+   cantos do primeiro botão (Google) ficavam recortados, e o "afundar" ao carregar também */
+.cl-rootBox,
+.cl-cardBox,
+.cl-card,
+.cl-main,
+.cl-socialButtonsRoot,
+.cl-socialButtons {
+  overflow: visible !important;
+}
+.cl-cardBox {
+  padding: 2px !important;
 }

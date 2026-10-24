@@ -1,0 +1,378 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  BookOpenIcon, BriefcaseIcon, BuildingsIcon, CheckCircleIcon, CheckIcon, CoffeeIcon, CrownIcon, FireIcon,
+  LightningIcon, ListChecksIcon, PaperclipIcon, PlantIcon, TargetIcon, TimerIcon, TrophyIcon, UsersThreeIcon,
+  type Icon,
+} from '@phosphor-icons/react'
+import Mascot from '../ui/Mascot'
+import ProgressRing from '../ui/ProgressRing'
+
+/*
+ * Página inicial para quem ainda não tem sessão: apresenta a app, com o Marcos animado,
+ * e leva ao registo (/entrar). Quem já tem sessão vê a app em "/".
+ */
+
+const START = '/entrar?passo=como'
+const LOGIN = '/entrar?passo=login'
+
+/** Mostra o conteúdo com uma animação quando entra no ecrã */
+function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0.2 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return (
+    <div ref={ref} className={`reveal ${visible ? 'is-visible' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
+      {children}
+    </div>
+  )
+}
+
+/** Ícone a flutuar num cartão branco (decoração das ilustrações) */
+function Floating({ icon: I, color, className, delay = 0, rotate = 0, size = 56 }: { icon: Icon; color: string; className: string; delay?: number; rotate?: number; size?: number }) {
+  return (
+    <span
+      className={`absolute flex items-center justify-center rounded-2xl bg-white shadow-[0_5px_0_#E9E7F2] animate-float ${className}`}
+      style={{ width: size, height: size, color, animationDelay: `${delay}s`, ['--r' as string]: `${rotate}deg` }}
+      aria-hidden
+    >
+      <I size={Math.round(size * 0.55)} weight="duotone" />
+    </span>
+  )
+}
+
+function Header() {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 420)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  return (
+    <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-[border-color] ${scrolled ? 'border-b-2 border-line' : 'border-b-2 border-transparent'}`}>
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+        <Link href="/" className="flex items-center gap-2">
+          <Mascot size={40} />
+          <span className="text-2xl font-black tracking-tight text-brand">marcos tasks</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={LOGIN} className="hidden rounded-xl px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-muted hover:text-body sm:block">
+            Entrar
+          </Link>
+          <Link href={START} className={`btn btn-primary px-4 py-2.5 text-sm transition-all duration-300 ${scrolled ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}>
+            Começar agora
+          </Link>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+function Hero() {
+  return (
+    <section className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-2">
+      {/* ilustração: o Marcos a dançar rodeado do que a app faz */}
+      <div className="relative mx-auto flex h-[380px] w-full max-w-md items-end justify-center sm:h-[440px]">
+        <span className="absolute inset-x-10 bottom-8 top-16 rounded-full bg-brand-light blur-2xl" aria-hidden />
+        <Floating icon={ListChecksIcon} color="#12B5A6" className="left-2 top-10" delay={0} rotate={-10} />
+        <Floating icon={TimerIcon} color="#F2545B" className="right-4 top-4" delay={0.5} rotate={8} size={64} />
+        <Floating icon={LightningIcon} color="#E0A419" className="left-[38%] top-0" delay={1.1} rotate={6} size={48} />
+        <Floating icon={TrophyIcon} color="#E0A419" className="right-0 top-[48%]" delay={0.8} rotate={12} />
+        <Floating icon={FireIcon} color="#FF8A3D" className="left-0 top-[55%]" delay={1.4} rotate={-8} />
+        <Floating icon={CoffeeIcon} color="#4C7DFF" className="bottom-6 right-10" delay={0.3} rotate={-6} size={48} />
+        <div className="relative animate-hop">
+          <Mascot size={330} pose="dance" mood="excited" />
+        </div>
+      </div>
+
+      <div className="text-center lg:text-left">
+        <h1 className="mx-auto max-w-lg text-4xl font-black leading-tight tracking-tight text-ink sm:text-5xl lg:mx-0 animate-rise">
+          A forma mais divertida de <span className="text-brand">focar</span>, fazer pausas e <span className="text-accent">acabar tarefas</span>!
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-lg font-semibold text-muted lg:mx-0 animate-rise" style={{ animationDelay: '150ms' }}>
+          Cronómetro de foco, XP, sequências e ranking. Sozinho ou com a tua equipa.
+        </p>
+        <div className="mx-auto mt-8 flex max-w-sm flex-col gap-3 lg:mx-0 animate-rise" style={{ animationDelay: '300ms' }}>
+          <Link href={START} className="btn btn-primary w-full py-4 text-base">Começar agora</Link>
+          <Link href={LOGIN} className="btn btn-ghost w-full py-4 text-base text-brand">Já tenho uma conta</Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+const STRIP: { icon: Icon; label: string; color: string }[] = [
+  { icon: BriefcaseIcon, label: 'Trabalho', color: '#4C7DFF' },
+  { icon: BookOpenIcon, label: 'Estudo', color: '#EC5BA6' },
+  { icon: PlantIcon, label: 'Pessoal', color: '#12B5A6' },
+  { icon: TimerIcon, label: 'Foco', color: '#F2545B' },
+  { icon: CoffeeIcon, label: 'Pausas', color: '#FF8A3D' },
+  { icon: TargetIcon, label: 'Metas diárias', color: '#7B61FF' },
+  { icon: FireIcon, label: 'Sequências', color: '#FF8A3D' },
+  { icon: TrophyIcon, label: 'Ranking', color: '#E0A419' },
+  { icon: UsersThreeIcon, label: 'Equipas', color: '#12B5A6' },
+  { icon: CheckCircleIcon, label: 'Aprovações', color: '#4C7DFF' },
+]
+
+/** Faixa contínua com as áreas da app */
+function Strip() {
+  const items = [...STRIP, ...STRIP]
+  return (
+    <div className="overflow-hidden border-y-2 border-line bg-white py-5" aria-label="Funcionalidades">
+      <div className="flex w-max animate-marquee gap-10 pr-10">
+        {items.map((it, i) => (
+          <span key={i} className="flex shrink-0 items-center gap-3 text-sm font-black uppercase tracking-wider text-muted" aria-hidden={i >= STRIP.length}>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${it.color}1f`, color: it.color }}>
+              <it.icon size={22} weight="duotone" />
+            </span>
+            {it.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Feature({
+  id, title, text, art, flip = false, tint = false,
+}: { id?: string; title: ReactNode; text: string; art: ReactNode; flip?: boolean; tint?: boolean }) {
+  return (
+    <section id={id} className={tint ? 'bg-snow' : 'bg-white'}>
+      <div className={`mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 lg:grid-cols-2 lg:py-28 ${flip ? 'lg:[&>*:first-child]:order-2' : ''}`}>
+        <Reveal className="text-center lg:text-left">
+          <h2 className="text-4xl font-black lowercase leading-tight tracking-tight text-brand sm:text-5xl">{title}</h2>
+          <p className="mx-auto mt-5 max-w-md text-lg font-semibold leading-relaxed text-body/80 lg:mx-0">{text}</p>
+        </Reveal>
+        <Reveal delay={150} className="relative mx-auto flex h-[340px] w-full max-w-md items-end justify-center">
+          {art}
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+/** Telemóvel com uma tarefa a correr */
+function PhoneArt() {
+  return (
+    <>
+      <div className="absolute right-6 top-0 w-48 rounded-[2rem] border-[6px] border-gold bg-white p-4 shadow-[0_8px_0_#E0A419]">
+        <div className="h-3 overflow-hidden rounded-full bg-line">
+          <div className="h-full w-2/3 animate-grow rounded-full bg-accent" />
+        </div>
+        <div className="mt-4 space-y-2.5">
+          {[
+            { done: true, w: 'w-24' },
+            { done: true, w: 'w-20' },
+            { done: false, w: 'w-28' },
+          ].map((t, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-xl border-2 border-line p-2">
+              <span className={`flex h-5 w-5 items-center justify-center rounded-full ${t.done ? 'bg-brand text-white' : 'border-2 border-line'}`}>
+                {t.done && <CheckIcon size={12} weight="bold" />}
+              </span>
+              <span className={`h-2 rounded-full ${t.done ? 'bg-line' : 'bg-brand/30'} ${t.w}`} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-xl bg-brand py-2 text-center text-xs font-black uppercase text-white">+15 XP</div>
+      </div>
+      <div className="relative -ml-36">
+        <Mascot size={250} pose="thumbs" />
+      </div>
+    </>
+  )
+}
+
+/** Anel do cronómetro com o aviso de pausa */
+function FocusArt() {
+  const [progress, setProgress] = useState(0.15)
+  useEffect(() => {
+    const id = setInterval(() => setProgress(p => (p >= 1 ? 0.05 : p + 0.05)), 400)
+    return () => clearInterval(id)
+  }, [])
+  return (
+    <>
+      <div className="absolute left-4 top-6">
+        <ProgressRing size={170} stroke={14} progress={progress} color="#F2545B" track="#FDE4E5">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-muted">A focar</span>
+          <span className="font-mono text-3xl font-bold tabular-nums text-ink">{String(Math.round(progress * 25)).padStart(2, '0')}:00</span>
+        </ProgressRing>
+      </div>
+      <div className="absolute right-0 top-2 flex items-center gap-2 rounded-2xl border-2 border-line bg-white px-4 py-3 font-black text-ink shadow-[0_4px_0_#E9E7F2] animate-float" style={{ ['--r' as string]: '3deg' }}>
+        <CoffeeIcon size={24} weight="duotone" className="text-warm" /> Hora da pausa!
+      </div>
+      <div className="relative ml-32">
+        <Mascot size={250} pose="think" />
+      </div>
+    </>
+  )
+}
+
+/** Pódio do ranking com o Marcos a festejar */
+function RankingArt() {
+  const bars = [
+    { h: 'h-24', place: 2, color: '#C0C0C0', delay: 200 },
+    { h: 'h-36', place: 1, color: '#FFC53D', delay: 0 },
+    { h: 'h-16', place: 3, color: '#CD7F32', delay: 400 },
+  ]
+  return (
+    <>
+      <Floating icon={FireIcon} color="#FF8A3D" className="left-0 top-4" delay={0.2} rotate={-8} />
+      <Floating icon={LightningIcon} color="#E0A419" className="right-2 top-10" delay={0.9} rotate={10} />
+      <Floating icon={CrownIcon} color="#E0A419" className="left-[45%] -top-2" delay={0.5} size={48} />
+      <div className="absolute inset-x-6 bottom-0 flex items-end justify-center gap-3">
+        {bars.map(b => (
+          <div key={b.place} className={`flex w-24 animate-rise items-start justify-center rounded-t-2xl pt-2 text-3xl font-black text-white ${b.h}`} style={{ background: b.color, animationDelay: `${b.delay}ms`, boxShadow: 'inset 0 -8px 0 #0001' }}>
+            {b.place}
+          </div>
+        ))}
+      </div>
+      <div className="relative mb-32">
+        <Mascot size={200} pose="celebrate" mood="excited" />
+      </div>
+    </>
+  )
+}
+
+/** Equipa: tarefa aprovada com anexo */
+function TeamArt() {
+  const team = [
+    { name: 'AS', color: '#EC5BA6' },
+    { name: 'JC', color: '#4C7DFF' },
+    { name: 'RM', color: '#12B5A6' },
+  ]
+  return (
+    <>
+      <div className="absolute right-2 top-0 w-56 rounded-2xl border-2 border-line bg-white p-4 shadow-[0_6px_0_#E9E7F2] animate-float" style={{ ['--r' as string]: '-2deg' }}>
+        <p className="font-black text-ink">Relatório mensal</p>
+        <p className="mt-1 flex items-center gap-1 text-xs font-bold text-muted"><PaperclipIcon size={14} /> relatorio.pdf</p>
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex -space-x-2">
+            {team.map(t => (
+              <span key={t.name} className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-black text-white ring-2 ring-white" style={{ background: t.color }}>{t.name}</span>
+            ))}
+          </div>
+          <span className="flex items-center gap-1 rounded-lg bg-accent-light px-2 py-1 text-xs font-black text-accent-dark">
+            <CheckCircleIcon size={14} weight="fill" /> Aprovada
+          </span>
+        </div>
+      </div>
+      <Floating icon={BuildingsIcon} color="#4C7DFF" className="left-2 top-6" delay={0.4} rotate={-6} />
+      <div className="relative -ml-24">
+        <Mascot size={250} pose="walk" outfit="casual" />
+      </div>
+    </>
+  )
+}
+
+function FinalCta() {
+  return (
+    <section className="relative overflow-hidden bg-white pt-20">
+      <div className="mx-auto max-w-3xl px-5 text-center">
+        <Reveal>
+          <h2 className="text-5xl font-black lowercase leading-tight tracking-tight text-brand sm:text-6xl">começa hoje com o marcos</h2>
+          <Link href={START} className="btn btn-primary mx-auto mt-8 w-full max-w-sm py-4 text-base">Começar agora</Link>
+        </Reveal>
+      </div>
+      <div className="relative mt-10 h-[320px]">
+        {/* colinas no fundo, a continuar para o rodapé */}
+        <svg className="absolute inset-x-0 bottom-0 h-56 w-full" viewBox="0 0 1440 220" preserveAspectRatio="none" aria-hidden>
+          <path d="M0 80 Q240 40 420 90 Q600 150 720 150 Q840 150 1020 90 Q1200 40 1440 80 L1440 220 L0 220 Z" fill="#7B61FF" />
+        </svg>
+        <Floating icon={LightningIcon} color="#E0A419" className="left-[12%] top-6" delay={0.2} rotate={-10} />
+        <Floating icon={FireIcon} color="#FF8A3D" className="left-[26%] top-24" delay={0.9} rotate={8} size={48} />
+        <Floating icon={TrophyIcon} color="#E0A419" className="right-[14%] top-8" delay={0.5} rotate={10} />
+        <Floating icon={CheckCircleIcon} color="#12B5A6" className="right-[28%] top-28" delay={1.2} rotate={-6} size={48} />
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
+          <Mascot size={240} pose="jump" mood="excited" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function Footer() {
+  const cols: { title: string; links: { label: string; href: string }[] }[] = [
+    { title: 'Produto', links: [{ label: 'Foco e pausas', href: '#foco' }, { label: 'XP e ranking', href: '#ranking' }, { label: 'Para equipas', href: '#equipas' }] },
+    { title: 'Conta', links: [{ label: 'Começar agora', href: START }, { label: 'Entrar', href: LOGIN }] },
+  ]
+  return (
+    <footer className="bg-brand text-white">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-12 pt-6 sm:grid-cols-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Mascot size={40} />
+            <span className="text-2xl font-black tracking-tight">marcos tasks</span>
+          </div>
+          <p className="mt-3 max-w-xs text-sm font-semibold text-white/75">Tarefas, foco e pausas, com o Marcos a torcer por ti.</p>
+        </div>
+        {cols.map(c => (
+          <div key={c.title}>
+            <p className="text-lg font-black">{c.title}</p>
+            <ul className="mt-3 space-y-2">
+              {c.links.map(l => (
+                <li key={l.label}><Link href={l.href} className="font-bold text-white/75 hover:text-white">{l.label}</Link></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <p className="border-t border-white/15 py-5 text-center text-xs font-bold text-white/60">© {new Date().getFullYear()} Marcos Tasks</p>
+    </footer>
+  )
+}
+
+export default function Landing() {
+  return (
+    <div className="min-h-dvh bg-white">
+      <Header />
+      <Hero />
+      <Strip />
+      <Feature
+        title="grátis. divertido. eficaz."
+        text="Liga o cronómetro, conclui tarefas e vê o teu progresso a crescer. Blocos curtos de foco, pontos a cada passo e metas que te puxam para a frente."
+        art={<PhoneArt />}
+      />
+      <Feature
+        id="foco"
+        tint
+        flip
+        title="foco com pausas certas"
+        text="O Marcos avisa-te quando é hora de descansar e quando é hora de voltar. Menos cansaço, mais concentração, todos os dias."
+        art={<FocusArt />}
+      />
+      <Feature
+        id="ranking"
+        title="xp, sequências e ranking"
+        text="Cada minuto de foco e cada tarefa contam. Mantém a sequência, sobe de nível e compara-te com amigos e colegas."
+        art={<RankingArt />}
+      />
+      <Feature
+        id="equipas"
+        tint
+        flip
+        title="feito para equipas"
+        text="Atribui tarefas, recebe o trabalho com anexos, aprova com um clique e acompanha o tempo e a presença de cada pessoa."
+        art={<TeamArt />}
+      />
+      <FinalCta />
+      <Footer />
+    </div>
+  )
+}
