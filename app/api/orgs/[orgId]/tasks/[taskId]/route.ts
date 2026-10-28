@@ -3,11 +3,12 @@ import { orgScope, scopes } from '../../../../../lib/server/scopes'
 import { mutate } from '../../../../../lib/server/store'
 import { removeFiles } from '../../../../../lib/server/files'
 import { spawnNext } from '../../../../../lib/server/org'
-import { addComment, cleanTaskFields, deleteTask, type TaskPatch } from '../../../../../lib/server/tasks'
+import { addComment, checkReviewer, cleanTaskFields, deleteTask, type TaskPatch } from '../../../../../lib/server/tasks'
+import { isCompanyAccount } from '../../../../../lib/org'
 import type { TaskStatus } from '../../../../../types'
 
 type Action =
-  | { action: 'update'; patch: TaskPatch & { assigneeId?: string } }
+  | { action: 'update'; patch: TaskPatch & { assigneeId?: string; reviewerId?: string | null } }
   | { action: 'status'; status: TaskStatus }
   | { action: 'approve'; comment?: string }
   | { action: 'reject'; comment?: string }
@@ -21,6 +22,7 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
   const input = await body<Action>(req)
 
   return mutate(scopes(orgScope(orgId), async l => l.load('tasks', { id: taskId })), db => {
+    const org = db.orgs.find(o => o.id === orgId)!
     const task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
     const access = taskAccess(db, me, task)
     if (!access.view) fail(403, 'Sem acesso a esta tarefa')
@@ -43,9 +45,17 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
         const assigneeId = input.patch?.assigneeId
         if (editor && assigneeId && assigneeId !== task.assigneeId) {
           const target = db.members.find(m => m.id === assigneeId && m.orgId === orgId)
-          if (!target || (target.id !== me.id && !canManage(db, me, target))) fail(403, 'Só podes atribuir tarefas à tua equipa')
+          if (!target || isCompanyAccount(target, org)) fail(400, 'Funcionário inválido')
+          if (target!.id !== me.id && !canManage(db, me, target)) fail(403, 'Só podes atribuir tarefas à tua equipa')
           task.assigneeId = target!.id
           task.departmentId = target!.departmentId
+        }
+        const reviewerId = input.patch?.reviewerId
+        if (editor && reviewerId !== undefined) {
+          task.reviewerId = reviewerId ? checkReviewer(db, org, reviewerId, task.assigneeId) : undefined
+        } else if (task.reviewerId === task.assigneeId) {
+          // o responsável mudou para quem supervisionava: volta à regra por omissão
+          task.reviewerId = undefined
         }
         break
       }
@@ -76,7 +86,7 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
 
       case 'approve':
       case 'reject': {
-        if (!access.manager) fail(403, 'Só o supervisor pode rever esta tarefa')
+        if (!access.review) fail(403, 'Só o supervisor desta tarefa a pode rever')
         if (task.status !== 'done' || task.review?.status !== 'pending') fail(400, 'A tarefa não está à espera de revisão')
         const comment = input.comment?.trim()
         if (input.action === 'approve') {

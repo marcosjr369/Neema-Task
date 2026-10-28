@@ -1,4 +1,5 @@
 import type { Department, Member, PresenceStatus, Task } from '../../types'
+import { isCompanyAccount, teamMembers } from '../org'
 import { managedDepartments } from './api'
 import { newId, type DB } from './store'
 
@@ -34,16 +35,19 @@ export function setPresence(db: DB, m: Member, status: PresenceStatus, now = Dat
 /** Membros cujos dados de tempo e presença o membro pode ver */
 export function visibleMembers(db: DB, me: Member) {
   const scope = managedDepartments(db, me)
+  const org = db.orgs.find(o => o.id === me.orgId)
   return db.members.filter(
     m =>
       m.orgId === me.orgId &&
+      !isCompanyAccount(m, org) &&
       (m.id === me.id || scope === 'all' || (!!m.departmentId && scope.has(m.departmentId))),
   )
 }
 
 /** Define os supervisores do departamento e promove-os a supervisor */
 export function syncSupervisors(db: DB, dept: Department, ids: string[]) {
-  const valid = new Set(db.members.filter(m => m.orgId === dept.orgId).map(m => m.id))
+  const org = db.orgs.find(o => o.id === dept.orgId)
+  const valid = new Set(teamMembers(db.members.filter(m => m.orgId === dept.orgId), org).map(m => m.id))
   dept.supervisorIds = [...new Set(ids)].filter(id => valid.has(id))
   db.members.forEach(m => {
     if (dept.supervisorIds.includes(m.id) && m.role === 'membro') m.role = 'supervisor'

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { MinusIcon, PaperclipIcon, PlusIcon, RepeatIcon, ShieldCheckIcon, XIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
-import { CATEGORIES, CATEGORY_CONFIG, ChecklistItem, Priority, PRIORITY_CONFIG, Recurrence, Task, TaskCategory } from '../../types'
+import { CATEGORIES, CATEGORY_CONFIG, ChecklistItem, COMPANY_ACCOUNT_LABEL, Priority, PRIORITY_CONFIG, Recurrence, ROLE_LABEL, Task, TaskCategory } from '../../types'
+import { canSuperviseTask } from '../../lib/org'
 import Avatar from '../ui/Avatar'
 import { CategoryGlyph } from '../ui/icons'
 
@@ -29,7 +30,9 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const { addTask, updateTask, settings, showToast } = useApp()
   const org = useOrg()
   const canAssign = !!org?.isManager
-  const [assigneeId, setAssigneeId] = useState(task?.assigneeId ?? org?.me.id ?? '')
+  // a conta da empresa não faz tarefas: tem de escolher o responsável
+  const [assigneeId, setAssigneeId] = useState(task?.assigneeId ?? (org?.isCompany ? '' : org?.me.id) ?? '')
+  const [reviewerId, setReviewerId] = useState(task?.reviewerId ?? '')
   const [requiresApproval, setRequiresApproval] = useState<boolean | null>(task?.requiresApproval ?? null)
   const [requiresAttachment, setRequiresAttachment] = useState(task?.requiresAttachment ?? false)
   const [recurrence, setRecurrence] = useState<Recurrence | undefined>(task?.recurrence)
@@ -39,6 +42,10 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const approval = requiresApproval ?? (!!org && assigneeId !== org.me.id)
   const assignee = org?.memberById(assigneeId)
   const assigningOther = !!org && assigneeId !== org.me.id
+  // quem pode aprovar: supervisores, administradores e a conta da empresa (nunca o próprio responsável)
+  const supervisors = org
+    ? [...(org.isCompany ? [org.me] : []), ...org.members].filter(m => canSuperviseTask(m, org.org) && m.id !== assigneeId)
+    : []
 
   const addCheck = () => {
     if (checkInput.trim()) setChecklist(l => [...l, { id: itemId(), text: checkInput.trim(), done: false }])
@@ -70,6 +77,10 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
+    if (org && canAssign && !assigneeId) {
+      showToast('Escolhe o funcionário responsável', 'danger')
+      return
+    }
     const data = {
       title: title.trim(),
       description: description.trim(),
@@ -80,7 +91,13 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
       tags,
       checklist,
       ...(org && canAssign
-        ? { assigneeId: assigneeId || org.me.id, requiresApproval: approval, requiresAttachment, recurrence }
+        ? {
+            assigneeId,
+            requiresApproval: approval,
+            reviewerId: approval && supervisors.some(m => m.id === reviewerId) ? reviewerId : undefined,
+            requiresAttachment,
+            recurrence,
+          }
         : {}),
     }
     if (task) {
@@ -115,7 +132,8 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
             <label className="label" htmlFor="t-assignee">Responsável</label>
             <div className="flex items-center gap-3">
               <Avatar name={assignee?.name ?? '?'} picture={assignee?.picture} size={40} />
-              <select id="t-assignee" className="input" value={assigneeId} onChange={e => setAssigneeId(e.target.value)}>
+              <select id="t-assignee" className="input" value={assigneeId} onChange={e => setAssigneeId(e.target.value)} required>
+                {!assigneeId && <option value="" disabled>Escolhe um funcionário</option>}
                 {org.assignable.map(m => (
                   <option key={m.id} value={m.id}>
                     {m.id === org.me.id ? `${m.name} (eu)` : m.name}
@@ -284,15 +302,27 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
               <ShieldCheckIcon size={20} className="text-accent" />
               <span className="flex-1">
                 <span className="block font-bold text-ink">Precisa de aprovação</span>
-                <span className="block text-xs font-semibold text-muted">O supervisor revê antes de contar como concluída</span>
               </span>
               <input type="checkbox" checked={approval} onChange={e => setRequiresApproval(e.target.checked)} className="h-5 w-5 accent-brand" />
             </label>
+            {approval && (
+              <div className="rounded-xl border-2 border-line px-3 py-2.5">
+                <label className="block font-bold text-ink" htmlFor="t-reviewer">Supervisor da tarefa</label>
+                <select id="t-reviewer" className="input mt-1.5" value={reviewerId} onChange={e => setReviewerId(e.target.value)}>
+                  <option value="">Chefes do departamento (automático)</option>
+                  {supervisors.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.id === org.me.id ? `${org.isCompany ? COMPANY_ACCOUNT_LABEL : m.name} (eu)` : m.name}
+                      {m.id !== org.me.id || !org.isCompany ? ` · ${ROLE_LABEL[m.role]}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <label className="flex items-center gap-3 rounded-xl border-2 border-line px-3 py-2.5 cursor-pointer">
               <PaperclipIcon size={20} className="text-warm" />
               <span className="flex-1">
                 <span className="block font-bold text-ink">Exigir anexo</span>
-                <span className="block text-xs font-semibold text-muted">Só pode concluir depois de anexar um comprovativo</span>
               </span>
               <input type="checkbox" checked={requiresAttachment} onChange={e => setRequiresAttachment(e.target.checked)} className="h-5 w-5 accent-brand" />
             </label>
@@ -309,7 +339,6 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
                 </button>
               ))}
             </div>
-            {recurrence && <p className="text-xs font-semibold text-muted">Quando for concluída, é criada a próxima automaticamente.</p>}
           </div>
         )}
 

@@ -1,7 +1,7 @@
 /**
  * Aspecto do formulário do Clerk no passo de login da entrada.
  * Parte do tema "simple" (quase sem estilo do Clerk) e veste cada elemento com as
- * classes da app: sem cartão nem título (quem fala é o Marcos), botões 3D, campos iguais
+ * classes da app: sem cartão nem título (quem fala é a Udacha), botões 3D, campos iguais
  * aos do resto da app. Funciona porque os estilos do Clerk estão na camada CSS "clerk",
  * abaixo das utilitárias do Tailwind (ver globals.css e layout.tsx).
  */

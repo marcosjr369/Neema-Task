@@ -1,4 +1,4 @@
-import type { Department, Member, PresenceSegment, PresenceStatus, Role } from '../types'
+import type { Department, Member, Org, PresenceSegment, PresenceStatus, Role, Task } from '../types'
 
 /** Utilitários de empresa partilhados entre cliente e servidor */
 
@@ -21,6 +21,25 @@ export const SECTORS = [
 export const ORG_SIZES = ['1-10', '11-50', '51-200', '201-1000', '1000+']
 
 export const canManageRole = (role?: Role) => role === 'admin' || role === 'supervisor'
+
+/**
+ * A conta que criou a empresa é a conta da própria empresa: administra tudo, mas não é
+ * uma pessoa da equipa (sem cronómetro, presença, XP nem lugar no ranking).
+ */
+export const isCompanyAccount = (m: Member | undefined, org: Pick<Org, 'createdBy'> | undefined) =>
+  !!m?.userId && !!org && m.userId === org.createdBy
+
+/** Pessoas da equipa: todos os membros menos a conta da empresa */
+export const teamMembers = (members: Member[], org: Pick<Org, 'createdBy'> | undefined) =>
+  members.filter(m => !isCompanyAccount(m, org))
+
+/** Pode ser escolhido como supervisor de uma tarefa (aprova o trabalho) */
+export const canSuperviseTask = (m: Member, org: Pick<Org, 'createdBy'> | undefined) =>
+  m.status === 'activo' && (canManageRole(m.role) || isCompanyAccount(m, org))
+
+/** Quem aprova: o supervisor escolhido (ou um administrador); sem escolha, quem gere o responsável */
+export const canReviewTask = (task: Task, me: Member, managesAssignee: boolean) =>
+  task.reviewerId ? task.reviewerId === me.id || me.role === 'admin' : managesAssignee
 
 /** Departamentos geridos pelo membro ('all' para administradores) */
 export function managedDepartmentIds(departments: Department[], me: Member): Set<string> | 'all' {

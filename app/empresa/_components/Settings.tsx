@@ -13,13 +13,14 @@ export default function Settings() {
   const [sector, setSector] = useState(org.org.sector)
   const [size, setSize] = useState(org.org.size ?? '')
   const [domain, setDomain] = useState(org.org.domain ?? '')
+  const [hidden, setHidden] = useState(!!org.org.hideFromRanking)
   const [busy, setBusy] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
     try {
-      await api(org.base, { method: 'PATCH', body: { name, sector, size, domain } })
+      await api(org.base, { method: 'PATCH', body: { name, sector, size, domain, hideFromRanking: hidden } })
       await org.refresh()
       showToast('Definições guardadas', 'success')
     } catch (err) {
@@ -60,7 +61,15 @@ export default function Settings() {
           <span className="font-black text-muted">@</span>
           <input id="s-domain" className="input" value={domain} onChange={e => setDomain(e.target.value)} placeholder="empresa.com" />
         </div>
-        <p className="mt-1 text-xs font-semibold text-muted">Quem entrar com um email deste domínio vê a empresa e pode juntar-se sem código.</p>
+      </div>
+      <div>
+        <span className="label">Ranking de empresas</span>
+        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-line p-3 hover:bg-snow">
+          <input type="checkbox" className="h-5 w-5 accent-brand" checked={!hidden} onChange={e => setHidden(!e.target.checked)} />
+          <span>
+            <span className="block font-black text-ink">Mostrar a empresa no ranking geral</span>
+          </span>
+        </label>
       </div>
       <button type="submit" disabled={busy} className="btn btn-primary">
         {busy ? 'A guardar…' : 'Guardar'}

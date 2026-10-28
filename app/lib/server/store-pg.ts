@@ -22,6 +22,7 @@ const COLUMNS: Record<Table, (r: Row) => Record<string, string | number | null>>
   sessions: r => ({ id: r.id as string, task_id: r.taskId as string, user_id: (r.userId as string) ?? null, member_id: (r.memberId as string) ?? null, start_at: r.start as number }),
   presence: r => ({ id: r.id as string, org_id: r.orgId as string, member_id: r.memberId as string, start_at: r.start as number, end_at: (r.end as number) ?? null }),
   push: r => ({ id: r.endpoint as string, user_id: r.userId as string }),
+  deleted: r => ({ id: r.id as string, deleted_at: r.deletedAt as number }),
 }
 
 const keyOf = (table: Table, r: Row) => (table === 'push' ? (r.endpoint as string) : (r.id as string))
@@ -51,6 +52,8 @@ create index if not exists presence_org on presence (org_id, start_at);
 create index if not exists presence_member_open on presence (member_id) where end_at is null;
 create table if not exists push (id text primary key, user_id text not null, data jsonb not null);
 create index if not exists push_user on push (user_id);
+create table if not exists deleted (id text primary key, deleted_at bigint not null, data jsonb not null);
+create index if not exists deleted_at on deleted (deleted_at);
 -- Sem políticas, o RLS fecha estas tabelas à API pública do Supabase (chaves anon/authenticated).
 -- A app liga como dona das tabelas (DATABASE_URL), por isso não é afectada.
 alter table users enable row level security;
@@ -61,9 +64,11 @@ alter table tasks enable row level security;
 alter table sessions enable row level security;
 alter table presence enable row level security;
 alter table push enable row level security;
+alter table deleted enable row level security;
 `
 
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema?: Promise<void> }
+// "__neemaSchema2": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema2?: Promise<void> }
 
 function client(): Sql {
   if (!g.__neemaSql) {
@@ -83,11 +88,11 @@ function client(): Sql {
 
 /** Cria as tabelas na primeira utilização (idempotente) */
 function ready(): Promise<void> {
-  g.__neemaSchema ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
-    g.__neemaSchema = undefined
+  g.__neemaSchema2 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
+    g.__neemaSchema2 = undefined
     throw err
   })
-  return g.__neemaSchema
+  return g.__neemaSchema2
 }
 
 function condition(sql: Sql, col: string, value: Condition) {

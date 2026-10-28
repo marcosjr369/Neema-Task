@@ -2,6 +2,7 @@ import { body, fail, handle, requireMember } from '../../../../../lib/server/api
 import { mutate, type DB } from '../../../../../lib/server/store'
 import type { Role } from '../../../../../types'
 import { orgScope } from '../../../../../lib/server/scopes'
+import { isCompanyAccount } from '../../../../../lib/org'
 
 type Patch = { name?: string; jobTitle?: string; phone?: string; departmentId?: string | null; role?: Role }
 
@@ -19,7 +20,11 @@ export const PATCH = handle<{ orgId: string; memberId: string }>(async (req, { o
     if (patch.jobTitle !== undefined) m.jobTitle = patch.jobTitle.trim().slice(0, 60) || undefined
     if (patch.phone !== undefined) m.phone = patch.phone.trim().slice(0, 30) || undefined
 
-    if (me.role === 'admin') {
+    // a conta da empresa é sempre administradora e não pertence a departamentos
+    const companyAccount = isCompanyAccount(m, db.orgs.find(o => o.id === orgId))
+    if (companyAccount && patch.role && patch.role !== 'admin') fail(400, 'A conta da empresa é sempre administradora')
+
+    if (me.role === 'admin' && !companyAccount) {
       if (patch.departmentId !== undefined) {
         const dept = patch.departmentId ? db.departments.find(d => d.id === patch.departmentId && d.orgId === orgId) : undefined
         if (patch.departmentId && !dept) fail(400, 'Departamento inválido')
@@ -46,6 +51,8 @@ export const DELETE = handle<{ orgId: string; memberId: string }>(async (_req, {
   if (me.role !== 'admin' && me.id !== memberId) fail(403, 'Sem permissão')
   return mutate(orgScope(orgId, { presence: 'open' }), db => {
     const m = db.members.find(x => x.id === memberId && x.orgId === orgId) ?? fail(404, 'Funcionário não encontrado')
+    // a conta que criou a empresa é a dona: não sai nem é removida
+    if (m.userId && m.userId === db.orgs.find(o => o.id === orgId)?.createdBy) fail(400, 'A conta que criou a empresa não pode sair nem ser removida')
     if (m.role === 'admin' && activeAdmins(db, orgId) <= 1) fail(400, 'Não podes remover o único administrador')
     db.members = db.members.filter(x => x.id !== m.id)
     db.departments.forEach(d => { d.supervisorIds = d.supervisorIds.filter(id => id !== m.id) })

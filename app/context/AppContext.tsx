@@ -99,7 +99,7 @@ export function useApp() {
 /** Campos que o servidor aceita numa actualização */
 const REMOTE_FIELDS = [
   'title', 'description', 'category', 'priority', 'focusDuration', 'deadline', 'tags',
-  'checklist', 'requiresApproval', 'requiresAttachment', 'recurrence', 'notified', 'assigneeId',
+  'checklist', 'requiresApproval', 'requiresAttachment', 'recurrence', 'notified', 'assigneeId', 'reviewerId',
 ] as const
 
 function remotePatch(patch: Partial<Task>) {

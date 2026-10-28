@@ -1,4 +1,6 @@
-import { CATEGORY_CONFIG, PRIORITY_CONFIG, type ChecklistItem, type Priority, type Recurrence, type Session, type Task, type TaskCategory, type TaskComment } from '../../types'
+import { CATEGORY_CONFIG, PRIORITY_CONFIG, type ChecklistItem, type Org, type Priority, type Recurrence, type Session, type Task, type TaskCategory, type TaskComment } from '../../types'
+import { canSuperviseTask } from '../org'
+import { fail } from './api'
 import { newId, type DB } from './store'
 
 export type TaskPatch = Partial<
@@ -36,6 +38,14 @@ export function cleanTaskFields(input: TaskPatch): Partial<Task> {
   if (input.recurrence !== undefined) out.recurrence = input.recurrence && RECURRENCES.includes(input.recurrence) ? input.recurrence : undefined
   if (input.notified !== undefined) out.notified = !!input.notified
   return out
+}
+
+/** Supervisor escolhido para a tarefa: tem de poder aprovar e não pode ser o próprio responsável */
+export function checkReviewer(db: DB, org: Org, reviewerId: string, assigneeId?: string) {
+  const reviewer = db.members.find(m => m.id === reviewerId && m.orgId === org.id)
+  if (!reviewer || !canSuperviseTask(reviewer, org)) fail(400, 'Escolhe um supervisor ou administrador para aprovar')
+  if (reviewerId === assigneeId) fail(400, 'O supervisor não pode ser o próprio responsável')
+  return reviewerId
 }
 
 /** O cliente pode gerar o id (actualizações optimistas) */

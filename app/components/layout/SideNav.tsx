@@ -6,7 +6,8 @@ import { PlusIcon } from '@phosphor-icons/react'
 import { useAccount } from '../../context/AccountContext'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
-import { isActivePath, navGroups, type NavItem } from '../../lib/nav'
+import { isActivePath, navGroups, navModeOf, type NavItem } from '../../lib/nav'
+import { COMPANY_ACCOUNT_LABEL } from '../../types'
 import { levelInfo, totalXp } from '../../lib/stats'
 import Mascot from '../ui/Mascot'
 import Avatar from '../ui/Avatar'
@@ -17,7 +18,7 @@ import LogoutButton from '../account/LogoutButton'
 
 function NavLink({ item, badge }: { item: NavItem; badge?: React.ReactNode }) {
   const pathname = usePathname()
-  const active = isActivePath(pathname, item.href)
+  const active = isActivePath(pathname, item.href, item.exact)
   const Icon = item.icon
   return (
     <Link
@@ -49,7 +50,7 @@ export default function SideNav() {
 
   const badgeFor = (href: string) => {
     if (href === '/foco' && timer) return <span className="ml-auto h-2.5 w-2.5 animate-pulse rounded-full bg-danger" aria-label="Cronómetro a correr" />
-    if (href === '/empresa' && reviews > 0) {
+    if (href === '/empresa/tarefas' && reviews > 0) {
       return <span className="ml-auto rounded-lg bg-danger px-2 text-xs font-black text-white" aria-label={`${reviews} por rever`}>{reviews}</span>
     }
     return null
@@ -59,12 +60,12 @@ export default function SideNav() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto border-r-2 border-line bg-white px-4 py-5 lg:flex">
       <Link href="/" className="mb-5 flex items-center gap-2 px-2">
         <Mascot size={38} />
-        <span className="text-xl font-black tracking-tight text-brand">marcos tasks</span>
+        <span className="text-xl font-black tracking-tight text-brand">udacha</span>
       </Link>
 
       <div className="space-y-2">
         <WorkspaceSwitcher />
-        {org && <PresencePicker />}
+        {org && !org.isCompany && <PresencePicker />}
       </div>
 
       <button onClick={() => openTaskSheet()} className="btn btn-primary mt-4 w-full">
@@ -72,7 +73,7 @@ export default function SideNav() {
       </button>
 
       <nav className="mt-5 space-y-5" aria-label="Navegação principal">
-        {navGroups(!!org?.isManager).map(group => (
+        {navGroups(navModeOf(org)).map(group => (
           <div key={group.title}>
             <p className="mb-1.5 px-3 text-[11px] font-black uppercase tracking-[0.14em] text-muted">{group.title}</p>
             <ul className="space-y-1">
@@ -92,7 +93,7 @@ export default function SideNav() {
               <Avatar name={user.name} picture={user.picture} size={38} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-black text-ink">{user.name}</span>
-                <span className="block text-xs font-bold text-muted">Nível {level} · Perfil</span>
+                <span className="block text-xs font-bold text-muted">{org?.isCompany ? COMPANY_ACCOUNT_LABEL : `Nível ${level} · Perfil`}</span>
               </span>
             </Link>
             <LogoutButton variant="icon" />

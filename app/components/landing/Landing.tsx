@@ -10,7 +10,7 @@ import Mascot, { type MascotMood, type MascotPose } from '../ui/Mascot'
 import ProgressRing from '../ui/ProgressRing'
 
 /*
- * Página inicial para quem ainda não tem sessão: apresenta a app, com o Marcos animado,
+ * Página inicial para quem ainda não tem sessão: apresenta a app, com a Udacha animada,
  * e leva ao registo (/entrar). Quem já tem sessão vê a app em "/".
  */
 
@@ -68,8 +68,8 @@ function Header() {
     <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur transition-[border-color] ${scrolled ? 'border-b-2 border-line' : 'border-b-2 border-transparent'}`}>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2">
-          <span data-marcos-logo className="inline-flex"><Mascot size={40} /></span>
-          <span className="text-2xl font-black tracking-tight text-brand">marcos tasks</span>
+          <span data-mascot-logo className="inline-flex"><Mascot size={40} /></span>
+          <span className="text-2xl font-black tracking-tight text-brand">udacha</span>
         </Link>
         <div className="flex items-center gap-2">
           <Link href={LOGIN} className="hidden rounded-xl px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-muted hover:text-body sm:block">
@@ -86,46 +86,47 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-2">
+    <section className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-6xl items-center gap-6 px-5 py-6 sm:gap-10 sm:py-10 lg:grid-cols-2">
       <HeroStage />
       <div className="text-center lg:text-left">
-        <h1 className="mx-auto max-w-lg text-4xl font-black leading-tight tracking-tight text-ink sm:text-5xl lg:mx-0 animate-rise">
+        <h1 className="mx-auto max-w-lg text-3xl font-black leading-tight tracking-tight text-ink sm:text-5xl lg:mx-0 animate-rise">
           A forma mais divertida de <span className="text-brand">focar</span>, fazer pausas e <span className="text-accent">acabar tarefas</span>!
         </h1>
-        <p className="mx-auto mt-4 max-w-md text-lg font-semibold text-muted lg:mx-0 animate-rise" style={{ animationDelay: '120ms' }}>
+        <p className="mx-auto mt-3 max-w-md text-base font-semibold text-muted sm:mt-4 sm:text-lg lg:mx-0 animate-rise" style={{ animationDelay: '120ms' }}>
           Cronómetro de foco, XP, sequências e ranking. Sozinho ou com a tua equipa.
         </p>
-        <div className="mx-auto mt-8 flex max-w-sm flex-col gap-3 lg:mx-0 animate-rise" style={{ animationDelay: '240ms' }}>
-          <Link href={START} className="btn btn-primary w-full py-4 text-base">Começar agora</Link>
-          <Link href={LOGIN} className="btn btn-ghost w-full py-4 text-base text-brand">Já tenho uma conta</Link>
+        <div className="mx-auto mt-6 flex max-w-sm flex-col gap-3 sm:mt-8 lg:mx-0 animate-rise" style={{ animationDelay: '240ms' }}>
+          <Link href={START} className="btn btn-primary w-full py-3.5 text-base sm:py-4">Começar agora</Link>
+          <Link href={LOGIN} className="btn btn-ghost w-full py-3.5 text-base text-brand sm:py-4">Já tenho uma conta</Link>
         </div>
       </div>
     </section>
   )
 }
 
-/** Poses que o Marcos vai trocando no hero, com o que diz em cada uma */
+/** Poses que a Udacha vai trocando no hero, com o que diz em cada uma */
 const SCENES: { pose: MascotPose; mood: MascotMood; say: string }[] = [
-  { pose: 'wave', mood: 'happy', say: 'Olá! Eu sou o Marcos.' },
+  { pose: 'wave', mood: 'happy', say: 'Olá! Eu sou a Udacha.' },
   { pose: 'dance', mood: 'excited', say: 'Bora focar?' },
   { pose: 'thumbs', mood: 'happy', say: 'Tarefa feita!' },
+  { pose: 'peace', mood: 'happy', say: 'Pausa merecida!' },
   { pose: 'celebrate', mood: 'excited', say: '+15 XP!' },
 ]
 
-/** Emblema colorido a flutuar à volta do Marcos */
+/** Emblema colorido a flutuar à volta da Udacha */
 function Badge({ icon: I, bg, className, delay, rotate }: { icon: Icon; bg: string; className: string; delay: number; rotate: number }) {
   return (
     <span
-      className={`absolute flex h-14 w-14 items-center justify-center rounded-2xl text-white animate-float sm:h-16 sm:w-16 ${className}`}
+      className={`absolute flex h-11 w-11 items-center justify-center rounded-xl text-white animate-float sm:h-16 sm:w-16 sm:rounded-2xl ${className}`}
       style={{ background: bg, boxShadow: 'inset 0 -5px 0 #0002', animationDelay: `${delay}s`, ['--r' as string]: `${rotate}deg` }}
       aria-hidden
     >
-      <I size={30} weight="fill" />
+      <I size={30} weight="fill" className="h-6 w-6 sm:h-[30px] sm:w-[30px]" />
     </span>
   )
 }
 
-/** O Marcos num palco colorido; muda de pose sozinho ou ao clicar */
+/** A Udacha num palco colorido; muda de pose sozinho ou ao clicar */
 function HeroStage() {
   const [n, setN] = useState(0)
   useEffect(() => {
@@ -134,23 +135,23 @@ function HeroStage() {
   }, [n])
   const scene = SCENES[n % SCENES.length]
   return (
-    <div className="relative mx-auto flex h-[380px] w-full max-w-md items-end justify-center sm:h-[460px]">
+    <div className="relative mx-auto flex h-[270px] w-full max-w-md items-end justify-center sm:h-[460px]">
       {/* fundo: círculo suave */}
-      <span className="absolute bottom-2 left-1/2 h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-brand-light sm:h-[360px] sm:w-[360px]" aria-hidden />
+      <span className="absolute bottom-2 left-1/2 h-[220px] w-[220px] -translate-x-1/2 rounded-full bg-brand-light sm:h-[360px] sm:w-[360px]" aria-hidden />
 
       <Badge icon={LightningIcon} bg="#FFC53D" className="left-[6%] top-[18%]" delay={0} rotate={-10} />
-      <Badge icon={FireIcon} bg="#FF8A3D" className="right-[8%] top-[10%]" delay={0.8} rotate={8} />
+      <Badge icon={FireIcon} bg="#FF8A3D" className="right-[6%] top-[34%]" delay={0.8} rotate={8} />
       <Badge icon={CheckIcon} bg="#12B5A6" className="bottom-[14%] left-[4%]" delay={1.5} rotate={6} />
 
       {/* balão de fala */}
-      <div key={`say-${n}`} className="absolute left-1/2 top-[6%] z-10 animate-bubble">
-        <div className="relative whitespace-nowrap rounded-2xl border-2 border-line bg-white px-4 py-2.5 text-lg font-extrabold text-ink shadow-[0_4px_0_#E9E7F2]">
+      <div key={`say-${n}`} className="absolute left-1/2 top-0 z-10 animate-bubble sm:top-[6%]">
+        <div className="relative whitespace-nowrap rounded-2xl border-2 border-line bg-white px-3 py-2 text-sm font-extrabold sm:px-4 sm:py-2.5 sm:text-lg text-ink shadow-[0_4px_0_#E9E7F2]">
           {scene.say}
           <span className="absolute -bottom-[9px] left-6 h-4 w-4 rotate-45 border-b-2 border-r-2 border-line bg-white" />
         </div>
       </div>
 
-      <button type="button" onClick={() => setN(v => v + 1)} className="relative mb-2 cursor-pointer" aria-label="Ver o Marcos noutra pose">
+      <button type="button" onClick={() => setN(v => v + 1)} className="relative mb-2 origin-bottom scale-[0.66] cursor-pointer sm:scale-100" aria-label="Ver a Udacha noutra pose">
         <div key={n} className="animate-hop">
           <Mascot size={330} pose={scene.pose} mood={scene.mood} />
         </div>
@@ -265,7 +266,7 @@ function FocusArt() {
   )
 }
 
-/** Pódio do ranking com o Marcos a festejar */
+/** Pódio do ranking com a Udacha a festejar */
 function RankingArt() {
   const bars = [
     { h: 'h-24', place: 2, color: '#C0C0C0', delay: 200 },
@@ -323,12 +324,12 @@ function TeamArt() {
 }
 
 /**
- * O Marcos salta do logótipo do cabeçalho e voa em curva até ao palco da chamada final,
+ * A Udacha salta do logótipo do cabeçalho e voa em curva até ao palco da chamada final,
  * dando uma cambalhota pelo caminho. Com movimento reduzido, aparece logo no sítio.
  */
 function flyFromLogo(target: HTMLElement) {
   const show = () => { target.style.opacity = '1' }
-  const logo = document.querySelector<HTMLElement>('[data-marcos-logo]')
+  const logo = document.querySelector<HTMLElement>('[data-mascot-logo]')
   if (!logo || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return show()
 
   const a = logo.getBoundingClientRect()
@@ -382,7 +383,7 @@ function FinalCta() {
     <section className="relative overflow-hidden bg-white pt-20">
       <div className="mx-auto max-w-3xl px-5 text-center">
         <Reveal>
-          <h2 className="text-5xl font-black lowercase leading-tight tracking-tight text-brand sm:text-6xl">começa hoje com o marcos</h2>
+          <h2 className="text-5xl font-black lowercase leading-tight tracking-tight text-brand sm:text-6xl">começa hoje com a udacha</h2>
           <Link href={START} className="btn btn-primary mx-auto mt-8 w-full max-w-sm py-4 text-base">Começar agora</Link>
         </Reveal>
       </div>
@@ -417,9 +418,9 @@ function Footer() {
         <div>
           <div className="flex items-center gap-2">
             <Mascot size={40} />
-            <span className="text-2xl font-black tracking-tight">marcos tasks</span>
+            <span className="text-2xl font-black tracking-tight">udacha</span>
           </div>
-          <p className="mt-3 max-w-xs text-sm font-semibold text-white/75">Tarefas, foco e pausas, com o Marcos a torcer por ti.</p>
+          <p className="mt-3 max-w-xs text-sm font-semibold text-white/75">Tarefas, foco e pausas, com a Udacha a torcer por ti.</p>
         </div>
         {cols.map(c => (
           <div key={c.title}>
@@ -432,7 +433,7 @@ function Footer() {
           </div>
         ))}
       </div>
-      <p className="border-t border-white/15 py-5 text-center text-xs font-bold text-white/60">© {new Date().getFullYear()} Marcos Tasks</p>
+      <p className="border-t border-white/15 py-5 text-center text-xs font-bold text-white/60">© {new Date().getFullYear()} Udacha</p>
     </footer>
   )
 }
@@ -453,7 +454,7 @@ export default function Landing() {
         tint
         flip
         title="foco com pausas certas"
-        text="O Marcos avisa-te quando é hora de descansar e quando é hora de voltar. Menos cansaço, mais concentração, todos os dias."
+        text="A Udacha avisa-te quando é hora de descansar e quando é hora de voltar. Menos cansaço, mais concentração, todos os dias."
         art={<FocusArt />}
       />
       <Feature

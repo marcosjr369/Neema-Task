@@ -54,10 +54,13 @@ async function provisionUser(clerkId: string): Promise<User | null> {
         }
         db.users.push(user)
       }
-      if (verified) {
-        // funcionários adicionados à mão ou por importação, à espera desta pessoa
+      // funcionários adicionados à mão ou por importação, à espera desta pessoa
+      // (contas pessoais e contas de empresa ficam de fora)
+      if (verified && user.accountType !== 'personal' && user.businessRole !== 'company') {
         for (const m of db.members) {
           if (m.status === 'pendente' && m.email === email && !m.userId) {
+            user.accountType = 'business'
+            user.businessRole = 'employee'
             m.userId = user.id
             m.status = 'activo'
             m.joinedAt = Date.now()

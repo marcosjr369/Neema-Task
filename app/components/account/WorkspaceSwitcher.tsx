@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { BuildingsIcon, CaretUpDownIcon, CheckIcon, PlusIcon, SignInIcon, UserIcon } from '@phosphor-icons/react'
+import { BuildingsIcon, CaretUpDownIcon, CheckIcon, PlusIcon, SignInIcon } from '@phosphor-icons/react'
 import { useAccount } from '../../context/AccountContext'
 import Avatar from '../ui/Avatar'
 import LogoutButton from './LogoutButton'
 
-/** Troca entre o espaço pessoal e as empresas */
+/** Conta activa: nas contas de empresa troca entre as empresas; nas pessoais só mostra a conta e sair */
 export default function WorkspaceSwitcher() {
-  const { user, memberships, workspace, current, setWorkspace } = useAccount()
+  const { user, accountType, businessRole, memberships, workspace, current, setWorkspace } = useAccount()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -63,17 +63,7 @@ export default function WorkspaceSwitcher() {
 
       {open && (
         <div role="menu" className="absolute inset-x-0 z-50 mt-2 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-xl animate-fade-in">
-          <button
-            role="menuitemradio"
-            aria-checked={workspace.kind === 'personal'}
-            onClick={() => go(() => setWorkspace({ kind: 'personal' }))}
-            className="flex w-full items-center gap-3 px-3 py-2.5 text-left font-bold hover:bg-snow cursor-pointer"
-          >
-            <UserIcon size={20} className="text-brand" />
-            <span className="flex-1 text-ink">Pessoal</span>
-            {workspace.kind === 'personal' && <CheckIcon size={18} className="text-brand" />}
-          </button>
-          {memberships.map(({ org, member }) => {
+          {accountType === 'business' && memberships.map(({ org, member }) => {
             const sel = workspace.kind === 'org' && workspace.orgId === org.id
             return (
               <button
@@ -89,14 +79,17 @@ export default function WorkspaceSwitcher() {
               </button>
             )
           })}
-          <Link
-            href="/entrar?passo=empresa"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 border-t-2 border-line px-3 py-2.5 text-sm font-extrabold uppercase tracking-wide text-accent hover:bg-snow"
-          >
-            <PlusIcon size={18} /> Criar ou entrar em empresa
-          </Link>
-          <div className="border-t-2 border-line">
+          {/* só a conta de uma empresa cria outra (funcionários, mesmo administradores, não) */}
+          {businessRole === 'company' && (
+            <Link
+              href="/entrar?passo=criar"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 border-t-2 border-line px-3 py-2.5 text-sm font-extrabold uppercase tracking-wide text-accent hover:bg-snow"
+            >
+              <PlusIcon size={18} /> Criar outra empresa
+            </Link>
+          )}
+          <div className={accountType === 'business' ? 'border-t-2 border-line' : ''}>
             <LogoutButton variant="menu" />
           </div>
         </div>

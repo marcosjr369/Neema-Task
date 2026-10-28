@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { Department, Member, Org, PresenceSegment, Session, Task, User } from '../../types'
+import type { DeletedUser, Department, Member, Org, PresenceSegment, Session, Task, User } from '../../types'
 import * as fileStore from './store-file'
 import * as pgStore from './store-pg'
 
@@ -30,13 +30,15 @@ export type DB = {
   sessions: Session[]
   presence: PresenceSegment[]
   push: PushRecord[]
+  /** registo de utilizadores eliminados no painel */
+  deleted: DeletedUser[]
 }
 
 export type Table = keyof DB
-export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push']
+export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'deleted']
 
 export const emptyDB = (): DB => ({
-  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [],
+  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], deleted: [],
 })
 
 /** Condição sobre uma coluna: valor (=), lista (IN), null (IS NULL) ou { gte } (>=) */

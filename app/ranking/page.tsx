@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { CheckCircleIcon, ClockIcon, CrownIcon, InfoIcon, LightningIcon } from '@phosphor-icons/react'
+import { BuildingsIcon, CheckCircleIcon, ClockIcon, CrownIcon, InfoIcon, LightningIcon } from '@phosphor-icons/react'
 import { useAccount } from '../context/AccountContext'
 import { useApp } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
@@ -11,9 +11,11 @@ import { POINTS_HELP } from '../lib/points'
 import { formatDuration, formatShort, startOfDay } from '../lib/stats'
 import Avatar from '../components/ui/Avatar'
 import Mascot from '../components/ui/Mascot'
-import type { RankEntry, RankMetric } from '../types'
+import type { OrgRankEntry, RankEntry, RankMetric } from '../types'
 
-type Period = 'semana' | 'mes' | 'sempre'
+type Period = 'hoje' | 'semana' | 'mes' | 'sempre'
+/** pessoas: colegas da empresa ou contas pessoais (nunca misturadas); empresas: ranking geral */
+type Scope = 'pessoas' | 'empresas'
 type DeptEntry = { id: string; name: string; color: string; members: number; seconds: number; tasks: number; points: number }
 
 const METRICS: { id: RankMetric; label: string; icon: typeof LightningIcon; color: string }[] = [
@@ -22,6 +24,7 @@ const METRICS: { id: RankMetric; label: string; icon: typeof LightningIcon; colo
   { id: 'tasks', label: 'Tarefas', icon: CheckCircleIcon, color: '#7B61FF' },
 ]
 const PERIODS: { id: Period; label: string }[] = [
+  { id: 'hoje', label: 'Hoje' },
   { id: 'semana', label: 'Semana' },
   { id: 'mes', label: 'Mês' },
   { id: 'sempre', label: 'Sempre' },
@@ -30,6 +33,7 @@ const PERIODS: { id: Period; label: string }[] = [
 function periodStart(p: Period, now: number) {
   if (p === 'sempre') return 0
   const d = new Date(startOfDay(now))
+  if (p === 'hoje') return d.getTime()
   if (p === 'semana') d.setDate(d.getDate() - ((d.getDay() + 6) % 7)) // segunda-feira
   else d.setDate(1)
   return d.getTime()
@@ -70,6 +74,46 @@ function Podium({ top, metric }: { top: RankEntry[]; metric: RankMetric }) {
   )
 }
 
+/** Ranking geral das empresas: ordenado pela média por pessoa */
+function OrgList({ list, metric }: { list: OrgRankEntry[] | null; metric: RankMetric }) {
+  if (list === null) return <div className="flex justify-center py-16"><Mascot size={80} className="animate-bounce-soft" /></div>
+  if (list.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-14 text-center">
+        <Mascot size={96} mood="sleepy" />
+        <p className="mt-4 text-lg font-black text-ink">Ainda nenhuma empresa no ranking</p>
+        <p className="mt-1 text-sm font-semibold text-muted">As empresas aparecem quando a equipa começar a focar e a concluir tarefas.</p>
+      </div>
+    )
+  }
+  const avg = (e: OrgRankEntry) => ({ seconds: e.seconds / e.members, tasks: Math.round((e.tasks / e.members) * 10) / 10, points: Math.round(e.points / e.members) })
+  return (
+    <>
+      <ol className="card mt-4 divide-y-2 divide-line">
+        {list.map((e, i) => (
+          <li key={e.id} className={`flex items-center gap-3 px-4 py-3 ${e.isMine ? 'bg-brand-light/60' : ''}`}>
+            <span className="w-6 text-center font-black" style={{ color: MEDALS[i] ?? '#A3A0B8' }}>{i + 1}</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-light text-accent-dark">
+              {i === 0 ? <CrownIcon size={22} weight="fill" color="#E0A419" /> : <BuildingsIcon size={22} />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className={`block truncate font-black ${e.isMine ? 'text-brand-dark' : 'text-ink'}`}>{e.name}{e.isMine ? ' (a tua)' : ''}</span>
+              {e.hidden && <span className="block text-[11px] font-extrabold uppercase text-warm-dark">Escondida: só a tua equipa a vê</span>}
+              <span className="block truncate text-xs font-bold text-muted">
+                {e.members} pessoa{e.members === 1 ? '' : 's'}{e.sector ? ` · ${e.sector}` : ''} · total {metricValue(e, metric)}
+              </span>
+            </span>
+            <span className="text-right">
+              <span className="block font-black text-ink">{metricValue(avg(e), metric)}</span>
+              <span className="block text-[11px] font-extrabold uppercase text-muted">por pessoa</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </>
+  )
+}
+
 export default function RankingPage() {
   const { user } = useAccount()
   const { now } = useApp()
@@ -78,7 +122,9 @@ export default function RankingPage() {
   const [period, setPeriod] = useState<Period>('semana')
   const [view, setView] = useState<'pessoas' | 'departamentos'>('pessoas')
   const [dept, setDept] = useState<string>('all')
+  const [scope, setScope] = useState<Scope>('pessoas')
   const [entries, setEntries] = useState<RankEntry[] | null>(null)
+  const [orgs, setOrgs] = useState<OrgRankEntry[] | null>(null)
   const [depts, setDepts] = useState<DeptEntry[]>([])
   const [error, setError] = useState('')
   const [help, setHelp] = useState(false)
@@ -87,15 +133,20 @@ export default function RankingPage() {
   const load = useCallback(async () => {
     if (!user) return
     try {
-      const url = org ? `${org.base}/ranking?from=${from}&metric=${metric}` : `/api/ranking?from=${from}&metric=${metric}`
-      const res = await api<{ entries: RankEntry[]; departments?: DeptEntry[] }>(url)
-      setEntries(res.entries)
-      setDepts(res.departments ?? [])
+      const q = `from=${from}&metric=${metric}`
+      if (scope === 'empresas') {
+        setOrgs((await api<{ entries: OrgRankEntry[] }>(`/api/ranking/empresas?${q}`)).entries)
+      } else {
+        const url = org ? `${org.base}/ranking?${q}` : `/api/ranking?${q}`
+        const res = await api<{ entries: RankEntry[]; departments?: DeptEntry[] }>(url)
+        setEntries(res.entries)
+        setDepts(res.departments ?? [])
+      }
       setError('')
     } catch (err) {
       setError(errorText(err))
     }
-  }, [user, org, from, metric])
+  }, [user, org, from, metric, scope])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carregar do servidor
@@ -127,7 +178,7 @@ export default function RankingPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-black text-ink lg:text-3xl">Ranking</h1>
           <span className="rounded-lg bg-snow px-2 py-0.5 text-xs font-extrabold uppercase text-muted">
-            {org ? org.org.name : 'Global'}
+            {scope === 'empresas' ? 'Todas as empresas' : org ? org.org.name : 'Contas pessoais'}
           </span>
           <button onClick={() => setHelp(h => !h)} className="ml-auto rounded-xl p-2 text-muted hover:bg-snow cursor-pointer" aria-label="Como funcionam os pontos">
             <InfoIcon size={22} />
@@ -138,6 +189,24 @@ export default function RankingPage() {
             {POINTS_HELP.map(h => <li key={h}>• {h}</li>)}
           </ul>
         )}
+        <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="Ranking">
+          {([
+            { id: 'pessoas', label: org ? (org.isCompany ? 'Equipa' : 'A minha equipa') : 'Pessoas' },
+            { id: 'empresas', label: 'Empresas' },
+          ] as const).map(t => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={scope === t.id}
+              onClick={() => setScope(t.id)}
+              className={`rounded-2xl border-2 border-b-4 py-2.5 text-sm font-black uppercase tracking-wide cursor-pointer ${
+                scope === t.id ? 'border-brand bg-brand-light text-brand-dark' : 'border-line text-muted hover:bg-snow'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="grid grid-cols-3 gap-1 rounded-2xl bg-snow p-1" role="tablist" aria-label="Critério">
           {METRICS.map(m => (
             <button
@@ -159,7 +228,7 @@ export default function RankingPage() {
               {p.label}
             </button>
           ))}
-          {org && org.departments.length > 0 && (
+          {scope === 'pessoas' && org && org.departments.length > 0 && (
             <>
               <span className="mx-1 w-0.5 shrink-0 bg-line" />
               <button onClick={() => setView(view === 'pessoas' ? 'departamentos' : 'pessoas')} className={`chip ${view === 'departamentos' ? 'border-accent! bg-accent-light! text-accent-dark!' : ''}`}>
@@ -178,7 +247,9 @@ export default function RankingPage() {
 
       <div className="px-4 pt-2 lg:px-0">
         {error && <p className="card mt-4 p-4 text-center font-bold text-danger">{error}</p>}
-        {entries === null && !error ? (
+        {scope === 'empresas' ? (
+          <OrgList list={orgs} metric={metric} />
+        ) : entries === null && !error ? (
           <div className="flex justify-center py-16"><Mascot size={80} className="animate-bounce-soft" /></div>
         ) : view === 'departamentos' && org ? (
           <ol className="card mt-4 divide-y-2 divide-line">
@@ -201,7 +272,9 @@ export default function RankingPage() {
           <div className="flex flex-col items-center py-14 text-center">
             <Mascot size={96} mood="sleepy" />
             <p className="mt-4 text-lg font-black text-ink">Ainda ninguém no ranking</p>
-            <p className="mt-1 text-sm font-semibold text-muted">Liga o cronómetro e conclui tarefas para aparecer aqui.</p>
+            <p className="mt-1 text-sm font-semibold text-muted">
+              {org?.isCompany ? 'Sem actividade da equipa neste período.' : 'Liga o cronómetro e conclui tarefas para aparecer aqui.'}
+            </p>
           </div>
         ) : (
           <>

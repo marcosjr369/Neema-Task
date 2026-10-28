@@ -13,7 +13,7 @@ import Mascot from '../ui/Mascot'
 
 /**
  * Lembrete de inactividade com a app aberta: sem cronómetro a correr durante o intervalo
- * escolhido, o Marcos reclama (notificação + janela no ecrã). Com a app fechada, quem envia
+ * escolhido, a Udacha reclama (notificação + janela no ecrã). Com a app fechada, quem envia
  * é o servidor por push (lib/server/reminders.ts), com as mesmas regras.
  */
 export default function IdleNudge() {

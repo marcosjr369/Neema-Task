@@ -2,13 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, errorText } from '../lib/api'
-import { assignableMembers, canManageRole, managedDepartmentIds } from '../lib/org'
+import { assignableMembers, canManageRole, isCompanyAccount, managedDepartmentIds, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
 type OrgData = { org: Org; me: Member; departments: Department[]; members: Member[] }
 
 type OrgValue = OrgData & {
   base: string
+  /** sessão iniciada com a conta da própria empresa (gere, mas não é funcionário) */
+  isCompany: boolean
   isAdmin: boolean
   isManager: boolean
   /** departamentos geridos ('all' = admin) */
@@ -83,12 +85,14 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     sendPresence(status)
   }, [sendPresence])
 
-  // Abrir a app conta como entrada: fica "a trabalhar" até mudar (só depois do consentimento)
-  const consented = !!data.me.consentAt
+  // Abrir a app conta como entrada: fica "a trabalhar" até mudar (só depois do consentimento).
+  // A conta da empresa não tem estado.
+  const isCompany = isCompanyAccount(data.me, data.org)
+  const tracksPresence = !!data.me.consentAt && !isCompany
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- registo de entrada
-    if (consented) setPresence('trabalho')
-  }, [consented, setPresence])
+    if (tracksPresence) setPresence('trabalho')
+  }, [tracksPresence, setPresence])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carregar do servidor
@@ -120,16 +124,19 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   const removeTeamTask = useCallback((id: string) => setTeamTasks(ts => ts.filter(t => t.id !== id)), [])
 
   const value = useMemo<OrgValue>(() => {
-    const members = data.members.length ? data.members : [data.me]
+    const all = data.members.length ? data.members : [data.me]
+    // "members" são as pessoas da equipa; a conta da empresa só aparece por id (ex.: quem atribuiu)
+    const members = teamMembers(all, data.org)
     return {
       ...data,
       members,
       base,
+      isCompany,
       isAdmin: data.me.role === 'admin',
       isManager,
       scope: managedDepartmentIds(data.departments, data.me),
       assignable: assignableMembers(members.filter(m => m.status === 'activo' || m.status === 'pendente'), data.departments, data.me),
-      memberById: id => members.find(m => m.id === id),
+      memberById: id => all.find(m => m.id === id),
       deptById: id => data.departments.find(d => d.id === id),
       refresh,
       presence,
@@ -140,7 +147,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       removeTeamTask,
       error,
     }
-  }, [data, base, isManager, refresh, presence, setPresence, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error])
+  }, [data, base, isCompany, isManager, refresh, presence, setPresence, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error])
 
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>
 }

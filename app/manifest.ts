@@ -3,8 +3,8 @@ import type { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Marcos Tasks',
-    short_name: 'Marcos Tasks',
+    name: 'Udacha',
+    short_name: 'Udacha',
     description: 'Tarefas, cronómetro de foco, pausas e estatísticas',
     lang: 'pt',
     start_url: '/',

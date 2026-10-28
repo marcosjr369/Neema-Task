@@ -1,17 +1,17 @@
-import { body, fail, handle, requireUser } from '../../../lib/server/api'
+import { body, fail, handle, requirePersonal } from '../../../lib/server/api'
 import { userScope } from '../../../lib/server/scopes'
 import { mutate, read } from '../../../lib/server/store'
 import { buildTask, cleanTaskFields, pickId, type TaskPatch } from '../../../lib/server/tasks'
 
 /** Tarefas do espaço pessoal */
 export const GET = handle(async () => {
-  const user = await requireUser()
+  const user = await requirePersonal()
   const db = await read(userScope(user.id, { tasks: true }))
   return { tasks: db.tasks.filter(t => t.ownerId === user.id && !t.orgId) }
 })
 
 export const POST = handle(async req => {
-  const user = await requireUser()
+  const user = await requirePersonal()
   const input = await body<TaskPatch & { id?: string }>(req)
   if (!input.title?.trim()) fail(400, 'Indica o título da tarefa')
   const fields = cleanTaskFields(input)

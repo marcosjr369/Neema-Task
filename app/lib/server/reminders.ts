@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS, type User } from '../../types'
 import { formatDuration } from '../stats'
 import { nudgeMessage } from '../nudges'
+import { isCompanyAccount } from '../org'
 import { effectivePresence } from './org'
 import { pushConfigured, sendToUser } from './push'
 import { mutate, read, type DB } from './store'
@@ -28,6 +29,9 @@ export function reminderFor(db: DB, user: User, now = Date.now()) {
   if (h < settings.reminderStartHour || h >= settings.reminderEndHour) return null
   const dayStart = now - ((h * 60 + m) * 60 + s) * 1000
   const workStart = dayStart + settings.reminderStartHour * 3600 * 1000
+
+  // a conta de uma empresa gere a equipa, não regista tempo
+  if (db.members.some(mb => mb.userId === user.id && isCompanyAccount(mb, db.orgs.find(o => o.id === mb.orgId)))) return null
 
   // cronómetro a correr em qualquer espaço → está a trabalhar
   if (Object.values(user.timers ?? {}).some(t => t.segmentStart)) return null
@@ -65,6 +69,7 @@ export async function runReminders(now = Date.now()) {
     const userIds = [...new Set(l.db.push.map(p => p.userId))]
     await l.load('users', { id: userIds })
     await l.load('members', { user_id: userIds })
+    await l.load('orgs', { id: l.db.members.map(m => m.orgId) })
     const since = now - 48 * 3600 * 1000
     await l.load('sessions', { user_id: userIds, start_at: { gte: since } })
     await l.load('sessions', { member_id: l.db.members.map(m => m.id), start_at: { gte: since } })
@@ -72,7 +77,7 @@ export async function runReminders(now = Date.now()) {
   const withPush = new Set(db.push.map(p => p.userId))
   let sent = 0
   for (const user of db.users) {
-    if (!withPush.has(user.id)) continue
+    if (!withPush.has(user.id) || user.disabled) continue
     const msg = reminderFor(db, user, now)
     if (!msg) continue
     const delivered = await sendToUser(user.id, {

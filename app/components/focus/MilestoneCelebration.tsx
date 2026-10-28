@@ -51,7 +51,7 @@ export default function MilestoneCelebration() {
     if (goal && !before.goal) {
       found.push({
         id: `goal-${day}`, icon: TargetIcon, color: '#12B5A6',
-        title: 'Meta diária cumprida!', subtitle: `Focaste ${formatDuration(today)} hoje. O Marcos está orgulhoso!`,
+        title: 'Meta diária cumprida!', subtitle: `Focaste ${formatDuration(today)} hoje. A Udacha está orgulhosa!`,
       })
     }
     if (level > before.level) {

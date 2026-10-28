@@ -18,6 +18,8 @@ import InstallCard from '../components/ui/InstallCard'
 import Avatar from '../components/ui/Avatar'
 import Modal from '../components/ui/Modal'
 import AccountSection from './AccountSection'
+import CompanyProfile from './CompanyProfile'
+import { useOrg } from '../context/OrgContext'
 import LogoutButton from '../components/account/LogoutButton'
 
 type Tab = 'resumo' | 'definicoes' | 'conta'
@@ -265,7 +267,7 @@ function Preferences() {
       <section>
         <h2 className="mb-1 text-lg font-black text-ink">Lembretes para voltar ao foco</h2>
         <p className="mb-3 text-sm font-semibold text-muted">
-          Se ficares este tempo sem o cronómetro a correr, o Marcos fica triste e avisa-te.
+          Se ficares este tempo sem o cronómetro a correr, a Udacha fica triste e avisa-te.
         </p>
         <div className="card divide-y-2 divide-line">
           <div className="px-4 py-3">
@@ -293,7 +295,7 @@ function Preferences() {
           )}
         </div>
         <p className="mt-2 text-xs font-semibold text-muted">
-          Com a app aberta, o aviso aparece no ecrã. Para receberes também com a app fechada, activa em baixo. Depois de cumprires a meta diária, o Marcos deixa-te em paz.
+          Com a app aberta, o aviso aparece no ecrã. Para receberes também com a app fechada, activa em baixo. Depois de cumprires a meta diária, a Udacha deixa-te em paz.
         </p>
         {settings.idleReminderMinutes > 0 && <div className="mt-3"><PushCard /></div>}
       </section>
@@ -352,6 +354,12 @@ function AccountTab() {
 }
 
 export default function ProfilePage() {
+  const org = useOrg()
+  // a conta da empresa não tem progresso próprio: o perfil mostra a equipa
+  return org?.isCompany ? <CompanyProfile /> : <PersonProfile />
+}
+
+function PersonProfile() {
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab') as Tab | null
     return t && TABS.some(x => x.id === t) ? t : 'resumo'

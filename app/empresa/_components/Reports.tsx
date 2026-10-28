@@ -167,7 +167,7 @@ export default function Reports() {
           </div>
           {rows.length === 0 && <p className="card p-6 text-center font-semibold text-muted">Sem funcionários neste filtro.</p>}
           <p className="text-xs font-semibold text-muted">
-            Tempo activo = {ACTIVE.map(s => PRESENCE_CONFIG[s].label.toLowerCase()).join(' + ')}. “Em tarefas” é o tempo contado pelo cronómetro. Total do período: {formatDuration(rows.reduce((a, r) => a + r.active, 0))} activo.
+            Total do período: {formatDuration(rows.reduce((a, r) => a + r.active, 0))} activo.
           </p>
         </>
       )}

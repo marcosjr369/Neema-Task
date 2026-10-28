@@ -7,6 +7,7 @@ import { useOrgRequired } from '../../context/OrgContext'
 import { formatDeadline, formatDuration, startOfDay } from '../../lib/stats'
 import { isCompleted } from '../../lib/points'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES } from '../../types'
+import type { SectionId } from '../../lib/nav'
 import Avatar from '../../components/ui/Avatar'
 import { overworkAlerts, PresenceBar, presenceTotals, useTeamActivity } from './shared'
 import { PresenceGlyph } from '../../components/ui/icons'
@@ -28,7 +29,7 @@ function Kpi({ icon, value, label, color, href }: { icon: React.ReactNode; value
   )
 }
 
-export default function Overview({ goTo }: { goTo: (tab: string) => void }) {
+export default function Overview({ goTo }: { goTo: (section: SectionId) => void }) {
   const org = useOrgRequired()
   const { now } = useApp()
   const dayStart = startOfDay(now)

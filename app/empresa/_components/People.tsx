@@ -79,7 +79,6 @@ function InviteCard() {
     <section className="card flex flex-col gap-4 border-b-4 p-4 sm:flex-row sm:items-center">
       <div className="flex-1">
         <h2 className="font-black text-ink">Convidar para a equipa</h2>
-        <p className="text-sm font-semibold text-muted">Partilha o link ou o código. Quem entrar fica como funcionário.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => copy(org.org.inviteCode)} className="rounded-xl border-2 border-dashed border-accent bg-accent-light px-4 py-2 font-mono text-lg font-black tracking-[0.2em] text-accent-dark cursor-pointer" title="Copiar código">
@@ -180,7 +179,8 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
       onClose={onClose}
       footer={
         <div className="flex gap-2">
-          {member && !isSelf && (
+          {/* o dono (quem criou a empresa) não pode ser removido */}
+          {member && !isSelf && member.userId !== org.org.createdBy && (
             <button type="button" onClick={remove} disabled={busy} className="btn btn-ghost px-4 text-danger" aria-label="Remover">
               <TrashIcon size={18} />
             </button>
@@ -199,7 +199,6 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
         <div>
           <label className="label" htmlFor="m-email">Email</label>
           <input id="m-email" type="email" className="input" value={email} onChange={e => setEmail(e.target.value)} disabled={!!member} required />
-          {!member && <p className="mt-1 text-xs font-semibold text-muted">A pessoa entra com este email (Google) e fica logo ligada à empresa.</p>}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -227,13 +226,6 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
               </button>
             ))}
           </div>
-          <p className="mt-2 text-xs font-semibold text-muted">
-            {role === 'supervisor'
-              ? 'Cria e atribui tarefas, aprova trabalho e vê o tempo do seu departamento.'
-              : role === 'admin'
-                ? 'Acesso total: funcionários, departamentos, relatórios e definições.'
-                : 'Vê as suas tarefas, regista o tempo e participa no ranking.'}
-          </p>
         </div>
         {member && (
           <Link href={`/empresa/membro/${member.id}`} className="block text-sm font-extrabold uppercase tracking-wide text-accent">
@@ -439,7 +431,7 @@ export default function People() {
 
       {org.isAdmin && org.members.some(m => m.status === 'pendente') && (
         <p className="flex items-center gap-2 text-xs font-semibold text-muted">
-          <CopyIcon size={14} /> Convites pendentes ficam activos quando a pessoa entrar com o email indicado.
+          <CopyIcon size={14} />
           <button onClick={() => copy(`${window.location.origin}/entrar`)} className="font-extrabold text-accent underline cursor-pointer">Copiar link de entrada</button>
         </p>
       )}

@@ -8,7 +8,7 @@ import {
   type Icon,
 } from '@phosphor-icons/react'
 import { useAccount } from '../context/AccountContext'
-import { errorText } from '../lib/api'
+import { api, errorText } from '../lib/api'
 import { ORG_SIZES, SECTORS } from '../lib/org'
 import Mascot from '../components/ui/Mascot'
 import Confetti from '../components/ui/Confetti'
@@ -17,14 +17,24 @@ import { CLERK_APPEARANCE } from '../components/account/clerkAppearance'
 
 /*
  * Entrada e criação de conta, em passos curtos:
- *   olá → como funciona → login → tipo de uso → (pessoal: meta diária | empresa: criar / código) → pronto
- * Quem já tem conta e espaço escolhido vai directo para a app.
+ *   pessoal: olá → como funciona → tipo → login → meta diária → pronto
+ *   empresa: … → tipo → dados da empresa (nome, área, departamentos) → login → cria a empresa → pronto
+ *   convite: … → tipo → código (valida se existe) → empresa encontrada → login → entra na equipa → pronto
+ * O tipo de conta escolhe-se antes do login e fica fixo: contas pessoais e de empresa não se misturam.
+ * A conta que cria a empresa passa a ser a conta da empresa; os funcionários entram por convite (código, link ou email).
+ * Quem já tem a conta configurada vai directo para a app.
  */
 
-type Step = 'ola' | 'como' | 'login' | 'tipo' | 'meta' | 'empresa' | 'criar' | 'codigo' | 'pronto'
+type Step = 'ola' | 'como' | 'tipo' | 'codigo' | 'convite' | 'criar' | 'login' | 'meta' | 'empresa' | 'pronto'
+
+/** Tipo escolhido antes do login (vai no URL de regresso do Clerk) */
+type Use = 'personal' | 'org' | 'invite'
+const USE_PARAM: Record<Use, string> = { personal: 'pessoal', org: 'empresa', invite: 'convite' }
+const parseUse = (v: string | null): Use | null => (Object.keys(USE_PARAM) as Use[]).find(k => USE_PARAM[k] === v) ?? null
+
 type Done = { kind: 'personal' } | { kind: 'created'; code: string; name: string } | { kind: 'joined'; name: string }
 
-const PROGRESS: Record<Step, number> = { ola: 0.04, como: 0.18, login: 0.34, tipo: 0.5, meta: 0.72, empresa: 0.66, criar: 0.84, codigo: 0.84, pronto: 1 }
+const PROGRESS: Record<Step, number> = { ola: 0.04, como: 0.14, tipo: 0.26, codigo: 0.42, convite: 0.56, criar: 0.5, login: 0.72, meta: 0.86, empresa: 0.5, pronto: 1 }
 const PUBLIC_DOMAINS = ['gmail.com', 'googlemail.com', 'hotmail.com', 'outlook.com', 'live.com', 'yahoo.com', 'icloud.com', 'sapo.pt']
 
 const GOALS = [
@@ -140,11 +150,11 @@ function Backdrop() {
   )
 }
 
-const TITLE = 'marcos tasks'
+const TITLE = 'udacha'
 
-/** Primeiro ecrã: o Marcos a saltar e a acenar, ícones à volta e o título a entrar letra a letra */
+/** Primeiro ecrã: a Udacha a saltar e a acenar, ícones à volta e o título a entrar letra a letra */
 function Welcome({ className }: { className: string }) {
-  const { shown, done } = useTypewriter('Olá! Eu sou o Marcos!', 45)
+  const { shown, done } = useTypewriter('Olá! Eu sou a Udacha!', 45)
   return (
     <div className={`my-auto flex flex-col items-center text-center ${className}`}>
       <div className="relative flex h-80 w-full max-w-sm items-end justify-center pb-4">
@@ -223,20 +233,36 @@ function NextSteps({ done, goal }: { done: Done; goal: number | null }) {
 export default function EnterPage() {
   const router = useRouter()
   const account = useAccount()
-  const { user, suggestions } = account
+  const { user, suggestions, accountType, businessRole, needsSetup } = account
+  // conta de empresa sem empresa: a conta da empresa volta a criá-la; um funcionário só entra
+  // com convite; se ainda não se sabe qual é, pergunta
+  const businessStart: Step =
+    businessRole === 'company' ? 'criar' : businessRole === 'employee' && !suggestions.length ? 'codigo' : 'empresa'
   const [params] = useState(() => new URLSearchParams(window.location.search))
-  const inviteCode = params.get('codigo') ?? ''
   const forced = !!params.get('passo')
+  // de volta do Clerk (ou de um link de convite), o URL traz o que já foi escolhido antes do login
+  const fromUrl = {
+    code: params.get('codigo') ?? '',
+    use: params.get('codigo') ? ('invite' as Use) : parseUse(params.get('tipo')),
+    orgName: params.get('nome') ?? '',
+  }
+  // há um passo a concluir logo a seguir ao login (criar a empresa ou entrar com o código)
+  const pending = (fromUrl.use === 'org' && !!fromUrl.orgName) || (fromUrl.use === 'invite' && !!fromUrl.code)
 
   const [stack, setStack] = useState<Step[]>(() => {
     if (!user) {
-      // vindo da landing: "Começar agora" → como funciona; "Já tenho conta" → login
-      if (inviteCode || window.location.hash.startsWith('#/') || params.get('passo') === 'login') return ['login']
+      // de volta do Clerk a meio do registo ("#/…" no URL) ou "Já tenho conta" na landing
+      if (window.location.hash.startsWith('#/') || params.get('passo') === 'login') return ['login']
+      if (fromUrl.code) return ['codigo'] // link de convite: valida o código primeiro
+      if (fromUrl.use === 'org' && fromUrl.orgName) return ['login']
       if (params.get('passo') === 'como') return ['como']
       return ['ola']
     }
-    if (inviteCode) return ['codigo']
-    if (params.get('passo') === 'empresa') return ['empresa']
+    if (pending) return ['login'] // acabou de fazer login: o efeito abaixo continua
+    if (params.get('passo') === 'criar') return ['criar']
+    if (params.get('passo') === 'codigo') return ['codigo']
+    // conta de empresa que ficou sem empresa
+    if (accountType === 'business') return [businessStart]
     return ['tipo']
   })
   const [dir, setDir] = useState<'right' | 'left'>('right')
@@ -246,15 +272,20 @@ export default function EnterPage() {
   const [errorKey, setErrorKey] = useState(0)
   const [done, setDone] = useState<Done | null>(null)
 
-  // escolhas
-  const [use, setUse] = useState<'personal' | 'org' | null>(null)
+  // escolhas (guardadas no URL de regresso do login)
+  const [use, setUse] = useState<Use | null>(fromUrl.use)
   const [goal, setGoal] = useState<number | null>(null)
   const [orgPath, setOrgPath] = useState<'criar' | 'codigo' | null>(null)
-  const [orgName, setOrgName] = useState('')
-  const [sector, setSector] = useState('')
-  const [size, setSize] = useState('')
-  const [departments, setDepartments] = useState('')
-  const [code, setCode] = useState(inviteCode)
+  const [orgName, setOrgName] = useState(fromUrl.orgName)
+  const [sector, setSector] = useState(params.get('sector') ?? '')
+  const [size, setSize] = useState(params.get('tam') ?? '')
+  const [departments, setDepartments] = useState(params.get('deps') ?? '')
+  const [code, setCode] = useState(fromUrl.code)
+  /** empresa do código, depois de validado */
+  const [found, setFound] = useState<{ name: string; sector: string } | null>(null)
+  // conta pessoal que entra numa empresa: tem de aceitar passar a conta de empresa
+  const [convert, setConvert] = useState(false)
+  const converting = accountType === 'personal'
 
   const go = (s: Step) => {
     setDir('right')
@@ -262,9 +293,9 @@ export default function EnterPage() {
     setStack(st => [...st, s])
   }
   const back = () => {
-    // primeiro passo sem sessão: volta à página de apresentação
+    // primeiro passo: sem sessão volta à apresentação; com a conta já configurada volta à app
     if (stack.length <= 1) {
-      if (!user) router.push('/')
+      if (!user || !needsSetup) router.push('/')
       return
     }
     setDir('left')
@@ -272,82 +303,172 @@ export default function EnterPage() {
     setStack(st => (st.length > 1 ? st.slice(0, -1) : st))
   }
 
-  // Quem volta do Google (ou abre /entrar) já com a app configurada segue directo para dentro
-  const routed = useRef(false)
-  useEffect(() => {
-    if (routed.current || !user?.workspace || forced || inviteCode || stack.length !== 1 || step !== 'tipo') return
-    routed.current = true
-    router.replace('/')
-  }, [user, step, stack.length, inviteCode, forced, router])
-
-  // Depois do login no Clerk (a conta chega pelo AccountContext):
-  // convite → código; conta já usada → app; conta nova → escolher o tipo
-  useEffect(() => {
-    if (step !== 'login' || !user) return
-    if (user.workspace && !inviteCode) {
-      router.replace('/')
-      return
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- avança quando o login no Clerk termina
-    go(inviteCode ? 'codigo' : 'tipo')
-  }, [step, user, inviteCode, router])
-
+  const fail = (err: unknown) => {
+    setError(errorText(err))
+    setErrorKey(k => k + 1)
+  }
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
     setError('')
     try {
       await fn()
     } catch (err) {
-      setError(errorText(err))
-      setErrorKey(k => k + 1)
+      fail(err)
     }
     setBusy(false)
   }
 
-  const first = user?.name.split(' ')[0] ?? ''
   const emailDomain = user?.email.split('@')[1] ?? ''
 
-  // ─── O que o Marcos diz em cada passo ──────────────────────────────────────
+  /** Confirma que o código existe e é de uma empresa registada */
+  const validate = async (value: string) => {
+    const org = await api<{ name: string; sector: string }>(`/api/orgs/convite?codigo=${encodeURIComponent(value)}`)
+    setFound(org)
+    go('convite')
+  }
+  const createOrg = async () => {
+    const res = await account.createOrg({
+      name: orgName,
+      sector,
+      size: size || undefined,
+      domain: emailDomain && !PUBLIC_DOMAINS.includes(emailDomain) ? emailDomain : undefined,
+      departments: departments.split(/[,;\n]/).map(d => d.trim()).filter(Boolean),
+    })
+    setDone({ kind: 'created', code: res.org.inviteCode, name: res.org.name })
+    go('pronto')
+  }
+  const joinOrg = async () => {
+    const res = await account.joinOrg({ code, convert: converting })
+    setDone({ kind: 'joined', name: res.org.name })
+    go('pronto')
+  }
+
+  // Link de convite (/convite/ABC123): valida o código mal a página abre
+  const checked = useRef(false)
+  useEffect(() => {
+    if (checked.current || step !== 'codigo' || !fromUrl.code || found) return
+    checked.current = true
+    run(() => validate(fromUrl.code))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só uma vez, ao abrir
+  }, [step])
+
+  // Quem abre /entrar já com a conta configurada segue directo para dentro
+  const routed = useRef(false)
+  useEffect(() => {
+    if (routed.current || !user || needsSetup || forced || pending || stack.length !== 1 || step !== 'tipo') return
+    routed.current = true
+    router.replace('/')
+  }, [user, needsSetup, step, stack.length, pending, forced, router])
+
+  // Depois do login (a conta chega pelo AccountContext) conclui o que foi escolhido antes:
+  // empresa → cria-a com os dados já preenchidos; convite → entra na empresa; pessoal → meta diária
+  const continued = useRef(false)
+  useEffect(() => {
+    if (step !== 'login' || !user || continued.current) return
+    continued.current = true
+    if (use === 'invite' && code) {
+      // conta pessoal que já existia: mostra a empresa e pede para confirmar a conversão
+      if (accountType === 'personal') run(() => validate(code))
+      else run(joinOrg)
+      return
+    }
+    if (!needsSetup) {
+      router.replace('/')
+      return
+    }
+    if (use === 'org' && orgName) {
+      setBusy(true)
+      createOrg()
+        .catch(err => { go('criar'); fail(err) }) // ex.: conta pessoal já existente
+        .finally(() => setBusy(false))
+      return
+    }
+    // avança quando o login no Clerk termina
+    go(accountType === 'business' ? businessStart : use === 'personal' ? 'meta' : 'tipo')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, quando a conta chega
+  }, [step, user])
+
+  const first = user?.name.split(' ')[0] ?? ''
+
+  // ─── O que a Udacha diz em cada passo ──────────────────────────────────────
   const speech: Record<Step, string> = {
-    ola: 'Olá! Eu sou o Marcos.',
+    ola: 'Olá! Eu sou a Udacha.',
     como: 'É simples. Vê como funciona:',
-    login: inviteCode ? 'Recebeste um convite! Entra para te juntares à equipa.' : 'Vamos criar a tua conta. Leva só um segundo!',
-    tipo: `Bem-vindo, ${first}! Como vais usar a app?`,
+    tipo: user ? `Bem-vindo, ${first}! Que tipo de conta queres?` : 'Primeiro: que tipo de conta queres criar?',
+    codigo:
+      businessRole === 'employee'
+        ? 'Já não estás em nenhuma empresa. Escreve o código do convite da tua empresa.'
+        : 'Escreve o código que a tua empresa te deu. Vou confirmar se existe.',
+    convite: found ? `Encontrei! É o convite da ${found.name}.` : 'Encontrei a empresa!',
+    criar: businessRole === 'company' ? 'Esta conta é de empresa, mas a empresa ainda não existe. Fala-me dela.' : 'Primeiro, fala-me da tua empresa.',
+    login: busy
+      ? 'Um segundo, estou a preparar tudo…'
+      : use === 'invite' ? `Agora entra ou cria a tua conta para te juntares à ${found?.name ?? 'equipa'}.`
+        : use === 'org' ? `Agora cria a conta da ${orgName || 'empresa'}.`
+          : use === 'personal' ? 'Boa! Agora cria a tua conta pessoal.'
+            : 'Bem-vindo de volta! Entra na tua conta.',
     meta: 'Quanto tempo queres focar por dia?',
-    empresa: 'Boa! Vais criar a empresa ou juntar-te a uma?',
-    criar: 'Conta-me um pouco sobre a empresa.',
-    codigo: 'Escreve o código que o teu supervisor te deu.',
+    empresa: suggestions.length
+      ? 'A tua empresa já usa a app! Queres juntar-te?'
+      : 'Esta conta ainda não está ligada a nenhuma empresa. Esta conta é a empresa ou é de um funcionário?',
     pronto:
       done?.kind === 'created' ? `A ${done.name} está pronta!` : done?.kind === 'joined' ? `Entraste na ${done.name}!` : 'Tudo pronto! Vamos a isso?',
   }
-  const mood = error ? 'sad' : step === 'pronto' ? 'excited' : step === 'criar' || step === 'codigo' ? 'thinking' : 'happy'
+  const mood = error ? 'sad' : step === 'pronto' || step === 'convite' ? 'excited' : step === 'criar' || step === 'codigo' ? 'thinking' : 'happy'
 
   // ─── Botão principal de cada passo ──────────────────────────────────────
   let primary: { label: string; onClick?: () => void; form?: string; disabled?: boolean } | null = null
   let secondary: { label: string; onClick: () => void } | null = null
   if (step === 'ola') {
     primary = { label: 'Começar', onClick: () => go('como') }
-    secondary = { label: 'Já tenho conta', onClick: () => go('login') }
-  }
-  else if (step === 'como') primary = { label: 'Continuar', onClick: () => go('login') }
-  else if (step === 'tipo') primary = { label: 'Continuar', disabled: !use, onClick: () => go(use === 'org' ? 'empresa' : 'meta') }
-  else if (step === 'meta') {
+    secondary = { label: 'Já tenho conta', onClick: () => { setUse(null); go('login') } }
+  } else if (step === 'como') primary = { label: 'Continuar', onClick: () => go('tipo') }
+  else if (step === 'tipo') {
+    // pessoal → login (ou meta, se já tem sessão); empresa → dados da empresa; convite → código
     primary = {
       label: 'Continuar',
-      disabled: !goal,
-      onClick: () => {
-        account.updateSettings({ dailyGoalMinutes: goal! })
-        account.setWorkspace({ kind: 'personal' })
-        setDone({ kind: 'personal' })
-        go('pronto')
-      },
+      disabled: !use,
+      onClick: () => go(use === 'org' ? 'criar' : use === 'invite' ? 'codigo' : user ? 'meta' : 'login'),
+    }
+  } else if (step === 'codigo') {
+    primary = { label: busy ? 'A confirmar…' : 'Confirmar código', form: 'f-codigo', disabled: busy || code.trim().length < 4 }
+  } else if (step === 'convite') {
+    primary = user
+      ? { label: busy ? 'A entrar…' : 'Entrar na equipa', onClick: () => run(joinOrg), disabled: busy || (converting && !convert) }
+      : { label: 'Continuar', onClick: () => go('login') }
+  } else if (step === 'criar') {
+    primary = { label: busy ? 'A criar…' : user ? 'Criar empresa' : 'Continuar', form: 'f-criar', disabled: busy || !orgName.trim() }
+  } else if (step === 'meta') {
+    primary = {
+      label: busy ? 'A guardar…' : 'Continuar',
+      disabled: !goal || busy,
+      onClick: () =>
+        run(async () => {
+          await account.choosePersonal()
+          account.updateSettings({ dailyGoalMinutes: goal! })
+          setDone({ kind: 'personal' })
+          go('pronto')
+        }),
     }
   } else if (step === 'empresa') primary = { label: 'Continuar', disabled: !orgPath, onClick: () => go(orgPath!) }
-  else if (step === 'criar') primary = { label: busy ? 'A criar…' : 'Criar empresa', form: 'f-criar', disabled: busy || !orgName.trim() }
-  else if (step === 'codigo') primary = { label: busy ? 'A entrar…' : 'Entrar na equipa', form: 'f-codigo', disabled: busy || code.trim().length < 4 }
   else if (step === 'pronto') {
-    primary = { label: 'Vamos lá!', onClick: () => router.replace(done?.kind === 'created' ? '/empresa?tab=pessoas' : '/') }
+    primary = { label: 'Vamos lá!', onClick: () => router.replace(done?.kind === 'created' ? '/empresa/pessoas' : '/') }
   }
+
+  // de volta do Clerk: o tipo de conta e o que já foi preenchido (código ou dados da empresa)
+  const returnUrl = (() => {
+    const q = new URLSearchParams()
+    if (use) q.set('tipo', USE_PARAM[use])
+    if (use === 'invite' && code) q.set('codigo', code)
+    if (use === 'org' && orgName.trim()) {
+      q.set('nome', orgName.trim())
+      if (sector) q.set('sector', sector)
+      if (size) q.set('tam', size)
+      if (departments.trim()) q.set('deps', departments.trim())
+    }
+    const s = q.toString()
+    return s ? `/entrar?${s}` : '/entrar'
+  })()
 
   const animation = dir === 'right' ? 'animate-step-right' : 'animate-step-left'
 
@@ -360,7 +481,7 @@ export default function EnterPage() {
       <header className="relative mx-auto flex w-full max-w-xl items-center gap-4 px-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
         <button
           onClick={back}
-          disabled={step === 'pronto' || (stack.length <= 1 && !!user)}
+          disabled={step === 'pronto' || (stack.length <= 1 && !!user && needsSetup)}
           aria-label="Voltar"
           className="rounded-xl p-1 text-muted transition-opacity hover:text-body disabled:opacity-0 cursor-pointer"
         >
@@ -408,14 +529,23 @@ export default function EnterPage() {
                   </div>
                 ))}
 
-              {step === 'login' && (
+              {/* já com sessão (a concluir a empresa ou o convite): a Udacha em vez do formulário */}
+              {step === 'login' && user && (
+                <div className="flex justify-center py-6"><Mascot size={80} className="animate-bounce-soft" /></div>
+              )}
+              {step === 'login' && !user && (
                 <div className="animate-rise" style={{ animationDelay: '150ms' }}>
+                  {use === 'org' && orgName && (
+                    <p className="mb-3 flex items-center justify-center gap-2 text-sm font-bold text-muted">
+                      <BuildingsIcon size={18} className="text-accent" /> A empresa <b className="text-ink">{orgName}</b> é criada logo a seguir
+                    </p>
+                  )}
                   <SignIn
                     routing="hash"
                     withSignUp
                     oauthFlow="redirect"
-                    forceRedirectUrl={inviteCode ? `/entrar?codigo=${inviteCode}` : '/entrar'}
-                    signUpForceRedirectUrl={inviteCode ? `/entrar?codigo=${inviteCode}` : '/entrar'}
+                    forceRedirectUrl={returnUrl}
+                    signUpForceRedirectUrl={returnUrl}
                     appearance={CLERK_APPEARANCE}
                   />
                 </div>
@@ -423,11 +553,9 @@ export default function EnterPage() {
 
               {step === 'tipo' && (
                 <>
-                  <Choice icon={UserIcon} color="#7B61FF" title="Só para mim" desc="As minhas tarefas, foco e ranking global" selected={use === 'personal'} onClick={() => setUse('personal')} delay={200} />
-                  <Choice icon={BuildingsIcon} color="#12B5A6" title="Com a minha empresa" desc="Equipas, tarefas atribuídas e aprovações" selected={use === 'org'} onClick={() => setUse('org')} delay={320} />
-                  <p className="pt-1 text-center text-xs font-semibold text-muted animate-rise" style={{ animationDelay: '440ms' }}>
-                    Podes ter os dois e trocar a qualquer momento.
-                  </p>
+                  <Choice icon={UserIcon} color="#7B61FF" title="Pessoal" desc="Só para mim: tarefas, foco e ranking entre contas pessoais" selected={use === 'personal'} onClick={() => setUse('personal')} delay={200} />
+                  <Choice icon={BuildingsIcon} color="#12B5A6" title="Empresa" desc="Crio a conta da empresa, convido a equipa e giro tudo" selected={use === 'org'} onClick={() => setUse('org')} delay={320} />
+                  <Choice icon={KeyIcon} color="#FF8A3D" title="Tenho um convite" desc="A minha empresa deu-me um código ou um link" selected={use === 'invite'} onClick={() => setUse('invite')} delay={440} />
                 </>
               )}
 
@@ -459,7 +587,7 @@ export default function EnterPage() {
 
               {step === 'empresa' && (
                 <>
-                  {suggestions.map((s, i) => (
+                  {businessRole !== 'company' && suggestions.map((s, i) => (
                     <Choice
                       key={s.id}
                       icon={SparkleIcon}
@@ -476,8 +604,13 @@ export default function EnterPage() {
                       delay={150 + i * 100}
                     />
                   ))}
-                  <Choice icon={PlusCircleIcon} color="#12B5A6" title="Criar a empresa" desc="Fico como administrador e convido a equipa" selected={orgPath === 'criar'} onClick={() => setOrgPath('criar')} delay={200 + suggestions.length * 100} />
-                  <Choice icon={KeyIcon} color="#7B61FF" title="Tenho um código" desc="O meu supervisor enviou-me um convite" selected={orgPath === 'codigo'} onClick={() => setOrgPath('codigo')} delay={320 + suggestions.length * 100} />
+                  {/* só aparece o que esta conta pode fazer: a empresa cria, o funcionário entra com convite */}
+                  {businessRole !== 'employee' && (
+                    <Choice icon={BuildingsIcon} color="#12B5A6" title="Esta conta é a empresa" desc="Criar a empresa e convidar a equipa" selected={orgPath === 'criar'} onClick={() => setOrgPath('criar')} delay={200 + suggestions.length * 100} />
+                  )}
+                  {businessRole !== 'company' && (
+                    <Choice icon={KeyIcon} color="#7B61FF" title="Sou funcionário" desc="Entrar com o código de convite da minha empresa" selected={orgPath === 'codigo'} onClick={() => setOrgPath('codigo')} delay={320 + suggestions.length * 100} />
+                  )}
                 </>
               )}
 
@@ -486,24 +619,16 @@ export default function EnterPage() {
                   id="f-criar"
                   onSubmit={e => {
                     e.preventDefault()
-                    run(async () => {
-                      const res = await account.createOrg({
-                        name: orgName,
-                        sector,
-                        size: size || undefined,
-                        domain: emailDomain && !PUBLIC_DOMAINS.includes(emailDomain) ? emailDomain : undefined,
-                        departments: departments.split(/[,;\n]/).map(d => d.trim()).filter(Boolean),
-                      })
-                      setDone({ kind: 'created', code: res.org.inviteCode, name: res.org.name })
-                      go('pronto')
-                    })
+                    // sem sessão: guarda os dados (vão no URL de regresso) e vai ao login; com sessão: cria já
+                    if (user) run(createOrg)
+                    else go('login')
                   }}
                   className="space-y-5"
                 >
                   <Field label="Nome da empresa" delay={150}>
                     <input className="input py-3.5 text-lg" value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Ex: Lwei Brokers" required autoFocus maxLength={80} />
                   </Field>
-                  <Field label="Sector" delay={250}>
+                  <Field label="Área de actuação" delay={250}>
                     <div className="flex flex-wrap gap-2">
                       {SECTORS.map(s => (
                         <button type="button" key={s} onClick={() => setSector(sector === s ? '' : s)} className={`chip ${sector === s ? 'border-accent! bg-accent-light! text-accent-dark!' : ''}`}>{s}</button>
@@ -529,24 +654,54 @@ export default function EnterPage() {
                   key={errorKey}
                   onSubmit={e => {
                     e.preventDefault()
-                    run(async () => {
-                      const res = await account.joinOrg({ code })
-                      setDone({ kind: 'joined', name: res.org.name })
-                      go('pronto')
-                    })
+                    run(() => validate(code))
                   }}
-                  className={error ? 'animate-shake' : 'animate-rise'}
+                  className={error ? 'animate-shake' : errorKey ? '' : 'animate-rise'}
                 >
                   <input
-                    className="input py-5 text-center font-mono text-3xl font-black uppercase tracking-[0.4em]"
+                    className={`input py-5 text-center font-mono text-3xl font-black uppercase tracking-[0.4em] ${
+                      error ? 'border-danger! bg-danger-light! text-danger-dark! focus:ring-danger/20!' : ''
+                    }`}
+                    aria-invalid={!!error}
                     placeholder="ABC123"
                     value={code}
-                    onChange={e => setCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                    onChange={e => {
+                      setCode(e.target.value.toUpperCase().replace(/\s/g, ''))
+                      // ao corrigir o código, sai do vermelho
+                      if (error) setError('')
+                    }}
                     maxLength={12}
                     autoFocus
                     aria-label="Código de convite"
                   />
                 </form>
+              )}
+
+              {step === 'convite' && found && (
+                <>
+                  <div className="flex items-center gap-4 rounded-2xl border-2 border-b-4 border-accent bg-accent-light p-4 animate-rise" style={{ animationDelay: '150ms' }}>
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-white">
+                      <BuildingsIcon size={30} weight="fill" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-lg font-black text-ink">{found.name}</span>
+                      <span className="block text-sm font-semibold text-accent-dark">{found.sector || 'Empresa registada'} · código {code}</span>
+                    </span>
+                    <CheckIcon size={26} weight="bold" className="shrink-0 text-accent-dark" />
+                  </div>
+                  <p className="text-center text-sm font-semibold text-muted animate-rise" style={{ animationDelay: '300ms' }}>
+                    {user ? 'Vais entrar como funcionário. A empresa escolhe o teu papel e departamento.' : 'A seguir entras ou crias a tua conta e ficas logo na equipa.'}
+                  </p>
+                  {user && converting && (
+                    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-warm/40 bg-warm-light p-4 animate-rise">
+                      <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0 accent-warm" checked={convert} onChange={e => setConvert(e.target.checked)} />
+                      <span className="text-sm font-semibold text-body">
+                        <b className="block font-black text-ink">Passar a minha conta a conta de empresa</b>
+                        Deixas de ter o espaço pessoal e o ranking das contas pessoais; passas a ver só a empresa e os colegas. Não dá para voltar atrás.
+                      </span>
+                    </label>
+                  )}
+                </>
               )}
 
               {step === 'pronto' && done && <NextSteps done={done} goal={goal} />}

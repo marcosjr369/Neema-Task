@@ -67,7 +67,7 @@ export type Settings = {
   dailyGoalMinutes: number
   sound: boolean
   breakAlerts: boolean
-  /** minutos sem foco até o Marcos reclamar (0 = desligado) */
+  /** minutos sem foco até a Udacha reclamar (0 = desligado) */
   idleReminderMinutes: number
   /** horário dos lembretes: [início, fim) em horas */
   reminderStartHour: number
@@ -169,6 +169,8 @@ export type OrgTaskFields = {
   assigneeId?: string
   createdBy?: string
   departmentId?: string
+  /** quem aprova a tarefa (id de membro); sem isto, aprova quem gere o responsável */
+  reviewerId?: string
   requiresApproval?: boolean
   requiresAttachment?: boolean
   review?: Review
@@ -179,6 +181,16 @@ export type OrgTaskFields = {
 }
 
 export type RankingVisibility = 'nome' | 'iniciais' | 'oculto'
+
+/**
+ * Tipo de conta, escolhido uma vez na entrada:
+ *  - pessoal: só o espaço pessoal; ranking entre contas pessoais
+ *  - empresa: só empresas (quem cria fica administrador; funcionários entram por convite)
+ */
+export type AccountType = 'personal' | 'business'
+
+/** Dentro das contas de empresa: a conta da empresa ou a de um funcionário (não mudam depois) */
+export type BusinessRole = 'company' | 'employee'
 
 export type User = {
   id: string
@@ -191,6 +203,12 @@ export type User = {
   clerkId?: string
   createdAt: number
   rankingVisibility: RankingVisibility
+  accountType?: AccountType
+  /** contas de empresa: a conta da própria empresa (criou-a) ou de um funcionário (entrou por convite) */
+  businessRole?: BusinessRole
+  /** desactivado no painel de administração: não usa a app (e fica bloqueado no Clerk) */
+  disabled?: boolean
+  disabledAt?: number
   settings?: Partial<Settings>
   /** último espaço usado */
   workspace?: Workspace
@@ -203,6 +221,26 @@ export type User = {
   nudgeCount?: number
 }
 
+/** Registo de um utilizador eliminado no painel (os dados dele já foram apagados) */
+export type DeletedUser = {
+  /** id que o utilizador tinha */
+  id: string
+  name: string
+  email: string
+  picture?: string
+  type: AccountType | 'none'
+  createdAt: number
+  deletedAt: number
+  reason?: string
+  /** empresas a que pertencia (nome · papel) */
+  orgs: string[]
+  /** empresas apagadas com ele (era a única pessoa) */
+  deletedOrgs: string[]
+  /** totais de sempre, no momento da eliminação */
+  focusSeconds: number
+  tasksDone: number
+}
+
 export type Role = 'admin' | 'supervisor' | 'membro'
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -210,6 +248,23 @@ export const ROLE_LABEL: Record<Role, string> = {
   supervisor: 'Supervisor',
   membro: 'Funcionário',
 }
+
+/** Progresso de uma pessoa da equipa (perfil da empresa) */
+export type TeamProgress = {
+  id: string
+  name: string
+  picture?: string
+  jobTitle?: string
+  departmentId?: string
+  role: Role
+  xp: number
+  level: number
+  seconds: number
+  progress: { done: number; hours: number; record: number; longest: number }
+}
+
+/** Como aparece a conta que criou a empresa (gere tudo, mas não é funcionário) */
+export const COMPANY_ACCOUNT_LABEL = 'Conta da empresa'
 
 export type Org = {
   id: string
@@ -221,6 +276,8 @@ export type Org = {
   inviteCode: string
   createdAt: number
   createdBy: string
+  /** não aparece no ranking geral de empresas */
+  hideFromRanking?: boolean
 }
 
 export type Department = {
@@ -281,6 +338,20 @@ export type Membership = { org: Org; member: Member }
 export type Workspace = { kind: 'personal' } | { kind: 'org'; orgId: string; memberId: string }
 
 export type RankMetric = 'points' | 'hours' | 'tasks'
+
+/** Linha do ranking geral de empresas (totais e média por pessoa activa) */
+export type OrgRankEntry = {
+  id: string
+  name: string
+  sector: string
+  members: number
+  seconds: number
+  tasks: number
+  points: number
+  isMine: boolean
+  /** escondida do ranking geral (só a própria equipa a vê) */
+  hidden?: boolean
+}
 
 export type RankEntry = {
   id: string

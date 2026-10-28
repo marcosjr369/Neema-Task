@@ -10,7 +10,7 @@ const HINT: Record<PushState, string> = {
   unsupported: 'Este browser não suporta notificações push.',
   'needs-install': 'No iPhone, primeiro instala a app: Partilhar → Adicionar ao ecrã principal. Depois abre-a por lá e volta aqui.',
   denied: 'As notificações estão bloqueadas. Activa-as nas definições do browser para este site.',
-  off: 'O Marcos avisa-te mesmo com a app fechada, no intervalo e horário que escolheste em cima.',
+  off: 'A Udacha avisa-te mesmo com a app fechada, no intervalo e horário que escolheste em cima.',
   on: 'Activo neste dispositivo. Os lembretes chegam mesmo com a app fechada.',
 }
 

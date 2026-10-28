@@ -157,6 +157,18 @@ export function bestStreak(sessions: Session[], tasks: Task[]) {
   return best
 }
 
+/** Números de que dependem as conquistas (sem ícones: também corre no servidor) */
+export type AchievementProgress = { done: number; hours: number; record: number; longest: number }
+
+export function achievementProgress(sessions: Session[], tasks: Task[]): AchievementProgress {
+  return {
+    done: tasks.filter(t => t.status === 'done' && t.review?.status !== 'pending').length,
+    hours: sumSeconds(sessions) / 3600,
+    record: bestStreak(sessions, tasks),
+    longest: sessions.reduce((m, s) => Math.max(m, s.seconds), 0) / 60,
+  }
+}
+
 export function totalXp(sessions: Session[], tasks: Task[]) {
   return Math.max(0, totalPoints(sessions, tasks))
 }

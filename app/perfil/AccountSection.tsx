@@ -7,7 +7,7 @@ import { useAccount } from '../context/AccountContext'
 import { useApp } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
 import { api, errorText } from '../lib/api'
-import { ROLE_LABEL, type RankingVisibility } from '../types'
+import { COMPANY_ACCOUNT_LABEL, ROLE_LABEL, type RankingVisibility } from '../types'
 import Avatar from '../components/ui/Avatar'
 import WorkspaceSwitcher from '../components/account/WorkspaceSwitcher'
 import LogoutButton from '../components/account/LogoutButton'
@@ -41,7 +41,7 @@ export default function AccountSection() {
     setBusy(true)
     try {
       await api(`${org.base}/members/${org.me.id}`, { method: 'DELETE' })
-      account.setWorkspace({ kind: 'personal' })
+      // sem outra empresa, a conta volta à entrada para criar ou entrar numa
       await account.refresh()
       showToast('Saíste da empresa', 'info')
     } catch (err) {
@@ -64,13 +64,21 @@ export default function AccountSection() {
         <div className="p-4">
           <LogoutButton className="w-full" />
         </div>
-        <div className="p-4">
-          <p className="label">Espaço activo</p>
-          <WorkspaceSwitcher />
-        </div>
+        {account.accountType === 'personal' && (
+          <div className="p-4">
+            <p className="label">Convite de uma empresa</p>
+            <Link href="/entrar?passo=codigo" className="btn btn-ghost w-full text-accent">Tenho um código de convite</Link>
+          </div>
+        )}
+        {account.accountType === 'business' && (
+          <div className="p-4">
+            <p className="label">Empresa activa</p>
+            <WorkspaceSwitcher />
+          </div>
+        )}
         {!org && (
           <div className="p-4">
-            <p className="label">Como apareço no ranking global</p>
+            <p className="label">Como apareço no ranking das contas pessoais</p>
             <div className="grid grid-cols-3 gap-2">
               {VISIBILITY.map(v => (
                 <button
@@ -85,7 +93,17 @@ export default function AccountSection() {
             </div>
           </div>
         )}
-        {org && (
+        {org?.isCompany && (
+          <div className="flex items-center gap-3 p-4">
+            <BuildingsIcon size={22} className="text-accent" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-black text-ink">{org.org.name}</p>
+              <p className="truncate text-sm font-semibold text-muted">{COMPANY_ACCOUNT_LABEL}</p>
+            </div>
+            <Link href="/empresa/definicoes" className="btn btn-ghost shrink-0 px-3 text-sm">Definições</Link>
+          </div>
+        )}
+        {org && !org.isCompany && (
           <div className="space-y-3 p-4">
             <div className="flex items-center gap-3">
               <BuildingsIcon size={22} className="text-accent" />
@@ -101,9 +119,12 @@ export default function AccountSection() {
               <Link href={`/empresa/membro/${org.me.id}`} className="btn btn-ghost flex-1 text-sm">
                 <ChartBarIcon size={16} /> O meu tempo
               </Link>
-              <button onClick={leaveOrg} disabled={busy} className="btn btn-ghost flex-1 text-sm text-danger">
-                Sair da empresa
-              </button>
+              {/* só quem foi convidado ou adicionado pode sair; quem criou a empresa é o dono */}
+              {org.org.createdBy !== user.id && (
+                <button onClick={leaveOrg} disabled={busy} className="btn btn-ghost flex-1 text-sm text-danger">
+                  Sair da empresa
+                </button>
+              )}
             </div>
           </div>
         )}

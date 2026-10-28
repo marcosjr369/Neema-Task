@@ -13,7 +13,8 @@ import Avatar from '../../components/ui/Avatar'
 import { ReviewBadge } from '../../components/tasks/ReviewBadge'
 import { fileUrl } from '../../lib/api'
 import { taskPoints } from '../../lib/points'
-import { CATEGORY_CONFIG, PRIORITY_CONFIG, STATUS_LABEL, type Attachment, type Task, type TaskStatus } from '../../types'
+import { CATEGORY_CONFIG, PRIORITY_CONFIG, STATUS_LABEL, type Attachment, type Member, type Task, type TaskStatus } from '../../types'
+import { canReviewTask, isCompanyAccount } from '../../lib/org'
 import { formatClock, formatDeadline, formatDuration, phaseElapsed, startOfDay } from '../../lib/stats'
 import { CategoryGlyph } from '../../components/ui/icons'
 
@@ -38,11 +39,15 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
 
   const assignee = org.memberById(task.assigneeId)
   const creator = org.memberById(task.createdBy)
+  const reviewer = org.memberById(task.reviewerId)
+  // a conta da empresa aparece com o nome da empresa
+  const nameOf = (m: Member) => (m.id === org.me.id ? 'Mim' : isCompanyAccount(m, org.org) ? org.org.name : m.name)
   // mesmas regras do servidor (taskAccess): gere o responsável ou criou a tarefa sendo supervisor
   const scope = org.scope
   const managesAssignee =
     !!assignee && (scope === 'all' || (assignee.id !== org.me.id && !!assignee.departmentId && scope.has(assignee.departmentId)))
   const isManager = managesAssignee || (task.createdBy === org.me.id && org.isManager)
+  const canReview = canReviewTask(task, org.me, isManager)
   const pending = task.status === 'done' && task.review?.status === 'pending'
   const approved = task.review?.status === 'approved'
   const canUpload = (isOwner || isManager) && !approved
@@ -61,10 +66,19 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
           {creator && creator.id !== assignee?.id && (
             <span className="min-w-0 text-right">
               <span className="block text-xs font-extrabold uppercase text-muted">Atribuída por</span>
-              <span className="block truncate text-sm font-bold text-body">{creator.id === org.me.id ? 'Mim' : creator.name}</span>
+              <span className="block truncate text-sm font-bold text-body">{nameOf(creator)}</span>
             </span>
           )}
         </div>
+        {task.requiresApproval && reviewer && (
+          <div className="flex items-center gap-3 p-3">
+            <Avatar name={reviewer.name} picture={reviewer.picture} size={36} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-extrabold uppercase text-muted">Supervisor da tarefa</span>
+              <span className="block truncate font-bold text-ink">{reviewer.id === org.me.id ? 'Eu' : nameOf(reviewer)}</span>
+            </span>
+          </div>
+        )}
         {(task.requiresApproval || task.requiresAttachment || task.recurrence) && (
           <div className="flex flex-wrap gap-2 p-3 text-xs font-bold">
             {task.requiresApproval && <span className="flex items-center gap-1 rounded-lg bg-accent-light px-2 py-1 text-accent-dark"><ShieldCheckIcon size={14} /> Precisa de aprovação</span>}
@@ -79,9 +93,11 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
         <section className="card border-warm/50 bg-warm-light p-4">
           <p className="flex items-center gap-2 font-black text-warm-dark"><HourglassMediumIcon size={20} weight="duotone" /> À espera de aprovação</p>
           <p className="text-sm font-semibold text-body">
-            {isManager ? 'Revê o trabalho e os anexos antes de aprovar.' : 'O supervisor vai rever. Recebes um aviso quando houver resposta.'}
+            {canReview
+              ? 'Revê o trabalho e os anexos antes de aprovar.'
+              : `${reviewer ? nameOf(reviewer) : 'O supervisor'} vai rever. Recebes um aviso quando houver resposta.`}
           </p>
-          {isManager && (
+          {canReview && (
             <div className="mt-3 space-y-2">
               {rejecting && (
                 <textarea
@@ -506,7 +522,7 @@ export default function TaskDetailPage() {
             <button
               onClick={() => {
                 deleteTask(task.id)
-                router.replace(org && !isOwner ? '/empresa?tab=tarefas' : '/tarefas')
+                router.replace(org && !isOwner ? '/empresa/tarefas' : '/tarefas')
               }}
               className="btn btn-danger mt-5 w-full"
             >

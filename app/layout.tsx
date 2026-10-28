@@ -12,9 +12,9 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Marcos Tasks",
+  title: "Udacha",
   description: "Tarefas, cronómetro de foco, pausas e estatísticas",
-  applicationName: "Marcos Tasks",
+  applicationName: "Udacha",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Marcos Tasks",
+    title: "Udacha",
     statusBarStyle: "default",
   },
   formatDetection: { telephone: false },

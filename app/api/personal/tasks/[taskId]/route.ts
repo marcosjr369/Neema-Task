@@ -1,4 +1,4 @@
-import { body, fail, handle, requireUser } from '../../../../lib/server/api'
+import { body, fail, handle, requirePersonal } from '../../../../lib/server/api'
 import { userScope } from '../../../../lib/server/scopes'
 import { mutate } from '../../../../lib/server/store'
 import { cleanTaskFields, deleteTask, type TaskPatch } from '../../../../lib/server/tasks'
@@ -7,7 +7,7 @@ import type { TaskStatus } from '../../../../types'
 type Action = { action: 'update'; patch: TaskPatch } | { action: 'status'; status: TaskStatus }
 
 export const PATCH = handle<{ taskId: string }>(async (req, { taskId }) => {
-  const user = await requireUser()
+  const user = await requirePersonal()
   const input = await body<Action>(req)
   return mutate(userScope(user.id, { tasks: true }), db => {
     const task = db.tasks.find(t => t.id === taskId && t.ownerId === user.id) ?? fail(404, 'Tarefa não encontrada')
@@ -27,7 +27,7 @@ export const PATCH = handle<{ taskId: string }>(async (req, { taskId }) => {
 })
 
 export const DELETE = handle<{ taskId: string }>(async (_req, { taskId }) => {
-  const user = await requireUser()
+  const user = await requirePersonal()
   await mutate(userScope(user.id, { tasks: true, sessions: true }), db => {
     if (!db.tasks.some(t => t.id === taskId && t.ownerId === user.id)) fail(404, 'Tarefa não encontrada')
     deleteTask(db, taskId)

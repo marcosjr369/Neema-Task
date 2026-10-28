@@ -25,7 +25,7 @@ export default function InstallCard({ compact = false }: { compact?: boolean }) 
       <div className="flex items-center gap-3">
         <Image src="/icons/icon-192.png" alt="" width={48} height={48} className="rounded-xl" />
         <div className="flex-1">
-          <p className="font-black text-ink">Instalar Marcos Tasks</p>
+          <p className="font-black text-ink">Instalar Udacha</p>
           <p className="text-xs font-semibold text-muted">Abre como app, em ecrã inteiro, e funciona offline.</p>
         </div>
       </div>

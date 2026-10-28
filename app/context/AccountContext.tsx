@@ -4,13 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth, useClerk } from '@clerk/nextjs'
 import { api } from '../lib/api'
 import { clearBrowserStorage } from '../lib/browserStorage'
-import { DEFAULT_SETTINGS, type Member, type Membership, type Org, type RankingVisibility, type Settings, type User, type Workspace } from '../types'
+import { accountTypeOf, businessRoleOf } from '../lib/account'
+import { DEFAULT_SETTINGS, type AccountType, type BusinessRole, type Member, type Membership, type Org, type RankingVisibility, type Settings, type User, type Workspace } from '../types'
 
 type Suggestion = { id: string; name: string; sector: string }
 type MeResponse = {
   user: User | null
   memberships: Membership[]
   suggestions: Suggestion[]
+  /** conta desactivada pelo administrador da plataforma */
+  disabled?: boolean
 }
 
 export type OrgInput = { name: string; sector: string; size?: string; domain?: string; departments?: string[] }
@@ -18,7 +21,14 @@ export type OrgInput = { name: string; sector: string; size?: string; domain?: s
 type AccountValue = {
   /** à espera do Clerk e da primeira resposta do servidor */
   loading: boolean
+  disabled: boolean
   user: User | null
+  /** pessoal ou empresa; undefined enquanto a conta nova não escolher */
+  accountType: AccountType | undefined
+  /** contas de empresa: conta da própria empresa ou de funcionário (undefined se ainda não se sabe) */
+  businessRole: BusinessRole | undefined
+  /** conta sem tipo, ou de empresa sem nenhuma empresa: tem de passar pela entrada */
+  needsSetup: boolean
   memberships: Membership[]
   suggestions: Suggestion[]
   workspace: Workspace
@@ -30,8 +40,11 @@ type AccountValue = {
   setWorkspace: (ws: Workspace) => void
   logout: () => Promise<void>
   updateMe: (patch: { name?: string; rankingVisibility?: RankingVisibility }) => Promise<void>
+  /** fixa a conta como pessoal (passo final da entrada) */
+  choosePersonal: () => Promise<void>
   createOrg: (input: OrgInput) => Promise<Membership>
-  joinOrg: (by: { code?: string; orgId?: string }) => Promise<Membership>
+  /** convert: conta pessoal que aceita passar a conta de empresa */
+  joinOrg: (by: { code?: string; orgId?: string; convert?: boolean }) => Promise<Membership>
 }
 
 const AccountContext = createContext<AccountValue | null>(null)
@@ -100,11 +113,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     await refresh()
   }, [refresh])
 
+  const choosePersonal = useCallback(async () => {
+    await api('/api/me', { method: 'PATCH', body: { accountType: 'personal' } })
+    await refresh()
+  }, [refresh])
+
+  // o servidor já deixa a empresa nova como espaço activo
   const enter = useCallback(async (res: { org: Org; member: Member }) => {
     await refresh()
-    setWorkspace({ kind: 'org', orgId: res.org.id, memberId: res.member.id })
     return res
-  }, [refresh, setWorkspace])
+  }, [refresh])
 
   const createOrg = useCallback(
     async (input: OrgInput) => enter(await api<Membership>('/api/orgs', { body: input })),
@@ -112,16 +130,25 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   )
 
   const joinOrg = useCallback(
-    async (by: { code?: string; orgId?: string }) => enter(await api<Membership>('/api/orgs/join', { body: by })),
+    async (by: { code?: string; orgId?: string; convert?: boolean }) => enter(await api<Membership>('/api/orgs/join', { body: by })),
     [enter],
   )
 
   const user = me?.user ?? null
   const memberships = useMemo(() => me?.memberships ?? [], [me])
+  const accountType = user ? accountTypeOf(user, memberships.length > 0) : undefined
+  const businessRole =
+    user && accountType === 'business'
+      ? businessRoleOf(user, memberships.some(m => m.org.createdBy === user.id), memberships.length > 0)
+      : undefined
   const saved = user?.workspace
-  const current = saved?.kind === 'org' ? memberships.find(m => m.org.id === saved.orgId) ?? null : null
-  // espaço de empresa que deixou de existir (ex.: removido da empresa) → pessoal
-  const workspace: Workspace = saved?.kind === 'org' && current ? saved : { kind: 'personal' }
+  // contas de empresa: a empresa guardada ou, se deixou de existir, a primeira; contas pessoais: o espaço pessoal
+  const current =
+    accountType === 'business'
+      ? (saved?.kind === 'org' ? memberships.find(m => m.org.id === saved.orgId) : undefined) ?? memberships[0] ?? null
+      : null
+  const workspace: Workspace = current ? { kind: 'org', orgId: current.org.id, memberId: current.member.id } : { kind: 'personal' }
+  const needsSetup = !!user && (!accountType || (accountType === 'business' && !current))
   const settings = useMemo<Settings>(
     () => ({ ...DEFAULT_SETTINGS, ...user?.settings, ...settingsPatch }),
     [user?.settings, settingsPatch],
@@ -129,7 +156,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const value: AccountValue = {
     loading: !isLoaded || me === null,
+    disabled: !!me?.disabled,
     user,
+    accountType,
+    businessRole,
+    needsSetup,
     memberships,
     suggestions: me?.suggestions ?? [],
     workspace,
@@ -140,6 +171,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setWorkspace,
     logout,
     updateMe,
+    choosePersonal,
     createOrg,
     joinOrg,
   }

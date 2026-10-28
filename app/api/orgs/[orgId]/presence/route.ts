@@ -1,4 +1,4 @@
-import { body, fail, handle, requireMember } from '../../../../lib/server/api'
+import { body, fail, handle, requireMember, requirePerson } from '../../../../lib/server/api'
 import { mutate } from '../../../../lib/server/store'
 import { orgScope } from '../../../../lib/server/scopes'
 import { effectivePresence, setPresence, visibleMembers } from '../../../../lib/server/org'
@@ -29,7 +29,7 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
 
 /** Muda o estado do próprio (também serve de sinal periódico) */
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
-  const { me } = await requireMember(orgId)
+  const { me } = await requirePerson(orgId)
   const { status } = await body<{ status: PresenceStatus }>(req)
   if (!PRESENCE_CONFIG[status]) fail(400, 'Estado inválido')
   return mutate(orgScope(orgId, { presence: 'open' }), db => {

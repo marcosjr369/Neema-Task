@@ -1,5 +1,6 @@
 import type { Member, Org, Task, User } from '../../types'
-import { managedDepartmentIds } from '../org'
+import { canReviewTask, isCompanyAccount, managedDepartmentIds } from '../org'
+import { BUSINESS_ONLY } from '../account'
 import { currentUser } from './auth'
 import { read, type DB } from './store'
 import { orgScope, type OrgOpts } from './scopes'
@@ -38,8 +39,19 @@ export async function body<T>(req: Request): Promise<T> {
   }
 }
 
+export const DISABLED = 'A tua conta foi desactivada. Fala com o suporte.'
+
 export async function requireUser(): Promise<User> {
-  return (await currentUser()) ?? fail(401, 'Sessão expirada. Entra novamente.')
+  const user = (await currentUser()) ?? fail(401, 'Sessão expirada. Entra novamente.')
+  if (user.disabled) fail(403, DISABLED)
+  return user
+}
+
+/** Utilizador de conta pessoal (as contas de empresa não têm espaço pessoal) */
+export async function requirePersonal(): Promise<User> {
+  const user = await requireUser()
+  if (user.accountType === 'business') fail(403, BUSINESS_ONLY)
+  return user
 }
 
 export type OrgAccess = { db: DB; user: User; org: Org; me: Member }
@@ -53,6 +65,13 @@ export async function requireMember(orgId: string, opts: OrgOpts = {}): Promise<
     db.members.find(m => m.orgId === orgId && m.userId === user.id && m.status === 'activo') ??
     fail(403, 'Não pertences a esta empresa')
   return { db, user, org, me }
+}
+
+/** Pessoa da equipa: a conta da empresa não regista tempo nem estado */
+export async function requirePerson(orgId: string, opts: OrgOpts = {}) {
+  const access = await requireMember(orgId, opts)
+  if (isCompanyAccount(access.me, access.org)) fail(403, 'A conta da empresa não regista tempo nem estado')
+  return access
 }
 
 export async function requireAdmin(orgId: string, opts: OrgOpts = {}) {
@@ -81,5 +100,6 @@ export function taskAccess(db: DB, me: Member, task: Task) {
   const owner = task.assigneeId === me.id
   const creator = task.createdBy === me.id
   const manager = canManage(db, me, assignee) || (creator && isManager(me))
-  return { view: owner || creator || manager, owner, manager }
+  const reviewer = !!task.reviewerId && task.reviewerId === me.id
+  return { view: owner || creator || manager || reviewer, owner, manager, review: canReviewTask(task, me, manager) }
 }

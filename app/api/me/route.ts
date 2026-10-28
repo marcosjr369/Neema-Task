@@ -1,13 +1,15 @@
-import { body, handle, requireUser } from '../../lib/server/api'
+import { body, fail, handle, requireUser } from '../../lib/server/api'
 import { currentUser } from '../../lib/server/auth'
 import { userScope } from '../../lib/server/scopes'
 import { mutate, read } from '../../lib/server/store'
 import { domainSuggestions, membershipsOf } from '../../lib/server/views'
+import { accountTypeOf, BUSINESS_ONLY, PERSONAL_ONLY } from '../../lib/account'
 import { DEFAULT_SETTINGS, type RankingVisibility, type Settings, type Workspace } from '../../types'
 
 export const GET = handle(async () => {
   const user = await currentUser()
   if (!user) return { user: null, memberships: [], suggestions: [] }
+  if (user.disabled) return { user: null, memberships: [], suggestions: [], disabled: true }
   const db = await read(userScope(user.id, { memberships: true, domainOrgs: true }))
   return { user, memberships: membershipsOf(db, user), suggestions: domainSuggestions(db, user) }
 })
@@ -17,6 +19,8 @@ type Patch = {
   rankingVisibility?: RankingVisibility
   settings?: Partial<Settings>
   workspace?: Workspace
+  /** só na entrada: escolher conta pessoal (a de empresa nasce ao criar ou entrar numa empresa) */
+  accountType?: 'personal'
 }
 
 /** limites [mín, máx] de cada definição numérica */
@@ -36,6 +40,12 @@ export const PATCH = handle(async req => {
   const patch = await body<Patch>(req)
   return mutate(userScope(me.id, { memberships: true }), db => {
     const user = db.users.find(u => u.id === me.id)!
+    const hasMembership = db.members.some(m => m.userId === user.id && m.status === 'activo')
+    if (patch.accountType === 'personal') {
+      if (accountTypeOf(user, hasMembership) === 'business') fail(409, BUSINESS_ONLY)
+      user.accountType = 'personal'
+      user.workspace = { kind: 'personal' }
+    }
     if (patch.name?.trim()) {
       user.name = patch.name.trim().slice(0, 60)
       db.members.forEach(m => { if (m.userId === user.id) m.name = user.name })
@@ -57,6 +67,10 @@ export const PATCH = handle(async req => {
     }
     if (patch.workspace) {
       const ws = patch.workspace
+      // cada tipo de conta só tem os seus espaços
+      const type = accountTypeOf(user, hasMembership)
+      if (ws.kind === 'personal' && type === 'business') fail(409, BUSINESS_ONLY)
+      if (ws.kind === 'org' && type === 'personal') fail(409, PERSONAL_ONLY)
       const valid = ws.kind === 'personal' || db.members.some(m => m.id === ws.memberId && m.orgId === ws.orgId && m.userId === user.id)
       if (valid) user.workspace = ws.kind === 'personal' ? { kind: 'personal' } : { kind: 'org', orgId: ws.orgId, memberId: ws.memberId }
     }

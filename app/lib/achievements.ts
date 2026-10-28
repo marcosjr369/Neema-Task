@@ -1,6 +1,6 @@
 import { BrainIcon, ClockIcon, FireIcon, RocketIcon, TargetIcon, TrophyIcon, type Icon } from '@phosphor-icons/react'
 import type { Session, Task } from '../types'
-import { bestStreak, sumSeconds } from './stats'
+import { achievementProgress, type AchievementProgress } from './stats'
 
 export type Achievement = {
   id: string
@@ -14,10 +14,11 @@ export type Achievement = {
 
 /** Conquistas e o progresso actual de cada uma (usadas no Perfil e nas celebrações) */
 export function achievements(sessions: Session[], tasks: Task[]): Achievement[] {
-  const hours = sumSeconds(sessions) / 3600
-  const done = tasks.filter(t => t.status === 'done' && t.review?.status !== 'pending').length
-  const record = bestStreak(sessions, tasks)
-  const longest = sessions.reduce((m, s) => Math.max(m, s.seconds), 0) / 60
+  return achievementsFrom(achievementProgress(sessions, tasks))
+}
+
+/** As mesmas conquistas a partir dos números já calculados (ex.: vindos do servidor) */
+export function achievementsFrom({ done, hours, record, longest }: AchievementProgress): Achievement[] {
   return [
     { id: 'primeiro-passo', icon: RocketIcon, title: 'Primeiro passo', desc: 'Concluir 1 tarefa', value: done, target: 1, color: '#7B61FF' },
     { id: 'produtivo', icon: TrophyIcon, title: 'Produtivo', desc: 'Concluir 25 tarefas', value: done, target: 25, color: '#E0A419' },

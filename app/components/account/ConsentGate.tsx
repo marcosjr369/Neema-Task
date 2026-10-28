@@ -10,7 +10,7 @@ import Mascot from '../ui/Mascot'
 /** Primeira entrada numa empresa: explicar e aceitar o registo de tempo */
 export default function ConsentGate() {
   const org = useOrg()
-  const { setWorkspace } = useAccount()
+  const { logout } = useAccount()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -31,7 +31,7 @@ export default function ConsentGate() {
     { icon: <PulseIcon size={22} />, text: 'O teu estado ao longo do dia: a trabalhar, pausa, almoço, reunião, ausente.' },
     { icon: <ClockIcon size={22} />, text: 'O tempo que o cronómetro conta em cada tarefa da empresa.' },
     { icon: <EyeIcon size={22} />, text: 'Quem vê: o teu supervisor e os administradores. Tu vês sempre os mesmos dados.' },
-    { icon: <ShieldCheckIcon size={22} />, text: 'As tuas tarefas pessoais continuam só no teu espaço pessoal.' },
+    { icon: <ShieldCheckIcon size={22} />, text: 'No ranking só aparecem colegas desta empresa.' },
   ]
 
   return (
@@ -52,8 +52,8 @@ export default function ConsentGate() {
         <button onClick={accept} disabled={busy} className="btn btn-primary mt-6 w-full">
           {busy ? 'A guardar…' : 'Aceitar e continuar'}
         </button>
-        <button onClick={() => setWorkspace({ kind: 'personal' })} className="btn btn-ghost mt-3 w-full text-body">
-          Agora não
+        <button onClick={() => logout()} className="btn btn-ghost mt-3 w-full text-body">
+          Agora não (terminar sessão)
         </button>
       </div>
     </div>

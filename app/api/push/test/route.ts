@@ -6,7 +6,7 @@ export const POST = handle(async () => {
   const user = await requireUser()
   if (!pushConfigured()) fail(503, 'Notificações push não configuradas no servidor')
   const sent = await sendToUser(user.id, {
-    title: 'Olá! Sou o Marcos',
+    title: 'Olá! Sou a Udacha',
     body: 'É assim que te vou lembrar de focar, mesmo com a app fechada.',
     url: '/',
     tag: 'push-test',

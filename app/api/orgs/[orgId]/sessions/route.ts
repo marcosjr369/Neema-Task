@@ -1,4 +1,4 @@
-import { body, handle, requireMember } from '../../../../lib/server/api'
+import { body, handle, requireMember, requirePerson } from '../../../../lib/server/api'
 import { mutate, type Loader } from '../../../../lib/server/store'
 import { visibleMembers } from '../../../../lib/server/org'
 import { cleanSessions } from '../../../../lib/server/tasks'
@@ -20,7 +20,7 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
 
 /** Regista blocos de tempo trabalhado em tarefas atribuídas ao próprio */
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
-  const { me } = await requireMember(orgId)
+  const { me } = await requirePerson(orgId)
   const { sessions } = await body<{ sessions: Session[] }>(req)
   const ids = (sessions ?? []).map(s => String(s?.id ?? '')).filter(Boolean)
   const scope = async (l: Loader) => {

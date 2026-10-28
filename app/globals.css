@@ -120,22 +120,51 @@ body {
 .animate-bounce-soft { animation: bounce-soft 2.4s ease-in-out infinite; }
 .animate-toast-in { animation: toast-in 0.25s ease-out both; }
 
-/* ─── Mascote (Marcos) ───────────────────────────────────────────────
+/* ─── Mascote (Udacha) ───────────────────────────────────────────────
    Coordenadas do SVG (viewBox 0 0 200 260): pés em y=250, ombros (64,118)/(136,118),
-   cotovelos (…,144), ancas (88,170)/(112,170). */
+   cotovelos (…,144), ancas (88,170)/(112,170), pescoço (100,104), base dos puffs (76,38)/(124,38).
+   mk-joint: articulações cujo ângulo vem em style; a transição com mola liga uma pose à outra. */
+.mk-joint { transform-box: view-box; transition: transform 0.6s cubic-bezier(0.34, 1.45, 0.6, 1); }
 .mk-breathe { transform-box: view-box; transform-origin: 100px 250px; animation: mk-breathe 3s ease-in-out infinite; }
-.mk-blink { transform-box: fill-box; transform-origin: center; animation: mk-blink 4s infinite; }
-.mk-talk { transform-box: fill-box; transform-origin: center; animation: mk-talk 0.22s ease-in-out infinite alternate; }
+.mk-slow { animation-duration: 5s; }
+.mk-blink { transform-box: fill-box; transform-origin: center; animation: mk-blink 6s infinite; }
+.mk-look { animation: mk-look 8s ease-in-out infinite; }
+.mk-talk { transform-box: fill-box; transform-origin: center; animation: mk-talk 0.8s linear infinite; }
 .mk-tear { transform-box: fill-box; transform-origin: top center; animation: mk-tear 1.8s ease-in infinite; }
 .mk-tear-late { animation-delay: 0.9s; }
-.mk-wave { transform-box: view-box; transform-origin: 136px 144px; animation: mk-wave 0.45s ease-in-out infinite alternate; }
+.mk-zzz { transform-box: fill-box; transform-origin: center; animation: mk-zzz 3s ease-out infinite; opacity: 0; }
+.mk-zzz-2 { animation-delay: 1s; }
+.mk-zzz-3 { animation-delay: 2s; }
+.mk-ear-l { transform-box: view-box; transform-origin: 66px 70px; animation: mk-earring 1.8s ease-in-out infinite; }
+.mk-ear-r { transform-box: view-box; transform-origin: 134px 70px; animation: mk-earring 1.8s ease-in-out infinite; animation-delay: -0.6s; }
+
+/* cabeça: movimento próprio por cima da inclinação da pose */
+.mk-head-idle, .mk-head-bob, .mk-head-dance, .mk-head-walk, .mk-head-think { transform-box: view-box; transform-origin: 100px 104px; }
+.mk-head-idle { animation: mk-head-idle 6s ease-in-out infinite; }
+.mk-head-bob { animation: mk-head-bob 0.9s ease-in-out infinite; }
+.mk-head-dance { animation: mk-head-dance 0.9s ease-in-out infinite; }
+.mk-head-walk { animation: mk-head-walk 0.5s ease-in-out infinite; }
+.mk-head-think { animation: mk-head-think 4s ease-in-out infinite; }
+
+/* puffs: --dir dá o lado (descair = rodar para fora); o direito vai ligeiramente atrasado */
+.mk-puff-l { --dir: -1; transform-box: view-box; transform-origin: 76px 38px; }
+.mk-puff-r { --dir: 1; --lag: -0.08s; transform-box: view-box; transform-origin: 124px 38px; }
+.mk-puff-sway { animation: mk-puff-sway 3s ease-in-out infinite; animation-delay: var(--lag, 0s); }
+.mk-puff-jump { animation: mk-puff-jump 2.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+.mk-puff-bounce { animation: mk-puff-bounce 0.8s ease-in-out infinite; }
+.mk-puff-dance { animation: mk-puff-dance 0.9s ease-in-out infinite; animation-delay: calc(-0.1s + var(--lag, 0s)); }
+.mk-puff-walk { animation: mk-puff-walk 0.5s ease-in-out infinite; }
+
+.mk-wave { transform-box: view-box; transform-origin: 136px 144px; animation: mk-wave 0.9s ease-in-out infinite; }
+.mk-peace { transform-box: view-box; transform-origin: 136px 144px; animation: mk-peace 1.8s ease-in-out infinite; }
+.mk-pump { transform-box: view-box; transform-origin: 136px 118px; animation: mk-pump 1.6s ease-out infinite; }
 
 .mk-jump { transform-box: view-box; transform-origin: 100px 250px; animation: mk-jump 2.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
 .mk-shadow-jump { transform-box: fill-box; transform-origin: center; animation: mk-shadow-jump 2.4s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
 .mk-bounce { transform-box: view-box; transform-origin: 100px 250px; animation: mk-bounce 0.8s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
 .mk-shadow-bounce { transform-box: fill-box; transform-origin: center; animation: mk-shadow-bounce 0.8s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
 .mk-cheer-l { transform-box: view-box; transform-origin: 64px 118px; animation: mk-cheer-l 0.4s ease-in-out infinite alternate; }
-.mk-cheer-r { transform-box: view-box; transform-origin: 136px 118px; animation: mk-cheer-r 0.4s ease-in-out infinite alternate; }
+.mk-cheer-r { transform-box: view-box; transform-origin: 136px 118px; animation: mk-cheer-r 0.4s ease-in-out infinite alternate; animation-delay: -0.1s; }
 
 .mk-dance { transform-box: view-box; transform-origin: 100px 250px; animation: mk-dance 0.9s ease-in-out infinite; }
 .mk-dance-l { transform-box: view-box; transform-origin: 64px 118px; animation: mk-dance-l 0.9s ease-in-out infinite; }
@@ -150,10 +179,57 @@ body {
 .mk-swing-r { transform-box: view-box; transform-origin: 136px 118px; animation: mk-swing 1s ease-in-out infinite; }
 
 @keyframes mk-breathe { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-1.5px) scale(1.012, 0.994); } }
-@keyframes mk-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
-@keyframes mk-talk { from { transform: scaleY(0.3); } to { transform: scaleY(1.2); } }
+/* pisca uma vez e, mais à frente, duas seguidas */
+@keyframes mk-blink {
+  0%, 44%, 48%, 86%, 92%, 96%, 100% { transform: scaleY(1); }
+  46%, 89%, 94% { transform: scaleY(0.08); }
+}
+/* olha para um lado, para o outro e volta ao centro */
+@keyframes mk-look {
+  0%, 16%, 70%, 100% { transform: translate(0, 0); }
+  20%, 36% { transform: translate(1.8px, -0.3px); }
+  40%, 62% { transform: translate(-1.8px, 0.6px); }
+}
+/* várias aberturas diferentes, para não parecer uma mola */
+@keyframes mk-talk {
+  0%, 100% { transform: scale(1, 0.35); }
+  20% { transform: scale(0.9, 1.1); }
+  40% { transform: scale(1.1, 0.6); }
+  60% { transform: scale(0.85, 1.25); }
+  80% { transform: scale(1.05, 0.45); }
+}
 @keyframes mk-tear { 0% { transform: translateY(0) scale(0.4); opacity: 0; } 20% { opacity: 1; transform: translateY(0) scale(1); } 100% { transform: translateY(22px) scale(1); opacity: 0; } }
-@keyframes mk-wave { from { transform: rotate(8deg); } to { transform: rotate(-28deg); } }
+@keyframes mk-zzz { 0% { transform: translate(0, 6px) scale(0.6); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(8px, -14px) scale(1.1); opacity: 0; } }
+@keyframes mk-earring { 0%, 100% { transform: rotate(9deg); } 50% { transform: rotate(-9deg); } }
+
+@keyframes mk-head-idle { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-2.5deg); } 65% { transform: rotate(2deg); } }
+@keyframes mk-head-bob { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(3deg); } }
+@keyframes mk-head-dance { 0%, 100% { transform: rotate(6deg); } 25%, 75% { transform: translateY(-1px) rotate(0deg); } 50% { transform: rotate(-6deg); } }
+@keyframes mk-head-walk { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+@keyframes mk-head-think { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-3deg); } }
+
+@keyframes mk-puff-sway { 0%, 100% { transform: rotate(calc(var(--dir) * -2deg)); } 50% { transform: rotate(calc(var(--dir) * 4deg)); } }
+/* acompanha mk-jump: agacha, fica para trás na subida, sobe no topo e cai depois de aterrar */
+@keyframes mk-puff-jump {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  58% { transform: rotate(calc(var(--dir) * 8deg)); }
+  70% { transform: rotate(calc(var(--dir) * 16deg)); }
+  80% { transform: rotate(calc(var(--dir) * -8deg)); }
+  90% { transform: rotate(calc(var(--dir) * 18deg)); }
+  95% { transform: rotate(calc(var(--dir) * -4deg)); }
+}
+@keyframes mk-puff-bounce {
+  0%, 100% { transform: rotate(calc(var(--dir) * 16deg)); }
+  20% { transform: rotate(calc(var(--dir) * 8deg)); }
+  50% { transform: rotate(calc(var(--dir) * -10deg)); }
+  80% { transform: rotate(calc(var(--dir) * -5deg)); }
+}
+@keyframes mk-puff-dance { 0%, 100% { transform: rotate(8deg); } 50% { transform: rotate(-8deg); } }
+@keyframes mk-puff-walk { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(calc(var(--dir) * 7deg)); } }
+
+@keyframes mk-wave { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-30deg); } }
+@keyframes mk-peace { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-9deg); } }
+@keyframes mk-pump { 0%, 55%, 100% { transform: rotate(0deg); } 18% { transform: rotate(-10deg); } 32% { transform: rotate(3deg); } 42% { transform: rotate(-2deg); } }
 @keyframes mk-jump {
   0%, 50%, 100% { transform: translateY(0) scale(1, 1); }
   58% { transform: translateY(0) scale(1.1, 0.88); }
@@ -271,9 +347,27 @@ body {
   .mk-stride-l,
   .mk-stride-r,
   .mk-swing-l,
-  .mk-swing-r {
+  .mk-swing-r,
+  .mk-look,
+  .mk-zzz,
+  .mk-ear-l,
+  .mk-ear-r,
+  .mk-head-idle,
+  .mk-head-bob,
+  .mk-head-dance,
+  .mk-head-walk,
+  .mk-head-think,
+  .mk-puff-sway,
+  .mk-puff-jump,
+  .mk-puff-bounce,
+  .mk-puff-dance,
+  .mk-puff-walk,
+  .mk-peace,
+  .mk-pump {
     animation: none;
   }
+  .mk-zzz { opacity: 1; }
+  .mk-joint { transition: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
 }
 

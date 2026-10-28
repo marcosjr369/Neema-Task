@@ -87,8 +87,7 @@ function DepartmentForm({ dept, onClose }: { dept: Department | null; onClose: (
           </div>
         </div>
         <div>
-          <span className="label">Supervisores</span>
-          <p className="mb-2 text-xs font-semibold text-muted">Podem atribuir tarefas, aprovar trabalho e ver o tempo deste departamento.</p>
+          <span className="label">Chefes do departamento</span>
           <ul className="card max-h-64 divide-y-2 divide-line overflow-y-auto">
             {candidates.map(m => {
               const on = supervisors.includes(m.id)
@@ -122,8 +121,7 @@ export default function Departments() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="font-semibold text-muted">Agrupa os funcionários e define quem supervisiona cada grupo.</p>
+      <div className="flex justify-end">
         <button onClick={() => setEditing('new')} className="btn btn-primary shrink-0">
           <PlusIcon size={18} /> Novo
         </button>
@@ -148,7 +146,7 @@ export default function Departments() {
                   {people.length > 6 && <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-snow text-xs font-black text-muted ring-2 ring-white">+{people.length - 6}</span>}
                 </div>
                 <p className="mt-3 truncate text-xs font-bold text-muted">
-                  Supervisão: <span className="text-body">{sups.length ? sups.map(m => m!.name).join(', ') : '—'}</span>
+                  Chefia: <span className="text-body">{sups.length ? sups.map(m => m!.name).join(', ') : '—'}</span>
                 </p>
               </div>
             </button>

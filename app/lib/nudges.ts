@@ -1,7 +1,7 @@
-/** Frases do Marcos quando não estás a trabalhar; cada lembrete seguido é mais triste */
+/** Frases da Udacha quando não estás a trabalhar; cada lembrete seguido é mais triste */
 const NUDGES = [
   { title: 'Tenho saudades tuas…', body: (t: string) => `Já passou ${t} sem focares. Vamos voltar?` },
-  { title: 'O Marcos está triste', body: (t: string) => `Não trabalhas há ${t}. Só 25 minutos, prometo que vale a pena.` },
+  { title: 'A Udacha está triste', body: (t: string) => `Não trabalhas há ${t}. Só 25 minutos, prometo que vale a pena.` },
   { title: 'Assim fico a chorar…', body: (t: string) => `${t} sem foco. A tua meta de hoje ainda está à espera.` },
   { title: 'Ainda estás aí?', body: (t: string) => `${t} parado. Uma tarefa pequena já me deixa feliz outra vez.` },
 ]
