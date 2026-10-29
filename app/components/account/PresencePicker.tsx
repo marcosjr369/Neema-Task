@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { CaretDownIcon, SignOutIcon } from '@phosphor-icons/react'
+import { CaretDownIcon, PlayIcon, SignOutIcon } from '@phosphor-icons/react'
 import { useOrg } from '../../context/OrgContext'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES } from '../../types'
 import { PresenceGlyph } from '../ui/icons'
 
-/** Botão de estado rápido (a trabalhar, pausa, almoço, reunião…) */
+/** Começar e terminar o trabalho; durante o dia, o estado rápido (a trabalhar, pausa, almoço, reunião…) */
 export default function PresencePicker({ compact = false }: { compact?: boolean }) {
   const org = useOrg()
   const [open, setOpen] = useState(false)
@@ -21,8 +21,20 @@ export default function PresencePicker({ compact = false }: { compact?: boolean 
     return () => document.removeEventListener('mousedown', close)
   }, [open])
 
-  if (!org) return null
+  if (!org || org.isCompany) return null
   const cfg = PRESENCE_CONFIG[org.presence]
+
+  if (!org.workStart) {
+    return (
+      <button
+        onClick={org.startWork}
+        className={`btn btn-accent ${compact ? 'gap-1.5 px-3 py-1.5 text-sm' : 'w-full'}`}
+      >
+        <PlayIcon size={compact ? 16 : 18} weight="fill" /> {compact ? 'Começar' : 'Começar a trabalhar'}
+      </button>
+    )
+  }
+  const since = new Date(org.workStart).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div ref={ref} className="relative">
@@ -46,7 +58,9 @@ export default function PresencePicker({ compact = false }: { compact?: boolean 
             compact ? 'right-0' : 'left-0'
           }`}
         >
-          <p className="px-4 pb-1 pt-3 text-xs font-extrabold uppercase tracking-wider text-muted">O meu estado</p>
+          <p className="flex items-center justify-between px-4 pb-1 pt-3 text-xs font-extrabold uppercase tracking-wider text-muted">
+            O meu estado <span className="normal-case tracking-normal">Desde {since}</span>
+          </p>
           {PRESENCE_STATUSES.filter(s => s !== 'offline').map(s => {
             const c = PRESENCE_CONFIG[s]
             const sel = s === org.presence
@@ -70,12 +84,12 @@ export default function PresencePicker({ compact = false }: { compact?: boolean 
           <button
             role="menuitem"
             onClick={() => {
-              org.setPresence('offline')
+              org.endWork()
               setOpen(false)
             }}
             className="flex w-full items-center gap-3 border-t-2 border-line px-4 py-3 text-left font-bold text-danger hover:bg-danger-light cursor-pointer"
           >
-            <SignOutIcon size={18} /> Terminar o dia
+            <SignOutIcon size={18} /> Terminar o trabalho
           </button>
         </div>
       )}

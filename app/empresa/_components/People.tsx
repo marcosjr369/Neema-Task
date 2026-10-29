@@ -149,7 +149,7 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
           body: { members: [{ name, email, jobTitle, phone, departmentId: departmentId || undefined, role }] },
         })
         if (res.skipped.length) throw new Error(res.skipped[0].reason === 'Já existe' ? 'Já existe um funcionário com este email' : res.skipped[0].reason)
-        showToast(res.added[0]?.status === 'activo' ? 'Adicionado' : 'Adicionado. Fica activo quando entrar com este email', 'success')
+        showToast(res.added[0]?.userId ? 'Convite enviado' : 'Convite criado', 'success')
       }
       await org.refresh()
       onClose()
@@ -410,7 +410,7 @@ export default function People() {
                     <span className="rounded-md bg-brand-light px-1.5 py-0.5 text-[11px] font-extrabold text-brand-dark">{ROLE_LABEL[m.role]}</span>
                   )}
                   {m.status === 'pendente' && (
-                    <span className="rounded-md bg-gold/20 px-1.5 py-0.5 text-[11px] font-extrabold text-gold-dark">Convite pendente</span>
+                    <span className="rounded-md bg-gold/20 px-1.5 py-0.5 text-[11px] font-extrabold text-gold-dark">{m.userId ? 'Convite enviado' : 'Convite pendente'}</span>
                   )}
                 </span>
               </span>
@@ -432,7 +432,7 @@ export default function People() {
       {org.isAdmin && org.members.some(m => m.status === 'pendente') && (
         <p className="flex items-center gap-2 text-xs font-semibold text-muted">
           <CopyIcon size={14} />
-          <button onClick={() => copy(`${window.location.origin}/entrar`)} className="font-extrabold text-accent underline cursor-pointer">Copiar link de entrada</button>
+          <button onClick={() => copy(`${window.location.origin}/convite/${org.org.inviteCode}`)} className="font-extrabold text-accent underline cursor-pointer">Copiar link de convite</button>
         </p>
       )}
 

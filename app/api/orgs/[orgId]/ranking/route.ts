@@ -1,6 +1,6 @@
 import { handle, requireMember } from '../../../../lib/server/api'
 import { memberEntry, sortRanking } from '../../../../lib/server/views'
-import { rangeStats } from '../../../../lib/points'
+import { rangeStats, withHistory } from '../../../../lib/points'
 import { teamMembers } from '../../../../lib/org'
 import type { RankEntry, RankMetric } from '../../../../types'
 
@@ -16,9 +16,9 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const tasks = db.tasks.filter(t => t.orgId === orgId)
   const entries: RankEntry[] = members.map(m => ({
     ...memberEntry(m, m.id === me.id),
-    ...rangeStats(
-      db.sessions.filter(s => s.memberId === m.id),
-      tasks.filter(t => t.assigneeId === m.id),
+    ...withHistory(
+      rangeStats(db.sessions.filter(s => s.memberId === m.id), tasks.filter(t => t.assigneeId === m.id), from),
+      m.history,
       from,
     ),
   }))

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, errorText } from '../lib/api'
-import { assignableMembers, canManageRole, isCompanyAccount, managedDepartmentIds, teamMembers } from '../lib/org'
+import { assignableMembers, canManageRole, isCompanyAccount, isWorking, managedDepartmentIds, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
 type OrgData = { org: Org; me: Member; departments: Department[]; members: Member[] }
@@ -21,6 +21,10 @@ type OrgValue = OrgData & {
   refresh: () => Promise<void>
   presence: PresenceStatus
   setPresence: (status: PresenceStatus) => void
+  /** início do dia de trabalho em curso; null se ainda não começou ou já terminou */
+  workStart: number | null
+  startWork: () => void
+  endWork: () => void
   /** tarefas que giro ou criei (supervisores e admins) */
   teamTasks: Task[]
   refreshTeam: () => Promise<void>
@@ -48,6 +52,9 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   const base = `/api/orgs/${orgId}`
   const [data, setData] = useState<OrgData>(() => ({ org: initial.org, me: initial.member, departments: [], members: [] }))
   const [presence, setPresenceState] = useState<PresenceStatus>('offline')
+  const [workStart, setWorkStart] = useState<number | null>(() => (isWorking(initial.member.workStart) ? initial.member.workStart! : null))
+  const workStartRef = useRef(workStart)
+  useEffect(() => { workStartRef.current = workStart }, [workStart])
   const [teamTasks, setTeamTasks] = useState<Task[]>([])
   const [error, setError] = useState<string | null>(null)
   const presenceRef = useRef(presence)
@@ -73,25 +80,45 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     } catch { /* offline */ }
   }, [base, isManager])
 
-  const sendPresence = useCallback(async (status: PresenceStatus) => {
-    try {
-      await api(`${base}/presence`, { body: { status } })
-    } catch { /* tenta de novo no próximo sinal */ }
-  }, [base])
-
-  const setPresence = useCallback((status: PresenceStatus) => {
+  const applyLocal = useCallback((status: PresenceStatus, start: number | null) => {
     presenceRef.current = status
+    workStartRef.current = start
     setPresenceState(status)
-    sendPresence(status)
-  }, [sendPresence])
+    setWorkStart(start)
+  }, [])
 
-  // Abrir a app conta como entrada: fica "a trabalhar" até mudar (só depois do consentimento).
+  const sendPresence = useCallback(async (body: { status?: PresenceStatus; work?: 'start' | 'end'; beat?: boolean }) => {
+    try {
+      const res = await api<{ presence: PresenceStatus; workStart?: number }>(`${base}/presence`, { body })
+      // o dia foi terminado noutro separador ou dispositivo
+      if (body.beat && res.presence === 'offline') applyLocal('offline', null)
+      else if (res.workStart) setWorkStart(res.workStart)
+    } catch { /* tenta de novo no próximo sinal */ }
+  }, [base, applyLocal])
+
+  // mudar de estado sem ter começado (ex.: iniciar o cronómetro) também começa o dia
+  const setPresence = useCallback((status: PresenceStatus) => {
+    applyLocal(status, status === 'offline' ? null : workStartRef.current ?? Date.now())
+    sendPresence({ status })
+  }, [sendPresence, applyLocal])
+
+  const startWork = useCallback(() => {
+    applyLocal('trabalho', workStartRef.current ?? Date.now())
+    sendPresence({ work: 'start' })
+  }, [sendPresence, applyLocal])
+  const endWork = useCallback(() => {
+    applyLocal('offline', null)
+    sendPresence({ work: 'end' })
+  }, [sendPresence, applyLocal])
+
+  // Ao abrir a app, um dia de trabalho já começado continua (só depois do consentimento).
   // A conta da empresa não tem estado.
   const isCompany = isCompanyAccount(data.me, data.org)
   const tracksPresence = !!data.me.consentAt && !isCompany
+  const resumeWith = useRef(initial.member.presence !== 'offline' ? initial.member.presence : 'trabalho')
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- registo de entrada
-    if (tracksPresence) setPresence('trabalho')
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- retoma o dia em curso
+    if (tracksPresence && workStartRef.current) setPresence(resumeWith.current)
   }, [tracksPresence, setPresence])
 
   useEffect(() => {
@@ -99,7 +126,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     refresh()
     refreshTeam()
     const beat = setInterval(() => {
-      if (presenceRef.current !== 'offline') sendPresence(presenceRef.current)
+      if (presenceRef.current !== 'offline') sendPresence({ status: presenceRef.current, beat: true })
     }, HEARTBEAT)
     const poll = setInterval(() => {
       refresh()
@@ -108,7 +135,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     const onFocus = () => {
       refresh()
       refreshTeam()
-      if (presenceRef.current !== 'offline') sendPresence(presenceRef.current)
+      if (presenceRef.current !== 'offline') sendPresence({ status: presenceRef.current, beat: true })
     }
     window.addEventListener('focus', onFocus)
     return () => {
@@ -141,13 +168,16 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       refresh,
       presence,
       setPresence,
+      workStart,
+      startWork,
+      endWork,
       teamTasks,
       refreshTeam,
       upsertTeamTask,
       removeTeamTask,
       error,
     }
-  }, [data, base, isCompany, isManager, refresh, presence, setPresence, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error])
+  }, [data, base, isCompany, isManager, refresh, presence, setPresence, workStart, startWork, endWork, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error])
 
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>
 }

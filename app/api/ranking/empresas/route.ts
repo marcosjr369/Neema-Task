@@ -1,6 +1,6 @@
 import { handle, requireUser } from '../../../lib/server/api'
 import { read } from '../../../lib/server/store'
-import { rangeStats } from '../../../lib/points'
+import { rangeStats, withHistory } from '../../../lib/points'
 import { teamMembers } from '../../../lib/org'
 import type { OrgRankEntry, RankMetric } from '../../../types'
 
@@ -29,9 +29,9 @@ export const GET = handle(async req => {
     const members = teamMembers(all, org)
     const total = { seconds: 0, tasks: 0, points: 0 }
     for (const m of members) {
-      const s = rangeStats(
-        db.sessions.filter(x => x.memberId === m.id),
-        db.tasks.filter(t => t.orgId === org.id && t.assigneeId === m.id),
+      const s = withHistory(
+        rangeStats(db.sessions.filter(x => x.memberId === m.id), db.tasks.filter(t => t.orgId === org.id && t.assigneeId === m.id), from),
+        m.history,
         from,
       )
       total.seconds += s.seconds

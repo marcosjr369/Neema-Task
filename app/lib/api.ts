@@ -8,12 +8,24 @@ export class ApiError extends Error {
 
 type Options = { method?: string; body?: unknown; form?: FormData }
 
+/**
+ * Token da sessão do Clerk (definido pelo AccountProvider). Vai em cada pedido para o servidor
+ * não depender do cookie, que pode estar expirado quando o separador volta de segundo plano
+ * ou logo a seguir ao login.
+ */
+let getToken: (() => Promise<string | null>) | null = null
+export const setTokenSource = (fn: typeof getToken) => { getToken = fn }
+
 export async function api<T = { ok: true }>(url: string, opts: Options = {}): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
+  const token = await getToken?.().catch(() => null)
+  if (token) headers.Authorization = `Bearer ${token}`
   let res: Response
   try {
     res = await fetch(url, {
       method: opts.method ?? (opts.body || opts.form ? 'POST' : 'GET'),
-      headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      headers,
       body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
       credentials: 'same-origin',
       cache: 'no-store',

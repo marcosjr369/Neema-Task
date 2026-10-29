@@ -12,6 +12,7 @@ import {
 } from 'react'
 import {
   ActiveTimer,
+  CarriedHistory,
   CATEGORY_CONFIG,
   Session,
   Settings,
@@ -54,6 +55,8 @@ type AppContextValue = {
   sessions: Session[]
   /** sessões guardadas + o segmento a correr agora */
   allSessions: Session[]
+  /** empresa: pontos e conquistas que a pessoa trouxe ao entrar (somam aos de lá) */
+  history?: CarriedHistory
   settings: Settings
   timer: ActiveTimer | null
   activeTask: Task | null
@@ -616,6 +619,7 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     tasks,
     sessions,
     allSessions,
+    history: orgCtx?.me.history,
     settings,
     timer,
     activeTask,

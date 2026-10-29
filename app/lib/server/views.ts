@@ -17,6 +17,14 @@ export function membershipsOf(db: DB, user: User) {
     .filter(x => x.org)
 }
 
+/** Convites de empresas à espera de resposta (a conta já existia quando foi adicionada) */
+export function invitesOf(db: DB, user: User) {
+  return db.members
+    .filter(m => m.userId === user.id && m.status === 'pendente')
+    .map(member => ({ member, org: db.orgs.find(o => o.id === member.orgId)! }))
+    .filter(x => x.org)
+}
+
 /** Empresas a que o utilizador se pode juntar pelo domínio do email */
 export function domainSuggestions(db: DB, user: User) {
   if (user.emailVerified === false) return []

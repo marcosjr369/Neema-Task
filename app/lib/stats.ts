@@ -1,4 +1,4 @@
-import { ActiveTimer, Session, Task, TaskCategory } from '../types'
+import { ActiveTimer, CarriedHistory, Session, Task, TaskCategory } from '../types'
 import { totalPoints } from './points'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -160,17 +160,23 @@ export function bestStreak(sessions: Session[], tasks: Task[]) {
 /** Números de que dependem as conquistas (sem ícones: também corre no servidor) */
 export type AchievementProgress = { done: number; hours: number; record: number; longest: number }
 
-export function achievementProgress(sessions: Session[], tasks: Task[]): AchievementProgress {
+/** history: o que a pessoa trouxe ao aceitar o convite da empresa (soma-se ao feito lá dentro) */
+export function achievementProgress(sessions: Session[], tasks: Task[], history?: CarriedHistory): AchievementProgress {
+  const done = tasks.filter(t => t.status === 'done' && t.review?.status !== 'pending').length
+  const hours = sumSeconds(sessions) / 3600
+  const record = bestStreak(sessions, tasks)
+  const longest = sessions.reduce((m, s) => Math.max(m, s.seconds), 0) / 60
+  if (!history) return { done, hours, record, longest }
   return {
-    done: tasks.filter(t => t.status === 'done' && t.review?.status !== 'pending').length,
-    hours: sumSeconds(sessions) / 3600,
-    record: bestStreak(sessions, tasks),
-    longest: sessions.reduce((m, s) => Math.max(m, s.seconds), 0) / 60,
+    done: done + history.done,
+    hours: hours + history.seconds / 3600,
+    record: Math.max(record, history.record),
+    longest: Math.max(longest, history.longest),
   }
 }
 
-export function totalXp(sessions: Session[], tasks: Task[]) {
-  return Math.max(0, totalPoints(sessions, tasks))
+export function totalXp(sessions: Session[], tasks: Task[], history?: CarriedHistory) {
+  return Math.max(0, totalPoints(sessions, tasks) + (history?.xp ?? 0))
 }
 
 /** Nível cresce quadraticamente: nível n começa em 25·(n-1)² XP */

@@ -1,4 +1,4 @@
-import { Priority, Session, Task } from '../types'
+import { CarriedHistory, Priority, Session, Task } from '../types'
 
 /**
  * Regras de pontuação (XP). Partilhado entre cliente e servidor, por isso
@@ -50,6 +50,12 @@ export function rangeStats(sessions: Session[], tasks: Task[], from = 0, to = In
     pts += taskPoints(t)
   }
   return { seconds, tasks: done, points: pts }
+}
+
+/** Soma o que a pessoa trouxe ao entrar na empresa; não tem datas, por isso só conta no total de sempre */
+export function withHistory(stats: RangeStats, history: CarriedHistory | undefined, from = 0): RangeStats {
+  if (!history || from > 0) return stats
+  return { seconds: stats.seconds + history.seconds, tasks: stats.tasks + history.done, points: stats.points + history.xp }
 }
 
 export function totalPoints(sessions: Session[], tasks: Task[]) {

@@ -42,11 +42,11 @@ function NavLink({ item, badge }: { item: NavItem; badge?: React.ReactNode }) {
 
 /** Navegação lateral (desktop) */
 export default function SideNav() {
-  const { timer, openTaskSheet, allSessions, tasks } = useApp()
+  const { timer, openTaskSheet, allSessions, tasks, history } = useApp()
   const { user } = useAccount()
   const org = useOrg()
   const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done').length ?? 0
-  const { level } = levelInfo(totalXp(allSessions, tasks))
+  const { level } = levelInfo(totalXp(allSessions, tasks, history))
 
   const badgeFor = (href: string) => {
     if (href === '/foco' && timer) return <span className="ml-auto h-2.5 w-2.5 animate-pulse rounded-full bg-danger" aria-label="Cronómetro a correr" />

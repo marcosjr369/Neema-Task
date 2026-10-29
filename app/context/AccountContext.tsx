@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth, useClerk } from '@clerk/nextjs'
-import { api } from '../lib/api'
+import { api, setTokenSource } from '../lib/api'
 import { clearBrowserStorage } from '../lib/browserStorage'
 import { accountTypeOf, businessRoleOf } from '../lib/account'
 import { DEFAULT_SETTINGS, type AccountType, type BusinessRole, type Member, type Membership, type Org, type RankingVisibility, type Settings, type User, type Workspace } from '../types'
@@ -12,15 +12,22 @@ type MeResponse = {
   user: User | null
   memberships: Membership[]
   suggestions: Suggestion[]
+  /** convites de empresas à espera de resposta */
+  invites: Membership[]
   /** conta desactivada pelo administrador da plataforma */
   disabled?: boolean
 }
+/** resposta do servidor e a sessão do Clerk a que corresponde */
+type MeState = MeResponse & { clerkId: string | null }
+const SIGNED_OUT: MeResponse = { user: null, memberships: [], invites: [], suggestions: [] }
 
 export type OrgInput = { name: string; sector: string; size?: string; domain?: string; departments?: string[] }
 
 type AccountValue = {
   /** à espera do Clerk e da primeira resposta do servidor */
   loading: boolean
+  /** a sessão do Clerk mudou (entrou ou saiu) e a conta ainda não chegou */
+  switching: boolean
   disabled: boolean
   user: User | null
   /** pessoal ou empresa; undefined enquanto a conta nova não escolher */
@@ -31,6 +38,9 @@ type AccountValue = {
   needsSetup: boolean
   memberships: Membership[]
   suggestions: Suggestion[]
+  invites: Membership[]
+  /** aceitar ou recusar o convite de uma empresa (convert: conta pessoal que passa a conta de empresa) */
+  answerInvite: (memberId: string, accept: boolean, convert?: boolean) => Promise<void>
   workspace: Workspace
   /** empresa activa (se o espaço for de empresa) */
   current: Membership | null
@@ -56,21 +66,40 @@ export function useAccount() {
 }
 
 export function AccountProvider({ children }: { children: ReactNode }) {
-  const { isLoaded, userId: clerkUserId } = useAuth()
+  const { isLoaded, userId, getToken } = useAuth()
+  const clerkUserId = userId ?? null
   const clerk = useClerk()
-  const [me, setMe] = useState<MeResponse | null>(null)
+  const [me, setMe] = useState<MeState | null>(null)
+  const clerkRef = useRef(clerkUserId)
+  const seq = useRef(0)
   const [settingsPatch, setSettingsPatch] = useState<Partial<Settings>>({})
   const settingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSettings = useRef<Partial<Settings>>({})
 
+  // todos os pedidos levam o token actual do Clerk (renovado por ele quando expira)
+  useEffect(() => {
+    clerkRef.current = clerkUserId
+    setTokenSource(isLoaded && clerkUserId ? () => getToken() : null)
+  }, [isLoaded, clerkUserId, getToken])
+
   const refresh = useCallback(async () => {
+    // só conta a resposta do pedido mais recente: uma resposta antiga (ex.: de antes do login)
+    // não pode apagar a conta que entretanto chegou
+    const n = ++seq.current
+    const clerkId = clerkRef.current
     try {
-      setMe(await api<MeResponse>('/api/me'))
+      let res = await api<MeResponse>('/api/me')
+      if (!res.user && !res.disabled && clerkId) {
+        // o Clerk tem sessão mas o servidor não a viu (token a meio da renovação): tenta outra vez
+        await getToken({ skipCache: true }).catch(() => null)
+        res = await api<MeResponse>('/api/me')
+      }
+      if (n === seq.current) setMe({ ...SIGNED_OUT, ...res, clerkId })
     } catch {
       // sem ligação: mantém o que houver; no primeiro arranque mostra o ecrã de entrada
-      setMe(m => m ?? { user: null, memberships: [], suggestions: [] })
+      if (n === seq.current) setMe(m => m ?? { ...SIGNED_OUT, clerkId })
     }
-  }, [])
+  }, [getToken])
 
   useEffect(() => {
     clearBrowserStorage()
@@ -84,6 +113,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sincronização com o servidor
     if (isLoaded) refresh()
   }, [isLoaded, clerkUserId, refresh])
+
+  const answerInvite = useCallback(async (memberId: string, accept: boolean, convert?: boolean) => {
+    await api(`/api/convites/${memberId}`, { body: { accept, convert } })
+    await refresh()
+  }, [refresh])
 
   const setWorkspace = useCallback((ws: Workspace) => {
     setMe(m => (m?.user ? { ...m, user: { ...m.user, workspace: ws } } : m))
@@ -103,9 +137,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    seq.current++ // ignora pedidos ainda em curso da sessão que terminou
     await clerk.signOut().catch(() => undefined)
     setSettingsPatch({})
-    setMe({ user: null, memberships: [], suggestions: [] })
+    setMe({ ...SIGNED_OUT, clerkId: null })
   }, [clerk])
 
   const updateMe = useCallback(async (patch: { name?: string; rankingVisibility?: RankingVisibility }) => {
@@ -155,7 +190,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   )
 
   const value: AccountValue = {
-    loading: !isLoaded || me === null,
+    // enquanto a resposta for de outra sessão (acabou de entrar ou sair), continua a carregar
+    loading: !isLoaded || me === null || me.clerkId !== clerkUserId,
+    switching: isLoaded && me !== null && me.clerkId !== clerkUserId,
     disabled: !!me?.disabled,
     user,
     accountType,
@@ -163,6 +200,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     needsSetup,
     memberships,
     suggestions: me?.suggestions ?? [],
+    invites: me?.invites ?? [],
+    answerInvite,
     workspace,
     current,
     settings,

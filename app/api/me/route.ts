@@ -2,16 +2,16 @@ import { body, fail, handle, requireUser } from '../../lib/server/api'
 import { currentUser } from '../../lib/server/auth'
 import { userScope } from '../../lib/server/scopes'
 import { mutate, read } from '../../lib/server/store'
-import { domainSuggestions, membershipsOf } from '../../lib/server/views'
+import { domainSuggestions, invitesOf, membershipsOf } from '../../lib/server/views'
 import { accountTypeOf, BUSINESS_ONLY, PERSONAL_ONLY } from '../../lib/account'
 import { DEFAULT_SETTINGS, type RankingVisibility, type Settings, type Workspace } from '../../types'
 
 export const GET = handle(async () => {
   const user = await currentUser()
-  if (!user) return { user: null, memberships: [], suggestions: [] }
-  if (user.disabled) return { user: null, memberships: [], suggestions: [], disabled: true }
+  if (!user) return { user: null, memberships: [], invites: [], suggestions: [] }
+  if (user.disabled) return { user: null, memberships: [], invites: [], suggestions: [], disabled: true }
   const db = await read(userScope(user.id, { memberships: true, domainOrgs: true }))
-  return { user, memberships: membershipsOf(db, user), suggestions: domainSuggestions(db, user) }
+  return { user, memberships: membershipsOf(db, user), invites: invitesOf(db, user), suggestions: domainSuggestions(db, user) }
 })
 
 type Patch = {
@@ -71,7 +71,7 @@ export const PATCH = handle(async req => {
       const type = accountTypeOf(user, hasMembership)
       if (ws.kind === 'personal' && type === 'business') fail(409, BUSINESS_ONLY)
       if (ws.kind === 'org' && type === 'personal') fail(409, PERSONAL_ONLY)
-      const valid = ws.kind === 'personal' || db.members.some(m => m.id === ws.memberId && m.orgId === ws.orgId && m.userId === user.id)
+      const valid = ws.kind === 'personal' || db.members.some(m => m.id === ws.memberId && m.orgId === ws.orgId && m.userId === user.id && m.status === 'activo')
       if (valid) user.workspace = ws.kind === 'personal' ? { kind: 'personal' } : { kind: 'org', orgId: ws.orgId, memberId: ws.memberId }
     }
     return { user }

@@ -1,5 +1,5 @@
 import { BrainIcon, ClockIcon, FireIcon, RocketIcon, TargetIcon, TrophyIcon, type Icon } from '@phosphor-icons/react'
-import type { Session, Task } from '../types'
+import type { CarriedHistory, Session, Task } from '../types'
 import { achievementProgress, type AchievementProgress } from './stats'
 
 export type Achievement = {
@@ -13,8 +13,8 @@ export type Achievement = {
 }
 
 /** Conquistas e o progresso actual de cada uma (usadas no Perfil e nas celebrações) */
-export function achievements(sessions: Session[], tasks: Task[]): Achievement[] {
-  return achievementsFrom(achievementProgress(sessions, tasks))
+export function achievements(sessions: Session[], tasks: Task[], history?: CarriedHistory): Achievement[] {
+  return achievementsFrom(achievementProgress(sessions, tasks, history))
 }
 
 /** As mesmas conquistas a partir dos números já calculados (ex.: vindos do servidor) */

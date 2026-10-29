@@ -18,6 +18,7 @@ import MilestoneCelebration from '../focus/MilestoneCelebration'
 import IdleNudge from '../focus/IdleNudge'
 import ToastView from '../ui/ToastView'
 import ConsentGate from '../account/ConsentGate'
+import InviteDialog from '../account/InviteDialog'
 import { PresenceSync } from '../account/PresenceSync'
 import Splash from '../ui/Splash'
 import Mascot from '../ui/Mascot'
@@ -128,7 +129,7 @@ function Shell({ children }: { children: ReactNode }) {
  * conforme o espaço activo (pessoal ou empresa).
  */
 function Workspace({ children }: { children: ReactNode }) {
-  const { workspace, current, user, loading, needsSetup, disabled, logout } = useAccount()
+  const { workspace, current, user, loading, switching, needsSetup, disabled, logout } = useAccount()
   const pathname = usePathname()
   const router = useRouter()
   const isPublic = PUBLIC.some(p => pathname.startsWith(p))
@@ -147,7 +148,8 @@ function Workspace({ children }: { children: ReactNode }) {
 
   // painel de administração: página própria, com palavra-passe (não depende da conta)
   if (pathname.startsWith('/marcos')) return <main className="min-h-dvh bg-snow">{children}</main>
-  if (loading) return <Splash />
+  // na entrada, o login acabado de fazer não troca a página pelo ecrã de carregamento (perdia os passos)
+  if (loading && !(switching && isPublic)) return <Splash />
   if (disabled) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center bg-white px-6 text-center">
@@ -189,6 +191,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <IconContext.Provider value={ICONS}>
       <AccountProvider>
         <Workspace>{children}</Workspace>
+        <InviteDialog />
       </AccountProvider>
     </IconContext.Provider>
   )

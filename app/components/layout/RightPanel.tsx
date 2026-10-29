@@ -18,9 +18,9 @@ import { CategoryBadge } from '../ui/icons'
 
 /** Coluna lateral direita (desktop): resumo, temporizador, objetivo, prazos */
 export default function RightPanel() {
-  const { allSessions, tasks, now, settings, timer } = useApp()
+  const { allSessions, tasks, history, now, settings, timer } = useApp()
   const { streak, activeToday } = computeStreak(allSessions, tasks, now)
-  const xp = totalXp(allSessions, tasks)
+  const xp = totalXp(allSessions, tasks, history)
   const lvl = levelInfo(xp)
   const today = todaySeconds(allSessions, now)
   const goal = settings.dailyGoalMinutes * 60

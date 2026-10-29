@@ -353,9 +353,10 @@ export default function EnterPage() {
   }, [step])
 
   // Quem abre /entrar já com a conta configurada segue directo para dentro
+  // (também se a conta só chegar depois de a página abrir no passo de boas-vindas)
   const routed = useRef(false)
   useEffect(() => {
-    if (routed.current || !user || needsSetup || forced || pending || stack.length !== 1 || step !== 'tipo') return
+    if (routed.current || !user || needsSetup || forced || pending || stack.length !== 1 || !['ola', 'como', 'tipo'].includes(step)) return
     routed.current = true
     router.replace('/')
   }, [user, needsSetup, step, stack.length, pending, forced, router])

@@ -10,7 +10,7 @@ import { useAccount } from '../context/AccountContext'
 import { Settings } from '../types'
 import { sounds } from '../lib/sounds'
 import { POINTS_HELP } from '../lib/points'
-import { bestStreak, formatShort, levelInfo, sumSeconds, totalXp } from '../lib/stats'
+import { achievementProgress, bestStreak, formatShort, levelInfo, sumSeconds, totalXp } from '../lib/stats'
 import { achievements as listAchievements, isUnlocked } from '../lib/achievements'
 import { REMINDER_INTERVALS } from '../lib/nudges'
 import PushCard from '../components/account/PushCard'
@@ -66,11 +66,11 @@ function Toggle({ label, desc, on, onChange, icon }: { label: string; desc?: str
 
 /** Cabeçalho: foto, nome editável, nível */
 function ProfileHeader() {
-  const { allSessions, tasks } = useApp()
+  const { allSessions, tasks, history } = useApp()
   const { user, updateMe } = useAccount()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(user?.name ?? '')
-  const xp = totalXp(allSessions, tasks)
+  const xp = totalXp(allSessions, tasks, history)
   const lvl = levelInfo(xp)
   if (!user) return null
 
@@ -127,11 +127,9 @@ function ProfileHeader() {
 }
 
 function Summary() {
-  const { allSessions, tasks } = useApp()
-  const hours = sumSeconds(allSessions) / 3600
-  const done = tasks.filter(t => t.status === 'done' && t.review?.status !== 'pending').length
-  const record = bestStreak(allSessions, tasks)
-  const achievements = listAchievements(allSessions, tasks)
+  const { allSessions, tasks, history } = useApp()
+  const { hours, done, record } = achievementProgress(allSessions, tasks, history)
+  const achievements = listAchievements(allSessions, tasks, history)
   const unlocked = achievements.filter(isUnlocked).length
 
   return (

@@ -42,6 +42,12 @@ export const canReviewTask = (task: Task, me: Member, managesAssignee: boolean) 
   task.reviewerId ? task.reviewerId === me.id || me.role === 'admin' : managesAssignee
 
 /** Departamentos geridos pelo membro ('all' para administradores) */
+/** Um dia de trabalho aberto há mais do que isto (esqueceu-se de terminar) já não conta */
+export const WORKDAY_MS = 16 * 60 * 60 * 1000
+
+/** Começou o dia de trabalho e ainda não terminou */
+export const isWorking = (workStart: number | undefined | null, now = Date.now()) => !!workStart && now - workStart < WORKDAY_MS
+
 export function managedDepartmentIds(departments: Department[], me: Member): Set<string> | 'all' {
   if (me.role === 'admin') return 'all'
   const ids = new Set<string>()

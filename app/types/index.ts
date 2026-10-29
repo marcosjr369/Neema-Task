@@ -306,7 +306,7 @@ export const PRESENCE_STATUSES = Object.keys(PRESENCE_CONFIG) as PresenceStatus[
 export type Member = {
   id: string
   orgId: string
-  /** vazio enquanto o funcionário não entrar pela primeira vez */
+  /** vazio enquanto o funcionário não entrar pela primeira vez; com status pendente, conta já existente a quem foi enviado o convite */
   userId?: string
   email: string
   name: string
@@ -321,7 +321,14 @@ export type Member = {
   consentAt?: number
   presence: PresenceStatus
   lastSeen?: number
+  /** início do dia de trabalho em curso ("Começar a trabalhar"); vazio depois de terminar */
+  workStart?: number
+  /** pontos e conquistas que a pessoa já tinha quando aceitou o convite */
+  history?: CarriedHistory
 }
+
+/** Resumo do que a pessoa fez antes de entrar na empresa (conta pessoal e outras empresas) */
+export type CarriedHistory = { at: number; xp: number; seconds: number; done: number; record: number; longest: number }
 
 export type PresenceSegment = {
   id: string

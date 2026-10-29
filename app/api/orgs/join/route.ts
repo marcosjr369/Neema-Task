@@ -1,11 +1,12 @@
 import { body, fail, handle, requireUser } from '../../../lib/server/api'
 import { mutate, newId } from '../../../lib/server/store'
 import { accountTypeOf, businessRoleOf, COMPANY_ONLY } from '../../../lib/account'
+import { activateMember, loadHistory } from '../../../lib/server/history'
 
 /**
  * Entrar numa empresa com código de convite ou pelo domínio do email.
  * Uma conta pessoal só entra se confirmar a conversão (convert): passa a conta de empresa
- * e o espaço pessoal deixa de aparecer (os dados ficam guardados, mas sem acesso).
+ * e o espaço pessoal deixa de aparecer; os pontos e conquistas que já tinha passam para a empresa.
  */
 export const POST = handle(async req => {
   const user = await requireUser()
@@ -13,7 +14,7 @@ export const POST = handle(async req => {
   const clean = code?.trim().toUpperCase().replace(/^NEEMA-/, '')
   return mutate(async l => {
     await l.load('users', { id: user.id })
-    await l.load('members', { user_id: user.id })
+    await loadHistory(l, user.id)
     // empresas onde já está (para saber se é a conta de alguma)
     await l.load('orgs', { id: l.db.members.map(m => m.orgId) })
     if (clean) await l.load('orgs', { invite_code: clean })
@@ -40,11 +41,8 @@ export const POST = handle(async req => {
       m => m.orgId === org.id && (m.userId === user.id || (user.emailVerified !== false && m.email === user.email)),
     )
     if (member) {
+      if (member.status === 'pendente') activateMember(db, member, user.id)
       member.userId = user.id
-      if (member.status === 'pendente') {
-        member.status = 'activo'
-        member.joinedAt = Date.now()
-      }
     } else {
       member = {
         id: newId(),
@@ -54,10 +52,10 @@ export const POST = handle(async req => {
         name: user.name,
         picture: user.picture,
         role: 'membro',
-        status: 'activo',
-        joinedAt: Date.now(),
+        status: 'pendente',
         presence: 'offline',
       }
+      activateMember(db, member, user.id)
       db.members.push(member)
     }
     me.accountType = 'business'

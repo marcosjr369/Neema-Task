@@ -8,9 +8,9 @@ import { computeStreak, formatShort, levelInfo, todaySeconds, totalXp } from '..
 
 /** Barra superior com nível, sequência, XP e tempo de hoje */
 export default function TopBar() {
-  const { allSessions, tasks, now, timer } = useApp()
+  const { allSessions, tasks, history, now, timer } = useApp()
   const { streak, activeToday } = computeStreak(allSessions, tasks, now)
-  const xp = totalXp(allSessions, tasks)
+  const xp = totalXp(allSessions, tasks, history)
   const { level } = levelInfo(xp)
   const today = todaySeconds(allSessions, now)
 

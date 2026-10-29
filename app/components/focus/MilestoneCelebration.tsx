@@ -23,7 +23,7 @@ type Snapshot = { day: number; goal: boolean; level: number; streak: number; unl
  * o que acontece durante a sessão (recarregar a página não repete celebrações).
  */
 export default function MilestoneCelebration() {
-  const { ready, allSessions, tasks, now, settings, celebration } = useApp()
+  const { ready, allSessions, tasks, history, now, settings, celebration } = useApp()
   const [queue, setQueue] = useState<Milestone[]>([])
   const prev = useRef<Snapshot | null>(null)
 
@@ -31,10 +31,10 @@ export default function MilestoneCelebration() {
   const today = todaySeconds(allSessions, now)
   const goalSeconds = settings.dailyGoalMinutes * 60
   const goal = today >= goalSeconds
-  const xp = totalXp(allSessions, tasks)
+  const xp = totalXp(allSessions, tasks, history)
   const level = levelInfo(xp).level
   const { streak } = computeStreak(allSessions, tasks, now)
-  const list = achievements(allSessions, tasks)
+  const list = achievements(allSessions, tasks, history)
   const unlockedIds = list.filter(isUnlocked).map(a => a.id).join(',')
   const tasksToday = tasks.filter(t => (completedTime(t) ?? 0) >= day).length
 

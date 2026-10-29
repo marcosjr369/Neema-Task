@@ -14,7 +14,7 @@ export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
     .map(m => {
       const sessions = db.sessions.filter(s => s.memberId === m.id)
       const tasks = orgTasks.filter(t => t.assigneeId === m.id)
-      const xp = totalXp(sessions, tasks)
+      const xp = totalXp(sessions, tasks, m.history)
       return {
         id: m.id,
         name: m.name,
@@ -24,8 +24,8 @@ export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
         role: m.role,
         xp,
         level: levelInfo(xp).level,
-        seconds: sumSeconds(sessions),
-        progress: achievementProgress(sessions, tasks),
+        seconds: sumSeconds(sessions) + (m.history?.seconds ?? 0),
+        progress: achievementProgress(sessions, tasks, m.history),
       }
     })
     .sort((a, b) => b.xp - a.xp || a.name.localeCompare(b.name))

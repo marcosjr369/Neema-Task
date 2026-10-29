@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { formatDeadline, formatDuration, startOfDay } from '../../lib/stats'
 import { isCompleted } from '../../lib/points'
+import { isWorking } from '../../lib/org'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES } from '../../types'
 import type { SectionId } from '../../lib/nav'
 import Avatar from '../../components/ui/Avatar'
@@ -97,8 +98,15 @@ export default function Overview({ goTo }: { goTo: (section: SectionId) => void 
                     <span className="block truncate font-bold text-ink">{m.name}</span>
                     <span className="block truncate text-xs font-semibold text-muted">{org.deptById(m.departmentId)?.name ?? m.jobTitle ?? '—'}</span>
                   </span>
-                  <span className="text-xs font-extrabold" style={{ color: PRESENCE_CONFIG[m.presence].color === '#D3D0E0' ? '#A3A0B8' : PRESENCE_CONFIG[m.presence].color }}>
-                    {PRESENCE_CONFIG[m.presence].label}
+                  <span className="shrink-0 text-right text-xs font-extrabold">
+                    <span className="block" style={{ color: PRESENCE_CONFIG[m.presence].color === '#D3D0E0' ? '#A3A0B8' : PRESENCE_CONFIG[m.presence].color }}>
+                      {PRESENCE_CONFIG[m.presence].label}
+                    </span>
+                    {isWorking(m.workStart, now) && (
+                      <span className="block font-bold text-muted">
+                        Entrou às {new Date(m.workStart!).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
                   </span>
                 </Link>
               </li>

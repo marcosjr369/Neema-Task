@@ -3,6 +3,7 @@ import { mutate, newId } from '../../../../lib/server/store'
 import { DEPT_COLORS } from '../../../../lib/org'
 import type { Member, Role } from '../../../../types'
 import { orgScope, scopes } from '../../../../lib/server/scopes'
+import { sendToUser } from '../../../../lib/server/push'
 
 type Row = { name?: string; email?: string; jobTitle?: string; phone?: string; department?: string; departmentId?: string; role?: Role }
 
@@ -16,8 +17,10 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   if (members.length > 1000) fail(400, 'Máximo de 1000 por importação')
 
   const emails = members.map(r => r.email?.trim().toLowerCase()).filter((e): e is string => !!e)
-  return mutate(scopes(orgScope(orgId), async l => l.load('users', { email: emails })), db => {
+  const res = await mutate(scopes(orgScope(orgId), async l => l.load('users', { email: emails })), db => {
     const added: Member[] = []
+    /** contas que já existiam: recebem o convite para aceitar ou recusar */
+    const invited: string[] = []
     const skipped: { email: string; reason: string }[] = []
     const deptByName = new Map(
       db.departments.filter(d => d.orgId === orgId).map(d => [d.name.trim().toLowerCase(), d]),
@@ -46,8 +49,12 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
         departmentId = dept.id
       }
 
-      // se a pessoa já tem conta, fica logo activa
+      // quem já tem conta recebe o convite (aceita ou recusa); quem não tem entra pelo link de convite
       const user = db.users.find(u => u.email === email && u.emailVerified !== false)
+      if (user?.businessRole === 'company') {
+        skipped.push({ email, reason: 'É a conta de uma empresa' })
+        continue
+      }
       const role: Role = row.role && ROLES.includes(row.role) ? row.role : 'membro'
       const member: Member = {
         id: newId(),
@@ -60,8 +67,7 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
         phone: row.phone?.trim().slice(0, 30) || undefined,
         departmentId,
         role,
-        status: user ? 'activo' : 'pendente',
-        joinedAt: user ? Date.now() : undefined,
+        status: 'pendente',
         presence: 'offline',
       }
       if (role === 'supervisor' && departmentId) {
@@ -69,7 +75,15 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
       }
       db.members.push(member)
       added.push(member)
+      if (user) invited.push(user.id)
     }
-    return { added, skipped }
+    const org = db.orgs.find(o => o.id === orgId)!
+    return { added, skipped, invited, orgName: org.name }
   })
+  await Promise.all(
+    res.invited.map(id =>
+      sendToUser(id, { title: 'Convite de empresa', body: `A ${res.orgName} convidou-te para a equipa`, url: '/', tag: `convite-${orgId}` }).catch(() => 0),
+    ),
+  )
+  return { added: res.added, skipped: res.skipped }
 })

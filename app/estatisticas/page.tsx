@@ -112,7 +112,7 @@ function StatTile({ icon, value, label, color }: { icon: React.ReactNode; value:
 }
 
 export default function StatsPage() {
-  const { allSessions, tasks, now, settings } = useApp()
+  const { allSessions, tasks, history, now, settings } = useApp()
   const [days, setDays] = useState(7)
 
   const series = dailySeries(allSessions, tasks, now, days)
@@ -124,7 +124,7 @@ export default function StatsPage() {
   const best = series.reduce((b, d) => (d.seconds > b.seconds ? d : b), series[0])
   const { streak } = computeStreak(allSessions, tasks, now)
   const record = bestStreak(allSessions, tasks)
-  const xp = totalXp(allSessions, tasks)
+  const xp = totalXp(allSessions, tasks, history)
   const cats = categoryBreakdown(inRange)
   const peak = peakHour(inRange)
   const goalDays = series.filter(d => d.seconds >= settings.dailyGoalMinutes * 60).length

@@ -1,6 +1,6 @@
 import type { RankMetric } from '../../types'
 import { accountTypeOf } from '../account'
-import { rangeStats } from '../points'
+import { rangeStats, withHistory } from '../points'
 import { teamMembers } from '../org'
 import type { DB } from './store'
 
@@ -42,7 +42,7 @@ export function panelRanking(db: DB, kind: RankKind, metric: RankMetric, from: n
         const members = teamMembers(db.members, org).filter(m => m.orgId === org.id && m.status === 'activo')
         const total = { seconds: 0, tasks: 0, points: 0 }
         for (const m of members) {
-          const s = rangeStats(db.sessions.filter(x => x.memberId === m.id), db.tasks.filter(t => t.orgId === org.id && t.assigneeId === m.id), from)
+          const s = withHistory(rangeStats(db.sessions.filter(x => x.memberId === m.id), db.tasks.filter(t => t.orgId === org.id && t.assigneeId === m.id), from), m.history, from)
           total.seconds += s.seconds
           total.tasks += s.tasks
           total.points += s.points
@@ -80,7 +80,7 @@ export function panelRanking(db: DB, kind: RankKind, metric: RankMetric, from: n
       sub: m.jobTitle || m.email,
       picture: m.picture,
       department: m.departmentId ? departments.find(d => d.id === m.departmentId)?.name : undefined,
-      ...rangeStats(db.sessions.filter(s => s.memberId === m.id), db.tasks.filter(t => t.orgId === orgId && t.assigneeId === m.id), from),
+      ...withHistory(rangeStats(db.sessions.filter(s => s.memberId === m.id), db.tasks.filter(t => t.orgId === orgId && t.assigneeId === m.id), from), m.history, from),
       hidden: false,
       href: m.userId ? `/marcos/faz/utilizadores/${m.userId}` : undefined,
     }))
