@@ -6,7 +6,7 @@ import { ArrowRightIcon, BuildingsIcon, PulseIcon, TimerIcon, UserPlusIcon, User
 import Avatar from '../../components/ui/Avatar'
 import { formatShort } from '../../lib/stats'
 import type { PanelOverview } from '../../lib/server/panelStats'
-import { ChartCard, ColumnChart, LineChart, compact, type Point, type Series } from './_components/Charts'
+import { ChartCard, ColumnChart, LineChart, compact, type Point, type Series } from '../../components/ui/Charts'
 import { usePanel } from './_components/PanelShell'
 import { dayLabel } from './_components/format'
 

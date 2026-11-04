@@ -1,14 +1,25 @@
 import { body, canManage, fail, handle, requireMember, taskAccess } from '../../../../../lib/server/api'
 import { orgScope, scopes } from '../../../../../lib/server/scopes'
-import { mutate } from '../../../../../lib/server/store'
+import { mutate, type DB } from '../../../../../lib/server/store'
 import { removeFiles } from '../../../../../lib/server/files'
 import { spawnNext } from '../../../../../lib/server/org'
-import { addComment, checkReviewer, cleanTaskFields, deleteTask, type TaskPatch } from '../../../../../lib/server/tasks'
-import { isCompanyAccount } from '../../../../../lib/org'
-import type { TaskStatus } from '../../../../../types'
+import {
+  addComment, checkReviewer, cleanTaskFields, cloneForAssignee, deleteTask, mergeChecklist, SHARED_FIELDS, withGroup, type TaskPatch,
+} from '../../../../../lib/server/tasks'
+import { groupKey, groupSiblings, isCompanyAccount } from '../../../../../lib/org'
+import type { Member, Org, Task, TaskStatus } from '../../../../../types'
+
+type UpdatePatch = TaskPatch & {
+  assigneeId?: string
+  reviewerId?: string | null
+  /** tarefa de grupo: responsáveis pretendidos (acrescenta e retira cópias) */
+  assigneeIds?: string[]
+  /** aplica os campos partilhados a todas as cópias do grupo */
+  group?: boolean
+}
 
 type Action =
-  | { action: 'update'; patch: TaskPatch & { assigneeId?: string; reviewerId?: string | null } }
+  | { action: 'update'; patch: UpdatePatch }
   | { action: 'status'; status: TaskStatus }
   | { action: 'approve'; comment?: string }
   | { action: 'reject'; comment?: string }
@@ -17,13 +28,84 @@ type Action =
 /** Campos que o funcionário pode mudar numa tarefa que lhe foi atribuída */
 const OWNER_FIELDS = ['checklist', 'notified', 'focusDuration'] as const
 
+const wantedIds = (patch?: UpdatePatch) =>
+  Array.isArray(patch?.assigneeIds) ? [...new Set(patch.assigneeIds.map(String).filter(Boolean))] : null
+
+/** Quem edita pode mexer nesta cópia? (gere o responsável ou criou a tarefa) */
+const canEdit = (db: DB, me: Member, t: Task) => taskAccess(db, me, t).manager || t.createdBy === me.id
+
+/**
+ * Edição de uma tarefa de grupo: campos partilhados em todas as cópias e, com assigneeIds,
+ * acrescenta cópias para quem entra e apaga as de quem sai (se ainda não entregou).
+ * Devolve a cópia que se estava a editar (ou outra do grupo, se essa saiu).
+ */
+function editGroup(db: DB, org: Org, me: Member, task: Task, fields: Partial<Task>, patch: UpdatePatch, files: string[]) {
+  const now = Date.now()
+  // tarefa simples a passar a grupo: o id dela passa a ser o do grupo
+  if (!task.groupId) task.groupId = task.id
+  const key = groupKey(task)
+  const siblings = groupSiblings(db.tasks, task)
+  const reviewerId = patch.reviewerId
+
+  for (const s of siblings.filter(s => canEdit(db, me, s))) {
+    const deadlineChanged = fields.deadline !== undefined && fields.deadline !== s.deadline
+    for (const k of SHARED_FIELDS) if (k in fields) Object.assign(s, { [k]: fields[k] })
+    if (deadlineChanged) s.notified = false
+    // checklist igual para todos, mas cada um mantém os passos que já marcou
+    if (fields.checklist) s.checklist = mergeChecklist(fields.checklist, s.checklist)
+    if (reviewerId !== undefined) s.reviewerId = reviewerId ? checkReviewer(db, org, reviewerId, s.assigneeId) : undefined
+    s.updatedAt = now
+  }
+
+  const wanted = wantedIds(patch)
+  if (wanted) {
+    if (!wanted.length) fail(400, 'Escolhe pelo menos um funcionário')
+    if (wanted.length > 200) fail(400, 'No máximo 200 pessoas por tarefa')
+    const current = new Set(siblings.map(s => s.assigneeId))
+
+    // entram: cópia nova a partir desta, com o trabalho do zero
+    for (const id of wanted.filter(id => !current.has(id))) {
+      const a = db.members.find(m => m.id === id && m.orgId === org.id)
+      if (!a || isCompanyAccount(a, org)) fail(400, 'Funcionário inválido')
+      if (a!.id !== me.id && !canManage(db, me, a)) fail(403, `Só podes atribuir tarefas à tua equipa (${a!.name})`)
+      if (task.reviewerId === a!.id) fail(400, `${a!.name} é o supervisor desta tarefa e não pode ser também responsável`)
+      db.tasks.push(cloneForAssignee(task, a!, me.id))
+    }
+
+    // saem: só quem ainda não entregou (o trabalho entregue fica no histórico)
+    for (const s of siblings.filter(s => !wanted.includes(s.assigneeId!))) {
+      const name = db.members.find(m => m.id === s.assigneeId)?.name ?? 'Esta pessoa'
+      if (!canEdit(db, me, s)) fail(403, `Não geres ${name}`)
+      if (s.status === 'done') fail(400, `${name} já entregou esta tarefa e não pode ser retirado`)
+      files.push(...deleteTask(db, s.id))
+    }
+  }
+
+  const remaining = db.tasks.filter(t => t.groupId && groupKey(t) === key)
+  // grupo de uma só pessoa volta a ser uma tarefa simples
+  if (remaining.length === 1) remaining[0].groupId = undefined
+  return remaining.find(t => t.id === task.id) ?? remaining[0]
+}
+
 export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { orgId, taskId }) => {
   const { me } = await requireMember(orgId)
   const input = await body<Action>(req)
+  const wanted = input.action === 'update' ? wantedIds(input.patch) : null
 
-  return mutate(scopes(orgScope(orgId), async l => l.load('tasks', { id: taskId })), db => {
+  const scope = scopes(orgScope(orgId), async l => {
+    await l.load('tasks', { id: taskId })
+    const t = l.db.tasks.find(x => x.id === taskId)
+    // as outras cópias do grupo (resumo, edição em grupo); quem sai leva as suas sessões
+    if (t?.groupId || (wanted && wanted.length > 1)) {
+      await l.load('tasks', { org_id: orgId })
+      if (wanted && t) await l.load('sessions', { task_id: groupSiblings(l.db.tasks, t).filter(s => !wanted.includes(s.assigneeId!)).map(s => s.id) })
+    }
+  })
+
+  const files: string[] = []
+  const result = await mutate(scope, db => {
     const org = db.orgs.find(o => o.id === orgId)!
-    const task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
+    let task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
     const access = taskAccess(db, me, task)
     if (!access.view) fail(403, 'Sem acesso a esta tarefa')
     const editor = access.manager || task.createdBy === me.id
@@ -40,9 +122,13 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
           }
         }
         if (fields.title === '') delete fields.title
+        if (editor && (input.patch?.group || (wanted && wanted.length > 1))) {
+          task = editGroup(db, org, me, task, fields, input.patch, files)
+          break
+        }
         if (fields.deadline !== undefined && fields.deadline !== task.deadline) fields.notified = false
         Object.assign(task, fields)
-        const assigneeId = input.patch?.assigneeId
+        const assigneeId = input.patch?.assigneeId || (wanted?.length === 1 ? wanted[0] : undefined)
         if (editor && assigneeId && assigneeId !== task.assigneeId) {
           const target = db.members.find(m => m.id === assigneeId && m.orgId === orgId)
           if (!target || isCompanyAccount(target, org)) fail(400, 'Funcionário inválido')
@@ -114,21 +200,31 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
         fail(400, 'Acção desconhecida')
     }
     task.updatedAt = now
-    return { task }
+    return { task: withGroup(db, task), tasks: groupSiblings(db.tasks, task).map(t => withGroup(db, t)) }
   })
+  await removeFiles(files)
+  return result
 })
 
-export const DELETE = handle<{ orgId: string; taskId: string }>(async (_req, { orgId, taskId }) => {
+/** Apaga a tarefa; ?group=1 apaga todas as cópias do grupo que quem pede gere */
+export const DELETE = handle<{ orgId: string; taskId: string }>(async (req, { orgId, taskId }) => {
   const { me } = await requireMember(orgId)
+  const whole = new URL(req.url).searchParams.get('group') === '1'
   const scope = scopes(orgScope(orgId), async l => {
     await l.load('tasks', { id: taskId })
-    await l.load('sessions', { task_id: taskId })
+    const t = l.db.tasks.find(x => x.id === taskId)
+    if (t?.groupId) await l.load('tasks', { org_id: orgId })
+    await l.load('sessions', { task_id: t && whole ? groupSiblings(l.db.tasks, t).map(s => s.id) : [taskId] })
   })
   const files = await mutate(scope, db => {
     const task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
-    const access = taskAccess(db, me, task)
-    if (!access.manager && task.createdBy !== me.id) fail(403, 'Só quem criou a tarefa a pode apagar')
-    return deleteTask(db, taskId)
+    if (!canEdit(db, me, task)) fail(403, 'Só quem criou a tarefa a pode apagar')
+    const targets = whole ? groupSiblings(db.tasks, task).filter(t => canEdit(db, me, t)) : [task]
+    const out = targets.flatMap(t => deleteTask(db, t.id))
+    // só uma cópia ficou: deixa de ser grupo
+    const left = task.groupId ? db.tasks.filter(t => t.groupId && groupKey(t) === groupKey(task)) : []
+    if (left.length === 1) left[0].groupId = undefined
+    return out
   })
   await removeFiles(files)
 })

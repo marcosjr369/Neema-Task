@@ -1,5 +1,6 @@
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, type ChecklistItem, type Org, type Priority, type Recurrence, type Session, type Task, type TaskCategory, type TaskComment } from '../../types'
-import { canSuperviseTask } from '../org'
+import { isCompleted } from '../points'
+import { canSuperviseTask, groupSiblings } from '../org'
 import { fail } from './api'
 import { newId, type DB } from './store'
 
@@ -112,4 +113,45 @@ export function deleteTask(db: DB, taskId: string) {
   db.tasks = db.tasks.filter(t => t.id !== taskId)
   db.sessions = db.sessions.filter(s => s.taskId !== taskId)
   return task?.attachments?.map(a => a.id) ?? []
+}
+
+/** Campos que, numa tarefa de grupo, são iguais para todos (a checklist junta-se à parte) */
+export const SHARED_FIELDS = [
+  'title', 'description', 'category', 'priority', 'focusDuration', 'deadline', 'tags',
+  'requiresApproval', 'requiresAttachment', 'recurrence',
+] as const
+
+/** Checklist nova com o progresso que cada pessoa já tinha (itens com o mesmo id) */
+export function mergeChecklist(next: ChecklistItem[], current: ChecklistItem[] = []) {
+  const done = new Map(current.map(c => [c.id, c.done]))
+  return next.map(c => ({ ...c, done: done.get(c.id) ?? false }))
+}
+
+/** Cópia nova da tarefa de grupo para outra pessoa: mesmos campos, trabalho do zero */
+export function cloneForAssignee(task: Task, assignee: { id: string; departmentId?: string }, creatorId: string): Task {
+  const now = Date.now()
+  return {
+    ...task,
+    id: newId(),
+    assigneeId: assignee.id,
+    departmentId: assignee.departmentId,
+    createdBy: creatorId,
+    status: 'todo',
+    createdAt: now,
+    updatedAt: now,
+    completedAt: undefined,
+    notified: false,
+    review: undefined,
+    attachments: [],
+    comments: [],
+    checklist: task.checklist?.map(c => ({ ...c, done: false })),
+    groupSummary: undefined,
+  }
+}
+
+/** Para as respostas: junta o resumo do grupo (sem alterar o objecto gravado) */
+export function withGroup(db: DB, task: Task): Task {
+  if (!task.groupId) return task
+  const list = groupSiblings(db.tasks, task)
+  return { ...task, groupSummary: { total: list.length, done: list.filter(isCompleted).length } }
 }

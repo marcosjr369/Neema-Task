@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { api, errorText } from '../../lib/api'
 import { ORG_SIZES, SECTORS } from '../../lib/org'
+import { DEFAULT_DAILY_GOAL_HOURS } from '../../lib/records'
 
 export default function Settings() {
   const org = useOrgRequired()
@@ -14,13 +15,14 @@ export default function Settings() {
   const [size, setSize] = useState(org.org.size ?? '')
   const [domain, setDomain] = useState(org.org.domain ?? '')
   const [hidden, setHidden] = useState(!!org.org.hideFromRanking)
+  const [goal, setGoal] = useState(String(org.org.dailyGoalHours ?? DEFAULT_DAILY_GOAL_HOURS))
   const [busy, setBusy] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
     try {
-      await api(org.base, { method: 'PATCH', body: { name, sector, size, domain, hideFromRanking: hidden } })
+      await api(org.base, { method: 'PATCH', body: { name, sector, size, domain, hideFromRanking: hidden, dailyGoalHours: Number(goal.replace(',', '.')) } })
       await org.refresh()
       showToast('Definições guardadas', 'success')
     } catch (err) {
@@ -61,6 +63,26 @@ export default function Settings() {
           <span className="font-black text-muted">@</span>
           <input id="s-domain" className="input" value={domain} onChange={e => setDomain(e.target.value)} placeholder="empresa.com" />
         </div>
+      </div>
+      <div>
+        <label className="label" htmlFor="s-goal">Meta diária de trabalho</label>
+        <div className="flex items-center gap-2">
+          <input
+            id="s-goal"
+            type="number"
+            min={1}
+            max={16}
+            step={0.5}
+            className="input w-28"
+            value={goal}
+            onChange={e => setGoal(e.target.value)}
+            required
+          />
+          <span className="font-bold text-muted">horas por pessoa</span>
+        </div>
+        <p className="mt-1 text-xs font-semibold text-muted">
+          Conta o tempo a trabalhar, em reunião e em formação. Usada nos Recordes para ver quem fica na meta, abaixo ou acima (margem de 15 min).
+        </p>
       </div>
       <div>
         <span className="label">Ranking de empresas</span>

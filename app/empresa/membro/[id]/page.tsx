@@ -8,11 +8,13 @@ import { useApp } from '../../../context/AppContext'
 import { useOrg } from '../../../context/OrgContext'
 import { completedTime, isCompleted, rangeStats } from '../../../lib/points'
 import { formatDuration, startOfDay } from '../../../lib/stats'
-import { PRESENCE_CONFIG, PRESENCE_STATUSES, ROLE_LABEL } from '../../../types'
+import { PRESENCE_CONFIG, ROLE_LABEL } from '../../../types'
 import Avatar from '../../../components/ui/Avatar'
 import Mascot from '../../../components/ui/Mascot'
 import { ReviewBadge } from '../../../components/tasks/ReviewBadge'
-import { DayTimeline, PresenceBar, PresenceLegend, presenceTotals, RANGES, rangeFrom, useTeamActivity, type RangeId } from '../../_components/shared'
+import { DayTimeline, PresenceLegend, presenceTotals, RANGES, rangeFrom, useTeamActivity, type RangeId } from '../../_components/shared'
+import { PresenceDonut, TaskStatusDonut, TrendCharts } from '../../_components/ActivityCharts'
+import { MemberRecordsCard } from '../../_components/Records'
 import { PresenceGlyph } from '../../../components/ui/icons'
 
 function Report({ memberId }: { memberId: string }) {
@@ -35,6 +37,7 @@ function Report({ memberId }: { memberId: string }) {
     .sort((a, b) => (completedTime(b) ?? b.completedAt ?? 0) - (completedTime(a) ?? a.completedAt ?? 0))
     .slice(0, 8)
   const open = tasks.filter(t => t.status !== 'done')
+  const periodText = range === 'hoje' ? 'Hoje' : `Últimos ${RANGES.find(r => r.id === range)!.label}`
 
   // dias do mais recente para o mais antigo (no máximo 7 linhas do tempo)
   const days: number[] = []
@@ -87,19 +90,14 @@ function Report({ memberId }: { memberId: string }) {
         ))}
       </section>
 
-      <section className="card p-4">
-        <h2 className="mb-3 text-lg font-black text-ink">Distribuição do tempo</h2>
-        <PresenceBar totals={totals} height={16} />
-        <ul className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-          {PRESENCE_STATUSES.filter(s => s !== 'offline').map(s => (
-            <li key={s} className="flex items-center gap-2 font-bold text-body">
-              <PresenceGlyph status={s} size={18} />
-              {PRESENCE_CONFIG[s].label}
-              <span className="ml-auto text-ink">{formatDuration(totals[s] ?? 0)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PresenceDonut title="Distribuição do tempo" subtitle={periodText} totals={totals} />
+        <TaskStatusDonut tasks={tasks} from={from} now={now} periodLabel={range === 'hoje' ? 'hoje' : RANGES.find(r => r.id === range)!.label} />
+      </div>
+
+      {loaded && <MemberRecordsCard memberId={memberId} from={from} now={now} sessions={sessions} segments={segments} tasks={tasks} periodText={periodText} />}
+
+      {loaded && <TrendCharts range={range} from={from} now={now} sessions={sessions} segments={segments} tasks={tasks} />}
 
       <section className="card p-4">
         <h2 className="mb-1 text-lg font-black text-ink">Linha do tempo</h2>

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { CalendarBlankIcon, CheckIcon, ClockIcon, ListChecksIcon, PaperclipIcon, PauseIcon, PlayIcon, UserCircleIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, CheckIcon, ClockIcon, ListChecksIcon, PaperclipIcon, PauseIcon, PlayIcon, UserCircleIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { ReviewBadge } from './ReviewBadge'
@@ -59,6 +59,9 @@ export default function TaskItem({ task }: { task: Task }) {
             <ReviewBadge task={task} />
             {assignedBy && (
               <span className="flex items-center gap-1"><UserCircleIcon size={12} /> {assignedBy.name.split(' ')[0]}</span>
+            )}
+            {task.groupSummary && task.groupSummary.total > 1 && (
+              <span className="flex items-center gap-1" title="Tarefa de grupo: concluíram / pessoas"><UsersThreeIcon size={12} /> {task.groupSummary.done}/{task.groupSummary.total}</span>
             )}
             {checklist.length > 0 && (
               <span className="flex items-center gap-1"><ListChecksIcon size={12} /> {checklist.filter(c => c.done).length}/{checklist.length}</span>

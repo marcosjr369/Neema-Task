@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { CalendarBlankIcon, CheckIcon, MagnifyingGlassIcon, PaperclipIcon, PlusIcon, RepeatIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, CheckIcon, MagnifyingGlassIcon, PaperclipIcon, PlusIcon, RepeatIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { useTaskActions } from '../../context/useTaskActions'
 import { formatDeadline } from '../../lib/stats'
+import { groupKey } from '../../lib/org'
+import { isCompleted } from '../../lib/points'
 import { PRIORITY_CONFIG, type Task } from '../../types'
 import Avatar from '../../components/ui/Avatar'
 import Mascot from '../../components/ui/Mascot'
@@ -22,6 +24,57 @@ const FILTERS: { id: Filter; label: string; test: (t: Task) => boolean }[] = [
   { id: 'todas', label: 'Todas', test: () => true },
 ]
 
+/** Uma tarefa de grupo: quem a tem, quantos concluíram e quantas entregas esperam revisão */
+function GroupRow({ copies, now }: { copies: Task[]; now: number }) {
+  const org = useOrgRequired()
+  const t = copies[0]
+  const pending = copies.filter(FILTERS[0].test)
+  const done = copies.filter(isCompleted).length
+  const deadline = t.deadline ? formatDeadline(t.deadline, now) : null
+  const open = copies.some(c => c.status !== 'done')
+  // abre a primeira entrega por rever (ou a primeira cópia)
+  const target = pending[0] ?? t
+  const shown = copies.slice(0, 5)
+
+  return (
+    <li className="card flex items-center gap-3 border-b-4 p-3">
+      <Link href={`/tarefas/${target.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <CategoryBadge category={t.category} size={44} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5 font-bold text-ink">
+            {t.priority === 'alta' && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: PRIORITY_CONFIG.alta.color }} />}
+            <span className="truncate">{t.title}</span>
+          </span>
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold text-muted">
+            <span className="flex items-center">
+              {shown.map((c, i) => {
+                const m = org.memberById(c.assigneeId)
+                return (
+                  <span key={c.id} className={`rounded-full ring-2 ring-white ${i ? '-ml-1.5' : ''}`} title={m?.name}>
+                    <Avatar name={m?.name ?? '?'} picture={m?.picture} size={18} />
+                  </span>
+                )
+              })}
+              {copies.length > shown.length && <span className="ml-1">+{copies.length - shown.length}</span>}
+            </span>
+            <span className="flex items-center gap-1"><UsersThreeIcon size={12} /> {done}/{copies.length} concluídas</span>
+            {pending.length > 0 && <span className="rounded-md bg-warm-light px-1.5 text-warm-dark">{pending.length} por rever</span>}
+            {deadline && open && (
+              <span className={`flex items-center gap-1 ${deadline.late ? 'text-danger' : ''}`}>
+                <CalendarBlankIcon size={12} /> {deadline.text}
+              </span>
+            )}
+            {t.recurrence && <RepeatIcon size={12} />}
+          </span>
+          <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-line">
+            <span className="block h-full rounded-full bg-accent" style={{ width: `${(done / copies.length) * 100}%` }} />
+          </span>
+        </span>
+      </Link>
+    </li>
+  )
+}
+
 export default function TeamTasks() {
   const org = useOrgRequired()
   const { now, openTaskSheet } = useApp()
@@ -36,10 +89,18 @@ export default function TeamTasks() {
   const base = org.teamTasks.filter(
     t => (member === 'all' || t.assigneeId === member) && (!q || t.title.toLowerCase().includes(q)),
   )
+  // tarefas de grupo aparecem uma vez (com todas as cópias); filtrando por pessoa, vê-se só a cópia dela
+  const groups = new Map<string, Task[]>()
+  for (const t of base) {
+    const key = member === 'all' ? groupKey(t) : t.id
+    groups.set(key, [...(groups.get(key) ?? []), t])
+  }
+  const items = [...groups.values()]
   const test = FILTERS.find(f => f.id === filter)!.test
-  const list = base
-    .filter(test)
-    .sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt))
+  const updated = (copies: Task[]) => Math.max(...copies.map(t => t.updatedAt ?? t.createdAt))
+  const list = items
+    .filter(copies => copies.some(test))
+    .sort((a, b) => updated(b) - updated(a))
   const people = org.assignable.filter(m => m.status === 'activo' || m.status === 'pendente')
 
   return (
@@ -60,7 +121,7 @@ export default function TeamTasks() {
 
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0">
         {FILTERS.map(f => {
-          const n = base.filter(f.test).length
+          const n = items.filter(copies => copies.some(f.test)).length
           return (
             <button key={f.id} onClick={() => setFilter(f.id)} className={`chip ${filter === f.id ? 'border-brand! bg-brand-light! text-brand-dark!' : ''}`}>
               {f.label}
@@ -78,7 +139,9 @@ export default function TeamTasks() {
         </div>
       ) : (
         <ul className="space-y-3">
-          {list.map(t => {
+          {list.map(copies => {
+            if (copies.length > 1) return <GroupRow key={groupKey(copies[0])} copies={copies} now={now} />
+            const t = copies[0]
             const who = org.memberById(t.assigneeId)
             const deadline = t.deadline ? formatDeadline(t.deadline, now) : null
             const pending = t.status === 'done' && t.review?.status === 'pending'

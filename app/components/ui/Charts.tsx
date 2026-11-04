@@ -223,10 +223,85 @@ export function LineChart({ points, series, format = compact, axisFormat = compa
   )
 }
 
+export type Slice = { key: string; label: string; color: string; value: number }
+
+/** Anel (donut) com legenda; ao passar numa fatia, o centro mostra o seu valor */
+export function DonutChart({
+  slices, format = compact, centerLabel = 'Total', size = 148, empty = 'Sem dados',
+}: { slices: Slice[]; format?: (v: number) => string; centerLabel?: string; size?: number; empty?: string }) {
+  const [focus, setFocus] = useState<string | null>(null)
+  const shown = slices.filter(s => s.value > 0)
+  const total = shown.reduce((a, s) => a + s.value, 0)
+  const stroke = 18
+  const r = (size - stroke) / 2
+  const c = 2 * Math.PI * r
+  // 2px de intervalo entre fatias (só quando há mais de uma)
+  const gap = shown.length > 1 ? 2 : 0
+  const active = shown.find(s => s.key === focus)
+  // onde começa cada fatia, ao longo da circunferência
+  const starts = shown.map((_, i) => shown.slice(0, i).reduce((a, s) => a + (s.value / total) * c, 0))
+
+  return (
+    <div className="flex flex-col items-center gap-4 sm:flex-row">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          role="img"
+          aria-label={total ? shown.map(s => `${s.label}: ${format(s.value)}`).join(', ') : empty}
+          className="-rotate-90"
+        >
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={GRID} strokeWidth={stroke} />
+          {shown.map((s, i) => {
+            const dash = Math.max(0.5, (s.value / total) * c - gap)
+            return (
+              <circle
+                key={s.key}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={focus === s.key ? stroke + 4 : stroke}
+                strokeDasharray={`${dash} ${c - dash}`}
+                strokeDashoffset={-starts[i]}
+                opacity={focus && focus !== s.key ? 0.45 : 1}
+                className="cursor-pointer transition-[opacity,stroke-width]"
+                onPointerEnter={() => setFocus(s.key)}
+                onPointerLeave={() => setFocus(null)}
+              />
+            )
+          })}
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
+          <span className="text-lg font-black leading-tight text-ink tabular-nums">{total ? format(active ? active.value : total) : '—'}</span>
+          <span className="truncate text-[11px] font-bold text-muted">{active ? active.label : total ? centerLabel : empty}</span>
+        </div>
+      </div>
+      <ul className="w-full min-w-0 flex-1 space-y-1.5 text-sm">
+        {slices.map(s => (
+          <li
+            key={s.key}
+            className={`flex items-center gap-2 rounded-lg px-1.5 py-0.5 font-bold text-body ${focus === s.key ? 'bg-snow' : ''}`}
+            onPointerEnter={() => s.value > 0 && setFocus(s.key)}
+            onPointerLeave={() => setFocus(null)}
+          >
+            <span className="h-3 w-3 shrink-0 rounded-sm" style={{ background: s.color }} />
+            <span className="min-w-0 flex-1 truncate">{s.label}</span>
+            <span className="text-ink tabular-nums">{format(s.value)}</span>
+            <span className="w-9 text-right text-xs text-muted tabular-nums">{total ? `${Math.round((s.value / total) * 100)}%` : ''}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /** Cartão de gráfico: título, legenda (2+ séries) e alternância para tabela */
 export function ChartCard({
-  title, subtitle, series, points, format = compact, children,
-}: { title: string; subtitle?: string; series: Series[]; points: Point[]; format?: (v: number) => string; children: ReactNode }) {
+  title, subtitle, series, points, format = compact, firstCol = 'Dia', children,
+}: { title: string; subtitle?: string; series: Series[]; points: Point[]; format?: (v: number) => string; firstCol?: string; children: ReactNode }) {
   const [table, setTable] = useState(false)
   return (
     <section className="card min-w-0 p-4 sm:p-5">
@@ -253,7 +328,7 @@ export function ChartCard({
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white text-left text-xs font-extrabold uppercase text-muted">
               <tr>
-                <th className="py-1.5">Dia</th>
+                <th className="py-1.5">{firstCol}</th>
                 {series.map(s => <th key={s.key} className="py-1.5 text-right">{s.name}</th>)}
               </tr>
             </thead>

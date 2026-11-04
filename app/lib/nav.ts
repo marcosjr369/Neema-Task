@@ -1,5 +1,5 @@
 import {
-  BuildingsIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon,
+  BuildingsIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
   SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
@@ -26,7 +26,7 @@ const ITEMS = {
 
 // ─── Secções do painel da empresa (cada uma com o seu endereço) ─────────────
 
-export type SectionId = 'geral' | 'tarefas' | 'relatorios' | 'pessoas' | 'departamentos' | 'definicoes'
+export type SectionId = 'geral' | 'tarefas' | 'relatorios' | 'recordes' | 'pessoas' | 'departamentos' | 'definicoes'
 
 export const sectionHref = (id: SectionId) => (id === 'geral' ? '/empresa' : `/empresa/${id}`)
 
@@ -34,6 +34,7 @@ export const SECTIONS: (NavItem & { id: SectionId; admin?: boolean })[] = [
   { id: 'geral', href: '/empresa', label: 'Visão geral', icon: SquaresFourIcon, color: '#4C7DFF', exact: true },
   { id: 'tarefas', href: '/empresa/tarefas', label: 'Tarefas da equipa', icon: ClipboardTextIcon, color: '#12B5A6' },
   { id: 'relatorios', href: '/empresa/relatorios', label: 'Relatórios', icon: ChartLineUpIcon, color: '#EC5BA6' },
+  { id: 'recordes', href: '/empresa/recordes', label: 'Recordes', icon: MedalIcon, color: '#E0A419' },
   { id: 'pessoas', href: '/empresa/pessoas', label: 'Funcionários', icon: UsersThreeIcon, color: '#7B61FF' },
   { id: 'departamentos', href: '/empresa/departamentos', label: 'Departamentos', icon: TreeStructureIcon, color: '#FF8A3D', admin: true },
   { id: 'definicoes', href: '/empresa/definicoes', label: 'Definições', icon: GearSixIcon, color: '#86829B', admin: true },
@@ -58,7 +59,7 @@ export function navGroups(mode: NavMode): NavGroup[] {
   // a conta da empresa não tem trabalho próprio: a sidebar é o painel
   if (mode === 'company') {
     return [
-      { title: 'Empresa', items: [section('geral'), section('tarefas'), section('relatorios')] },
+      { title: 'Empresa', items: [section('geral'), section('tarefas'), section('relatorios'), section('recordes')] },
       { title: 'Equipa', items: [section('pessoas'), section('departamentos'), ITEMS.ranking] },
       { title: 'Gestão', items: [section('definicoes')] },
     ]

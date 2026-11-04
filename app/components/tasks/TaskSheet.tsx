@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MinusIcon, PaperclipIcon, PlusIcon, RepeatIcon, ShieldCheckIcon, XIcon } from '@phosphor-icons/react'
+import { MagnifyingGlassIcon, MinusIcon, PaperclipIcon, PlusIcon, RepeatIcon, ShieldCheckIcon, UsersThreeIcon, XIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { CATEGORIES, CATEGORY_CONFIG, ChecklistItem, COMPANY_ACCOUNT_LABEL, Priority, PRIORITY_CONFIG, Recurrence, ROLE_LABEL, Task, TaskCategory } from '../../types'
-import { canSuperviseTask } from '../../lib/org'
+import { canSuperviseTask, groupSiblings } from '../../lib/org'
+import { useTaskActions } from '../../context/useTaskActions'
 import Avatar from '../ui/Avatar'
 import { CategoryGlyph } from '../ui/icons'
 
@@ -26,12 +27,101 @@ function toLocalInput(iso?: string) {
   return new Date(d.getTime() - off).toISOString().slice(0, 16)
 }
 
+/** Escolha de um ou mais responsáveis (com atalho para um departamento inteiro) */
+function AssigneePicker({ value, onChange }: { value: string[]; onChange: (ids: string[]) => void }) {
+  const org = useOrg()!
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const people = org.assignable.filter(m => !q || m.name.toLowerCase().includes(q) || org.deptById(m.departmentId)?.name.toLowerCase().includes(q))
+  const toggle = (id: string) => onChange(value.includes(id) ? value.filter(x => x !== id) : [...value, id])
+  const depts = org.departments
+    .map(d => ({ d, ids: org.assignable.filter(m => m.departmentId === d.id && m.status === 'activo').map(m => m.id) }))
+    .filter(x => x.ids.length > 1)
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <span className="label mb-0">Responsáveis</span>
+        <span className="text-xs font-bold text-muted">
+          {value.length === 0 ? 'Escolhe pelo menos um' : value.length === 1 ? '1 pessoa' : `${value.length} pessoas · cada uma entrega a sua`}
+        </span>
+      </div>
+      {value.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {value.map(id => {
+            const m = org.memberById(id)
+            return (
+              <button
+                type="button"
+                key={id}
+                onClick={() => toggle(id)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-accent-light py-0.5 pl-0.5 pr-2 text-xs font-bold text-accent-dark cursor-pointer"
+                aria-label={`Retirar ${m?.name ?? 'pessoa'}`}
+              >
+                <Avatar name={m?.name ?? '?'} picture={m?.picture} size={22} />
+                {m ? (m.id === org.me.id ? `${m.name} (eu)` : m.name) : 'Removido'}
+                <XIcon size={12} />
+              </button>
+            )
+          })}
+        </div>
+      )}
+      {depts.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {depts.map(({ d, ids }) => {
+            const all = ids.every(id => value.includes(id))
+            return (
+              <button
+                type="button"
+                key={d.id}
+                onClick={() => onChange(all ? value.filter(id => !ids.includes(id)) : [...new Set([...value, ...ids])])}
+                className={`chip text-xs ${all ? 'border-accent! bg-accent-light! text-accent-dark!' : ''}`}
+              >
+                <UsersThreeIcon size={14} /> {all ? 'Tirar' : 'Todo o'} {d.name} ({ids.length})
+              </button>
+            )
+          })}
+        </div>
+      )}
+      <div className="rounded-xl border-2 border-line">
+        <div className="relative border-b-2 border-line">
+          <MagnifyingGlassIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input className="w-full rounded-t-xl bg-transparent py-2 pl-9 pr-3 text-sm font-semibold outline-none" placeholder="Procurar funcionário ou departamento" value={query} onChange={e => setQuery(e.target.value)} />
+        </div>
+        <ul className="max-h-48 overflow-y-auto py-1">
+          {people.map(m => (
+            <li key={m.id}>
+              <label className="flex cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-snow">
+                <input type="checkbox" checked={value.includes(m.id)} onChange={() => toggle(m.id)} className="h-4 w-4 accent-brand" />
+                <Avatar name={m.name} picture={m.picture} size={26} />
+                <span className="min-w-0 flex-1 truncate text-sm font-bold text-ink">
+                  {m.id === org.me.id ? `${m.name} (eu)` : m.name}
+                  {org.deptById(m.departmentId) && <span className="font-semibold text-muted"> · {org.deptById(m.departmentId)!.name}</span>}
+                </span>
+              </label>
+            </li>
+          ))}
+          {people.length === 0 && <li className="px-3 py-2 text-sm font-semibold text-muted">Ninguém encontrado.</li>}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const { addTask, updateTask, settings, showToast } = useApp()
   const org = useOrg()
+  const actions = useTaskActions()
   const canAssign = !!org?.isManager
-  // a conta da empresa não faz tarefas: tem de escolher o responsável
-  const [assigneeId, setAssigneeId] = useState(task?.assigneeId ?? (org?.isCompany ? '' : org?.me.id) ?? '')
+  // tarefa de grupo: os responsáveis são os das cópias (a lista da equipa tem-nas todas)
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(() => {
+    if (task?.groupId && org) return [...new Set(groupSiblings(org.teamTasks, task).map(t => t.assigneeId!).filter(Boolean))]
+    if (task?.assigneeId) return [task.assigneeId]
+    // a conta da empresa não faz tarefas: tem de escolher o responsável
+    return org && !org.isCompany ? [org.me.id] : []
+  })
+  const assigneeId = assigneeIds[0] ?? ''
+  const isGroup = assigneeIds.length > 1 || !!task?.groupId
   const [reviewerId, setReviewerId] = useState(task?.reviewerId ?? '')
   const [requiresApproval, setRequiresApproval] = useState<boolean | null>(task?.requiresApproval ?? null)
   const [requiresAttachment, setRequiresAttachment] = useState(task?.requiresAttachment ?? false)
@@ -39,12 +129,12 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(task?.checklist ?? [])
   const [checkInput, setCheckInput] = useState('')
   // por omissão, tarefas atribuídas a outra pessoa precisam de aprovação
-  const approval = requiresApproval ?? (!!org && assigneeId !== org.me.id)
+  const approval = requiresApproval ?? (!!org && assigneeIds.some(id => id !== org.me.id))
   const assignee = org?.memberById(assigneeId)
-  const assigningOther = !!org && assigneeId !== org.me.id
-  // quem pode aprovar: supervisores, administradores e a conta da empresa (nunca o próprio responsável)
+  const assigningOther = !!org && assigneeIds.some(id => id !== org.me.id)
+  // quem pode aprovar: supervisores, administradores e a conta da empresa (nunca um dos responsáveis)
   const supervisors = org
-    ? [...(org.isCompany ? [org.me] : []), ...org.members].filter(m => canSuperviseTask(m, org.org) && m.id !== assigneeId)
+    ? [...(org.isCompany ? [org.me] : []), ...org.members].filter(m => canSuperviseTask(m, org.org) && !assigneeIds.includes(m.id))
     : []
 
   const addCheck = () => {
@@ -74,11 +164,34 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
     setTagInput('')
   }
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
     if (org && canAssign && !assigneeId) {
       showToast('Escolhe o funcionário responsável', 'danger')
+      return
+    }
+    // tarefa de grupo: vai directa ao servidor (uma cópia por pessoa) e recarrega as listas
+    if (org && canAssign && isGroup) {
+      const shared = {
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        priority,
+        focusDuration: focus,
+        // null limpa o campo no servidor
+        deadline: deadline ? new Date(deadline).toISOString() : null,
+        tags,
+        checklist,
+        requiresApproval: approval,
+        reviewerId: approval && supervisors.some(m => m.id === reviewerId) ? reviewerId : null,
+        requiresAttachment,
+        recurrence: recurrence ?? null,
+      }
+      const ok = task
+        ? !!(await actions.updateGroup(task.id, { ...shared, assigneeIds }, 'Tarefa actualizada para todos'))
+        : await actions.createGroup(shared, assigneeIds)
+      if (ok) onDone()
       return
     }
     const data = {
@@ -127,23 +240,7 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
           />
         </div>
 
-        {org && canAssign && (
-          <div>
-            <label className="label" htmlFor="t-assignee">Responsável</label>
-            <div className="flex items-center gap-3">
-              <Avatar name={assignee?.name ?? '?'} picture={assignee?.picture} size={40} />
-              <select id="t-assignee" className="input" value={assigneeId} onChange={e => setAssigneeId(e.target.value)} required>
-                {!assigneeId && <option value="" disabled>Escolhe um funcionário</option>}
-                {org.assignable.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.id === org.me.id ? `${m.name} (eu)` : m.name}
-                    {org.deptById(m.departmentId) ? ` · ${org.deptById(m.departmentId)!.name}` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
+        {org && canAssign && <AssigneePicker value={assigneeIds} onChange={setAssigneeIds} />}
 
         <div>
           <span className="label">Categoria</span>
@@ -260,14 +357,17 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
             <ul className="mb-2 space-y-1">
               {checklist.map(c => (
                 <li key={c.id} className="flex items-center gap-2 rounded-xl bg-snow px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={c.done}
-                    onChange={() => setChecklist(l => l.map(x => (x.id === c.id ? { ...x, done: !x.done } : x)))}
-                    className="h-4 w-4 accent-brand"
-                    aria-label={c.text}
-                  />
-                  <span className={`flex-1 text-sm font-bold ${c.done ? 'text-muted line-through' : 'text-ink'}`}>{c.text}</span>
+                  {/* em grupo, cada pessoa marca os seus passos */}
+                  {!isGroup && (
+                    <input
+                      type="checkbox"
+                      checked={c.done}
+                      onChange={() => setChecklist(l => l.map(x => (x.id === c.id ? { ...x, done: !x.done } : x)))}
+                      className="h-4 w-4 accent-brand"
+                      aria-label={c.text}
+                    />
+                  )}
+                  <span className={`flex-1 text-sm font-bold ${c.done && !isGroup ? 'text-muted line-through' : 'text-ink'}`}>{c.text}</span>
                   <button type="button" onClick={() => setChecklist(l => l.filter(x => x.id !== c.id))} className="text-muted hover:text-danger cursor-pointer" aria-label="Remover passo">
                     <XIcon size={16} />
                   </button>
@@ -380,8 +480,12 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
       </div>
 
       <div className="border-t-2 border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4">
-        <button type="submit" disabled={!title.trim()} className={`btn w-full ${title.trim() ? 'btn-primary' : 'btn-disabled'}`}>
-          {task ? 'Guardar alterações' : assigningOther ? 'Atribuir tarefa' : 'Criar tarefa'}
+        <button type="submit" disabled={!title.trim() || actions.busy} className={`btn w-full ${title.trim() ? 'btn-primary' : 'btn-disabled'}`}>
+          {actions.busy
+            ? 'A guardar…'
+            : task
+              ? isGroup ? 'Guardar para todos' : 'Guardar alterações'
+              : assigneeIds.length > 1 ? `Atribuir a ${assigneeIds.length} pessoas` : assigningOther ? 'Atribuir tarefa' : 'Criar tarefa'}
         </button>
       </div>
     </form>

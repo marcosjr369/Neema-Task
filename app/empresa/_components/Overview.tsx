@@ -10,7 +10,8 @@ import { isWorking } from '../../lib/org'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES } from '../../types'
 import type { SectionId } from '../../lib/nav'
 import Avatar from '../../components/ui/Avatar'
-import { overworkAlerts, PresenceBar, presenceTotals, useTeamActivity } from './shared'
+import { overworkAlerts, presenceTotals, rangeFrom, useTeamActivity } from './shared'
+import { PresenceDonut, TaskStatusDonut, TrendCharts } from './ActivityCharts'
 import { PresenceGlyph } from '../../components/ui/icons'
 
 function Kpi({ icon, value, label, color, href }: { icon: React.ReactNode; value: string; label: string; color: string; href?: string }) {
@@ -34,7 +35,9 @@ export default function Overview({ goTo }: { goTo: (section: SectionId) => void 
   const org = useOrgRequired()
   const { now } = useApp()
   const dayStart = startOfDay(now)
-  const { sessions, segments } = useTeamActivity(dayStart)
+  // 7 dias para os gráficos de evolução; os números de hoje filtram-se daqui
+  const weekStart = rangeFrom('7d', now)
+  const { sessions, segments } = useTeamActivity(weekStart)
 
   const scope = org.scope
   const team = org.members.filter(
@@ -42,7 +45,9 @@ export default function Overview({ goTo }: { goTo: (section: SectionId) => void 
   )
   const online = team.filter(m => m.presence !== 'offline')
   const byStatus = PRESENCE_STATUSES.filter(s => s !== 'offline').map(s => ({ s, n: team.filter(m => m.presence === s).length }))
-  const workedToday = sessions.reduce((a, s) => a + s.seconds, 0)
+  const teamIds = new Set(team.map(m => m.id))
+  const teamTasks = org.teamTasks.filter(t => !!t.assigneeId && teamIds.has(t.assigneeId))
+  const workedToday = sessions.reduce((a, s) => (s.start >= dayStart ? a + s.seconds : a), 0)
   const pending = org.teamTasks.filter(t => t.status === 'done' && t.review?.status === 'pending')
   const overdue = org.teamTasks.filter(t => t.deadline && t.status !== 'done' && new Date(t.deadline).getTime() < now)
   const doneToday = org.teamTasks.filter(t => isCompleted(t) && (t.review?.at ?? t.completedAt ?? 0) >= dayStart).length
@@ -74,6 +79,29 @@ export default function Overview({ goTo }: { goTo: (section: SectionId) => void 
           </ul>
         </section>
       )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PresenceDonut
+          title="Tempo da equipa hoje"
+          subtitle="Soma do tempo de todos em cada estado"
+          totals={totals}
+          footer={
+            <button onClick={() => goTo('relatorios')} className="mt-4 text-sm font-extrabold uppercase tracking-wide text-accent cursor-pointer">
+              Ver relatórios →
+            </button>
+          }
+        />
+        <TaskStatusDonut tasks={teamTasks} from={weekStart} now={now} periodLabel="7 dias" />
+      </div>
+
+      <TrendCharts
+        range="7d"
+        from={weekStart}
+        now={now}
+        sessions={sessions.filter(s => !!s.memberId && teamIds.has(s.memberId))}
+        segments={segments.filter(s => teamIds.has(s.memberId))}
+        tasks={teamTasks}
+      />
 
       <div className="space-y-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
         <section className="card p-4">
@@ -115,23 +143,6 @@ export default function Overview({ goTo }: { goTo: (section: SectionId) => void 
         </section>
 
         <div className="space-y-6">
-          <section className="card p-4">
-            <h2 className="mb-3 text-lg font-black text-ink">Tempo da equipa hoje</h2>
-            <PresenceBar totals={totals} height={16} />
-            <ul className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              {PRESENCE_STATUSES.filter(s => totals[s]).map(s => (
-                <li key={s} className="flex items-center gap-2 font-bold text-body">
-                  <span className="h-3 w-3 rounded-sm" style={{ background: PRESENCE_CONFIG[s].color }} />
-                  {PRESENCE_CONFIG[s].label}
-                  <span className="ml-auto text-ink">{formatDuration(totals[s] ?? 0)}</span>
-                </li>
-              ))}
-            </ul>
-            <button onClick={() => goTo('relatorios')} className="mt-4 text-sm font-extrabold uppercase tracking-wide text-accent cursor-pointer">
-              Ver relatórios →
-            </button>
-          </section>
-
           <section className="card p-4">
             <div className="mb-3 flex items-baseline justify-between">
               <h2 className="text-lg font-black text-ink">Por rever</h2>

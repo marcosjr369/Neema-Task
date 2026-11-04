@@ -84,6 +84,10 @@ export function spawnNext(db: DB, task: Task) {
     review: undefined,
     attachments: [],
     comments: [],
-    checklist: task.checklist?.map(c => ({ ...c, id: newId(), done: false })),
+    // mesmos ids: nas tarefas de grupo, as cópias da repetição seguinte continuam a corresponder
+    checklist: task.checklist?.map(c => ({ ...c, done: false })),
+    // cada pessoa gera a sua cópia; o grupo da repetição seguinte junta-as pelo número
+    occurrence: task.groupId ? (task.occurrence ?? 0) + 1 : undefined,
+    groupSummary: undefined,
   })
 }

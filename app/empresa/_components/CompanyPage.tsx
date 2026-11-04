@@ -13,6 +13,7 @@ import TeamTasks from './TeamTasks'
 import People from './People'
 import Departments from './Departments'
 import Reports from './Reports'
+import Records from './Records'
 import Settings from './Settings'
 
 /**
@@ -100,6 +101,7 @@ export default function CompanyPage({ section }: { section: SectionId }) {
         {section === 'geral' && <Overview goTo={goTo} />}
         {section === 'tarefas' && <TeamTasks />}
         {section === 'relatorios' && <Reports />}
+        {section === 'recordes' && <Records />}
         {section === 'pessoas' && <People />}
         {section === 'departamentos' && <Departments />}
         {section === 'definicoes' && <Settings />}

@@ -7,7 +7,7 @@ import Mascot from '../../../components/ui/Mascot'
 import { formatShort } from '../../../lib/stats'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, STATUS_LABEL, type TaskStatus } from '../../../types'
 import type { DayWork, PanelTask } from '../../../lib/server/panelDetail'
-import { ChartCard, ColumnChart, compact, type Point, type Series } from './Charts'
+import { ChartCard, ColumnChart, compact, type Point, type Series } from '../../../components/ui/Charts'
 import { date, dayLabel } from './format'
 
 /* Peças das fichas de detalhe (utilizador e empresa) */

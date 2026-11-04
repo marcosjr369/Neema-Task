@@ -22,6 +22,7 @@ const COLUMNS: Record<Table, (r: Row) => Record<string, string | number | null>>
   sessions: r => ({ id: r.id as string, task_id: r.taskId as string, user_id: (r.userId as string) ?? null, member_id: (r.memberId as string) ?? null, start_at: r.start as number }),
   presence: r => ({ id: r.id as string, org_id: r.orgId as string, member_id: r.memberId as string, start_at: r.start as number, end_at: (r.end as number) ?? null }),
   push: r => ({ id: r.endpoint as string, user_id: r.userId as string }),
+  events: r => ({ id: r.id as string, org_id: (r.orgId as string) ?? null, owner_id: (r.ownerId as string) ?? null, start_at: r.start as number }),
   deleted: r => ({ id: r.id as string, deleted_at: r.deletedAt as number }),
 }
 
@@ -52,6 +53,10 @@ create index if not exists presence_org on presence (org_id, start_at);
 create index if not exists presence_member_open on presence (member_id) where end_at is null;
 create table if not exists push (id text primary key, user_id text not null, data jsonb not null);
 create index if not exists push_user on push (user_id);
+create table if not exists events (id text primary key, org_id text, owner_id text, start_at bigint not null, data jsonb not null);
+create index if not exists events_org on events (org_id, start_at);
+create index if not exists events_owner on events (owner_id, start_at);
+create index if not exists events_start on events (start_at);
 create table if not exists deleted (id text primary key, deleted_at bigint not null, data jsonb not null);
 create index if not exists deleted_at on deleted (deleted_at);
 -- Sem políticas, o RLS fecha estas tabelas à API pública do Supabase (chaves anon/authenticated).
@@ -64,11 +69,12 @@ alter table tasks enable row level security;
 alter table sessions enable row level security;
 alter table presence enable row level security;
 alter table push enable row level security;
+alter table events enable row level security;
 alter table deleted enable row level security;
 `
 
-// "__neemaSchema2": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema2?: Promise<void> }
+// "__neemaSchema3": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema3?: Promise<void> }
 
 function client(): Sql {
   if (!g.__neemaSql) {
@@ -88,18 +94,21 @@ function client(): Sql {
 
 /** Cria as tabelas na primeira utilização (idempotente) */
 function ready(): Promise<void> {
-  g.__neemaSchema2 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
-    g.__neemaSchema2 = undefined
+  g.__neemaSchema3 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
+    g.__neemaSchema3 = undefined
     throw err
   })
-  return g.__neemaSchema2
+  return g.__neemaSchema3
 }
 
 function condition(sql: Sql, col: string, value: Condition) {
   const c = sql(col)
   if (value === null) return sql`${c} is null`
   if (Array.isArray(value)) return sql`${c} = any(${sql.array(value.map(String))})`
-  if (typeof value === 'object') return sql`${c} >= ${value.gte}`
+  if (typeof value === 'object') {
+    if (value.gte !== undefined && value.lte !== undefined) return sql`${c} >= ${value.gte} and ${c} <= ${value.lte}`
+    return value.lte !== undefined ? sql`${c} <= ${value.lte}` : sql`${c} >= ${value.gte ?? 0}`
+  }
   return sql`${c} = ${value}`
 }
 

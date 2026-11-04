@@ -115,3 +115,11 @@ export function parseCsv(text: string): string[][] {
   if (row.some(Boolean)) rows.push(row)
   return rows
 }
+
+// ─── Tarefas de grupo ───────────────────────────────────────────────────────
+
+/** Identifica as cópias da mesma tarefa de grupo, na mesma repetição (tarefa simples: o próprio id) */
+export const groupKey = (t: Pick<Task, 'id' | 'groupId' | 'occurrence'>) => (t.groupId ? `${t.groupId}:${t.occurrence ?? 0}` : t.id)
+
+/** Cópias da mesma tarefa de grupo (inclui a própria); tarefa simples: só ela */
+export const groupSiblings = (tasks: Task[], t: Task) => (t.groupId ? tasks.filter(x => groupKey(x) === groupKey(t)) : [t])

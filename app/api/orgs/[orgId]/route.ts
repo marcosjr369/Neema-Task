@@ -1,4 +1,4 @@
-import { body, handle, isManager, requireAdmin, requireMember } from '../../../lib/server/api'
+import { body, fail, handle, isManager, requireAdmin, requireMember } from '../../../lib/server/api'
 import { inviteCode, mutate } from '../../../lib/server/store'
 import { effectivePresence } from '../../../lib/server/org'
 import { orgScope } from '../../../lib/server/scopes'
@@ -27,7 +27,9 @@ export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
 
 export const PATCH = handle<{ orgId: string }>(async (req, { orgId }) => {
   await requireAdmin(orgId)
-  const patch = await body<{ name?: string; sector?: string; size?: string; domain?: string; hideFromRanking?: boolean; regenerateCode?: boolean }>(req)
+  const patch = await body<{ name?: string; sector?: string; size?: string; domain?: string; hideFromRanking?: boolean; dailyGoalHours?: number; regenerateCode?: boolean }>(req)
+  const goal = patch.dailyGoalHours === undefined ? undefined : Number(patch.dailyGoalHours)
+  if (goal !== undefined && (!Number.isFinite(goal) || goal < 1 || goal > 16)) fail(400, 'A meta diária tem de estar entre 1 e 16 horas')
   return mutate(orgScope(orgId), db => {
     const org = db.orgs.find(o => o.id === orgId)!
     if (patch.name?.trim()) org.name = patch.name.trim().slice(0, 80)
@@ -35,6 +37,8 @@ export const PATCH = handle<{ orgId: string }>(async (req, { orgId }) => {
     if (patch.size !== undefined) org.size = patch.size
     if (patch.domain !== undefined) org.domain = patch.domain.trim().toLowerCase().replace(/^@/, '') || undefined
     if (patch.hideFromRanking !== undefined) org.hideFromRanking = !!patch.hideFromRanking || undefined
+    // em meias horas
+    if (goal !== undefined) org.dailyGoalHours = Math.round(goal * 2) / 2
     if (patch.regenerateCode) {
       let code = inviteCode()
       while (db.orgs.some(o => o.inviteCode === code)) code = inviteCode()

@@ -9,7 +9,7 @@ import { useOrg } from './OrgContext'
 /** Acções sobre tarefas de empresa que mantêm as listas (minhas e da equipa) em dia */
 export function useTaskActions() {
   const org = useOrg()
-  const { replaceTask, showToast } = useApp()
+  const { replaceTask, refreshTasks, showToast } = useApp()
   const [busy, setBusy] = useState(false)
 
   const apply = useCallback((task: Task) => {
@@ -17,11 +17,12 @@ export function useTaskActions() {
     if (org?.isManager) org.upsertTeamTask(task)
   }, [replaceTask, org])
 
-  const call = useCallback(async (fn: () => Promise<{ task: Task }>, success?: string) => {
+  // tarefas de grupo: a resposta traz também as outras cópias (resumo do grupo actualizado)
+  const call = useCallback(async (fn: () => Promise<{ task: Task; tasks?: Task[] }>, success?: string) => {
     setBusy(true)
     try {
-      const { task } = await fn()
-      apply(task)
+      const { task, tasks } = await fn()
+      ;(tasks ?? [task]).forEach(apply)
       if (success) showToast(success, 'success')
       return task
     } catch (err) {
@@ -46,6 +47,39 @@ export function useTaskActions() {
       call(() => api(url(id), { method: 'PATCH', body: { action: 'status', status } })),
     update: (id: string, patch: Record<string, unknown>) =>
       call(() => api(url(id), { method: 'PATCH', body: { action: 'update', patch } })),
+    /** Edita a tarefa de grupo (campos para todos; assigneeIds acrescenta/retira pessoas) e recarrega as listas */
+    updateGroup: async (id: string, patch: Record<string, unknown>, success?: string) => {
+      const task = await call(() => api(url(id), { method: 'PATCH', body: { action: 'update', patch: { ...patch, group: true } } }), success)
+      if (task) await Promise.all([org?.refreshTeam(), refreshTasks()])
+      return task
+    },
+    /** Cria uma tarefa para várias pessoas (uma cópia por pessoa) */
+    createGroup: async (data: Record<string, unknown>, assigneeIds: string[]) => {
+      setBusy(true)
+      try {
+        await api(`${org?.base}/tasks`, { body: { ...data, assigneeIds } })
+        await Promise.all([org?.refreshTeam(), refreshTasks()])
+        showToast(`Tarefa atribuída a ${assigneeIds.length} pessoas`, 'success')
+        return true
+      } catch (err) {
+        showToast(errorText(err), 'danger')
+        return false
+      } finally {
+        setBusy(false)
+      }
+    },
+    /** Apaga todas as cópias da tarefa de grupo */
+    removeGroup: async (id: string) => {
+      try {
+        await api(`${url(id)}?group=1`, { method: 'DELETE' })
+        await Promise.all([org?.refreshTeam(), refreshTasks()])
+        showToast('Tarefa apagada para todos', 'success')
+        return true
+      } catch (err) {
+        showToast(errorText(err), 'danger')
+        return false
+      }
+    },
     upload: (id: string, file: File) => {
       if (file.size > 15 * 1024 * 1024) {
         showToast('O ficheiro excede 15 MB', 'danger')

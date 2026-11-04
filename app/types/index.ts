@@ -173,6 +173,15 @@ export type OrgTaskFields = {
   reviewerId?: string
   requiresApproval?: boolean
   requiresAttachment?: boolean
+  /**
+   * Tarefa de grupo: a mesma tarefa atribuída a várias pessoas. Cada pessoa tem a sua cópia
+   * (estado, tempo, checklist, anexos, comentários e revisão próprios), todas com o mesmo groupId.
+   */
+  groupId?: string
+  /** repetição a que a cópia pertence (tarefas recorrentes de grupo; vazio = 0) */
+  occurrence?: number
+  /** só nas respostas do servidor (não se grava): quantas pessoas têm a tarefa e quantas concluíram */
+  groupSummary?: { total: number; done: number }
   review?: Review
   attachments?: Attachment[]
   comments?: TaskComment[]
@@ -278,6 +287,8 @@ export type Org = {
   createdBy: string
   /** não aparece no ranking geral de empresas */
   hideFromRanking?: boolean
+  /** meta diária de trabalho activo por pessoa, em horas (vazio = 8h) */
+  dailyGoalHours?: number
 }
 
 export type Department = {
@@ -370,3 +381,43 @@ export type RankEntry = {
   points: number
   isMe: boolean
 }
+
+// ─── Calendário ─────────────────────────────────────────────────────────────
+
+export type EventKind = 'reuniao' | 'compromisso' | 'lembrete'
+
+export const EVENT_KINDS: Record<EventKind, { label: string; color: string; light: string }> = {
+  reuniao: { label: 'Reunião', color: '#7B61FF', light: '#EEEAFF' },
+  compromisso: { label: 'Compromisso', color: '#12B5A6', light: '#DCF7F3' },
+  lembrete: { label: 'Lembrete', color: '#FF8A3D', light: '#FFEDE0' },
+}
+
+export type EventResponse = 'sim' | 'nao'
+
+/** Evento do calendário: da empresa (orgId, ids de membro) ou pessoal (ownerId, id de utilizador) */
+export type CalendarEvent = {
+  id: string
+  orgId?: string
+  ownerId?: string
+  /** membro (empresa) ou utilizador (pessoal) que agendou */
+  createdBy: string
+  title: string
+  description?: string
+  kind: EventKind
+  start: number
+  end: number
+  /** sala ou link da chamada */
+  location?: string
+  /** convidados (ids de membro), além de quem agendou */
+  attendeeIds: string[]
+  /** respostas dos convidados */
+  responses?: Record<string, EventResponse>
+  /** avisos push já enviados (5 min antes e à hora) */
+  sentPre?: boolean
+  sentStart?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** Minutos de antecedência do primeiro aviso */
+export const EVENT_LEAD_MINUTES = 5

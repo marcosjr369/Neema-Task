@@ -96,6 +96,7 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
         db.tasks = db.tasks.filter(t => t.orgId !== org.id)
         db.sessions = db.sessions.filter(s => !s.memberId || !memberIds.has(s.memberId))
         db.presence = db.presence.filter(p => p.orgId !== org.id)
+        db.events = db.events.filter(e => e.orgId !== org.id)
         db.departments = db.departments.filter(d => d.orgId !== org.id)
         db.members = db.members.filter(x => x.orgId !== org.id)
         db.orgs = db.orgs.filter(o => o.id !== org.id)
@@ -111,6 +112,9 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
       db.departments.forEach(d => { d.supervisorIds = d.supervisorIds.filter(id => id !== m.id) })
       db.sessions = db.sessions.filter(s => s.memberId !== m.id)
       db.presence = db.presence.filter(p => p.memberId !== m.id)
+      // eventos que agendou saem; nos outros deixa de ser convidado
+      db.events = db.events.filter(e => e.orgId !== m.orgId || e.createdBy !== m.id)
+      db.events.forEach(e => { if (e.attendeeIds.includes(m.id)) e.attendeeIds = e.attendeeIds.filter(id => id !== m.id) })
       db.members = db.members.filter(x => x.id !== m.id)
     }
 
@@ -119,6 +123,7 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
     db.tasks = db.tasks.filter(t => t.ownerId !== userId)
     db.sessions = db.sessions.filter(s => s.userId !== userId)
     db.push = db.push.filter(p => p.userId !== userId)
+    db.events = db.events.filter(e => e.ownerId !== userId)
     db.users = db.users.filter(u => u.id !== userId)
     record.deletedOrgs = deletedOrgs
     db.deleted.push(record)

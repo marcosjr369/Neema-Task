@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
-import { ArrowUUpLeftIcon, ArrowsOutIcon, CalendarBlankIcon, CaretLeftIcon, ChatCircleIcon, CheckIcon, DownloadSimpleIcon, EyeIcon, FileTextIcon, HourglassMediumIcon, PaperPlaneRightIcon, PaperclipIcon, PauseIcon, PencilSimpleIcon, PlayIcon, RepeatIcon, SealCheckIcon, ShieldCheckIcon, StopIcon, TrashIcon, XIcon } from '@phosphor-icons/react'
+import { ArrowUUpLeftIcon, ArrowsOutIcon, CalendarBlankIcon, CaretLeftIcon, ChatCircleIcon, CheckIcon, DownloadSimpleIcon, EyeIcon, FileTextIcon, HourglassMediumIcon, PaperPlaneRightIcon, PaperclipIcon, PauseIcon, PencilSimpleIcon, PlayIcon, RepeatIcon, SealCheckIcon, ShieldCheckIcon, StopIcon, TrashIcon, UserPlusIcon, UsersThreeIcon, XIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { useTaskActions } from '../../context/useTaskActions'
@@ -12,9 +12,9 @@ import Mascot from '../../components/ui/Mascot'
 import Avatar from '../../components/ui/Avatar'
 import { ReviewBadge } from '../../components/tasks/ReviewBadge'
 import { fileUrl } from '../../lib/api'
-import { taskPoints } from '../../lib/points'
+import { isCompleted, taskPoints } from '../../lib/points'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, STATUS_LABEL, type Attachment, type Member, type Task, type TaskStatus } from '../../types'
-import { canReviewTask, isCompanyAccount } from '../../lib/org'
+import { canReviewTask, groupSiblings, isCompanyAccount } from '../../lib/org'
 import { formatClock, formatDeadline, formatDuration, phaseElapsed, startOfDay } from '../../lib/stats'
 import { CategoryGlyph } from '../../components/ui/icons'
 
@@ -27,6 +27,104 @@ function formatSize(bytes: number) {
 }
 
 const canPreview = (a: Attachment) => /^(image\/|application\/pdf|text\/plain)/.test(a.type)
+
+/** Quem gere: mesmas regras do servidor (taskAccess): gere o responsável ou criou a tarefa sendo supervisor */
+function useManages() {
+  const org = useOrg()!
+  return (task: Task) => {
+    const assignee = org.memberById(task.assigneeId)
+    const scope = org.scope
+    const managesAssignee =
+      !!assignee && (scope === 'all' || (assignee.id !== org.me.id && !!assignee.departmentId && scope.has(assignee.departmentId)))
+    return managesAssignee || (task.createdBy === org.me.id && org.isManager)
+  }
+}
+
+/** Tarefa de grupo, vista por quem gere: cada responsável com a sua entrega e revisão */
+function GroupPanel({ task }: { task: Task }) {
+  const org = useOrg()!
+  const { openTaskSheet } = useApp()
+  const actions = useTaskActions()
+  const manages = useManages()
+  const [rejecting, setRejecting] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const copies = groupSiblings(org.teamTasks, task)
+    .slice()
+    .sort((a, b) => (org.memberById(a.assigneeId)?.name ?? '').localeCompare(org.memberById(b.assigneeId)?.name ?? ''))
+  const done = copies.filter(isCompleted).length
+  const pending = copies.filter(c => c.status === 'done' && c.review?.status === 'pending').length
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="flex items-center gap-2 font-black text-ink"><UsersThreeIcon size={20} /> Tarefa de grupo · {copies.length} pessoas</h2>
+          <p className="text-xs font-semibold text-muted">
+            {done} concluída{done === 1 ? '' : 's'}{pending ? ` · ${pending} por rever` : ''} · cada pessoa entrega e é aprovada à parte
+          </p>
+        </div>
+        <button onClick={() => openTaskSheet(task)} className="chip shrink-0 text-xs">
+          <UserPlusIcon size={14} /> Pessoas
+        </button>
+      </div>
+      <div className="my-3 h-2 overflow-hidden rounded-full bg-line">
+        <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${(done / Math.max(1, copies.length)) * 100}%` }} />
+      </div>
+      <ul className="divide-y-2 divide-line">
+        {copies.map(c => {
+          const m = org.memberById(c.assigneeId)
+          const isPending = c.status === 'done' && c.review?.status === 'pending'
+          const canReview = canReviewTask(c, org.me, manages(c))
+          const due = c.deadline ? new Date(c.deadline).getTime() : null
+          const onTime = due !== null && c.status === 'done' && c.completedAt !== undefined ? c.completedAt <= due : null
+          const checks = c.checklist ?? []
+          return (
+            <li key={c.id} className={`py-2.5 ${c.id === task.id ? '-mx-2 rounded-xl bg-snow px-2' : ''}`}>
+              <div className="flex items-center gap-3">
+                <Avatar name={m?.name ?? '?'} picture={m?.picture} size={34} presence={m?.presence} />
+                <Link href={`/tarefas/${c.id}`} className="min-w-0 flex-1">
+                  <span className="block truncate font-bold text-ink hover:underline">{m ? (m.id === org.me.id ? `${m.name} (eu)` : m.name) : 'Removido'}</span>
+                  <span className="flex flex-wrap items-center gap-x-2 text-xs font-bold text-muted">
+                    <ReviewBadge task={c} />
+                    {!c.review && <span>{STATUS_LABEL[c.status]}</span>}
+                    {onTime !== null && <span className={onTime ? 'text-accent-dark' : 'text-danger'}>{onTime ? 'No prazo' : 'Fora do prazo'}</span>}
+                    {checks.length > 0 && <span>{checks.filter(x => x.done).length}/{checks.length} passos</span>}
+                    {!!c.attachments?.length && <span className="flex items-center gap-0.5"><PaperclipIcon size={12} /> {c.attachments.length}</span>}
+                    {!!c.comments?.filter(x => x.kind === 'comment').length && <span className="flex items-center gap-0.5"><ChatCircleIcon size={12} /> {c.comments.filter(x => x.kind === 'comment').length}</span>}
+                  </span>
+                </Link>
+                {isPending && canReview && rejecting !== c.id && (
+                  <div className="flex shrink-0 gap-1">
+                    <button onClick={() => { setRejecting(c.id); setNote('') }} className="rounded-lg p-2 text-danger hover:bg-danger-light cursor-pointer" aria-label={`Devolver a ${m?.name}`}>
+                      <ArrowUUpLeftIcon size={18} />
+                    </button>
+                    <button onClick={() => actions.approve(c.id)} disabled={actions.busy} className="btn btn-accent h-9 px-3 text-xs" aria-label={`Aprovar ${m?.name}`}>
+                      <CheckIcon size={16} /> <span className="hidden sm:inline">Aprovar</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              {rejecting === c.id && (
+                <div className="mt-2 flex gap-2">
+                  <input className="input py-2" placeholder={`O que falta corrigir, ${m?.name.split(' ')[0] ?? ''}?`} value={note} onChange={e => setNote(e.target.value)} autoFocus />
+                  <button onClick={() => setRejecting(null)} className="btn btn-ghost px-3 text-body" aria-label="Cancelar"><XIcon size={16} /></button>
+                  <button
+                    disabled={actions.busy || !note.trim()}
+                    onClick={async () => { if (await actions.reject(c.id, note.trim())) setRejecting(null) }}
+                    className={`btn px-3 ${note.trim() ? 'btn-danger' : 'btn-disabled'}`}
+                  >
+                    Devolver
+                  </button>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      <p className="mt-2 text-xs font-semibold text-muted">Toca num nome para ver os anexos, a checklist e os comentários dessa pessoa.</p>
+    </section>
+  )
+}
 
 /** Aprovação, anexos e comentários (só tarefas de empresa) */
 function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
@@ -42,11 +140,7 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
   const reviewer = org.memberById(task.reviewerId)
   // a conta da empresa aparece com o nome da empresa
   const nameOf = (m: Member) => (m.id === org.me.id ? 'Mim' : isCompanyAccount(m, org.org) ? org.org.name : m.name)
-  // mesmas regras do servidor (taskAccess): gere o responsável ou criou a tarefa sendo supervisor
-  const scope = org.scope
-  const managesAssignee =
-    !!assignee && (scope === 'all' || (assignee.id !== org.me.id && !!assignee.departmentId && scope.has(assignee.departmentId)))
-  const isManager = managesAssignee || (task.createdBy === org.me.id && org.isManager)
+  const isManager = useManages()(task)
   const canReview = canReviewTask(task, org.me, isManager)
   const pending = task.status === 'done' && task.review?.status === 'pending'
   const approved = task.review?.status === 'approved'
@@ -55,12 +149,20 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
 
   return (
     <>
+      {/* Tarefa de grupo: quem gere vê todos; o responsável vê só o andamento */}
+      {task.groupId && isManager && <GroupPanel task={task} />}
+      {task.groupId && !isManager && task.groupSummary && (
+        <p className="flex items-center gap-2 rounded-xl bg-accent-light px-3 py-2 text-sm font-bold text-accent-dark">
+          <UsersThreeIcon size={18} /> Tarefa de grupo · {task.groupSummary.done} de {task.groupSummary.total} pessoas concluíram. A tua entrega é aprovada à parte.
+        </p>
+      )}
+
       {/* Quem e como */}
       <section className="card divide-y-2 divide-line">
         <div className="flex items-center gap-3 p-3">
           <Avatar name={assignee?.name ?? '?'} picture={assignee?.picture} size={36} presence={assignee?.presence} />
           <span className="min-w-0 flex-1">
-            <span className="block text-xs font-extrabold uppercase text-muted">Responsável</span>
+            <span className="block text-xs font-extrabold uppercase text-muted">{task.groupId && isManager ? 'Entrega de' : 'Responsável'}</span>
             <span className="block truncate font-bold text-ink">{assignee ? (assignee.id === org.me.id ? 'Eu' : assignee.name) : 'Removido'}</span>
           </span>
           {creator && creator.id !== assignee?.id && (
@@ -284,6 +386,7 @@ export default function TaskDetailPage() {
     startTimer, pauseTimer, resumeTimer, stopTimer, setStatus, deleteTask, openTaskSheet, updateTask,
   } = useApp()
   const org = useOrg()
+  const taskActions = useTaskActions()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const task = tasks.find(t => t.id === id) ?? org?.teamTasks.find(t => t.id === id)
@@ -299,6 +402,7 @@ export default function TaskDetailPage() {
 
   const isOwner = !org || task.assigneeId === org.me.id
   const isEditor = !org || task.createdBy === org.me.id || org.isManager
+  const groupSize = task.groupId && org ? groupSiblings(org.teamTasks, task).length : 1
   const approved = task.review?.status === 'approved'
   const cat = CATEGORY_CONFIG[task.category]
   const sessions = allSessions.filter(s => s.taskId === task.id)
@@ -519,14 +623,26 @@ export default function TaskDetailPage() {
                 ? 'O tempo registado, os anexos e os comentários também serão apagados.'
                 : `O tempo registado (${formatDuration(total)}) também será apagado das estatísticas.`}
             </p>
+            {groupSize > 1 && (
+              <button
+                onClick={async () => {
+                  if (await taskActions.removeGroup(task.id)) router.replace(isOwner ? '/tarefas' : '/empresa/tarefas')
+                }}
+                className="btn btn-danger mt-5 w-full"
+              >
+                Apagar para todos ({groupSize} pessoas)
+              </button>
+            )}
             <button
               onClick={() => {
                 deleteTask(task.id)
+                // o grupo perdeu uma cópia: actualiza o resumo das outras
+                if (groupSize > 1) org?.refreshTeam()
                 router.replace(org && !isOwner ? '/empresa/tarefas' : '/tarefas')
               }}
-              className="btn btn-danger mt-5 w-full"
+              className={`btn mt-5 w-full ${groupSize > 1 ? 'btn-ghost text-danger' : 'btn-danger'}`}
             >
-              Apagar
+              {groupSize > 1 ? `Retirar só ${org?.memberById(task.assigneeId)?.name ?? 'esta pessoa'}` : 'Apagar'}
             </button>
             <button onClick={() => setConfirmDelete(false)} className="btn btn-ghost mt-3 w-full">
               Cancelar

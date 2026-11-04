@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { DeletedUser, Department, Member, Org, PresenceSegment, Session, Task, User } from '../../types'
+import type { CalendarEvent, DeletedUser, Department, Member, Org, PresenceSegment, Session, Task, User } from '../../types'
 import * as fileStore from './store-file'
 import * as pgStore from './store-pg'
 
@@ -30,19 +30,21 @@ export type DB = {
   sessions: Session[]
   presence: PresenceSegment[]
   push: PushRecord[]
+  /** eventos do calendário (empresa ou pessoais) */
+  events: CalendarEvent[]
   /** registo de utilizadores eliminados no painel */
   deleted: DeletedUser[]
 }
 
 export type Table = keyof DB
-export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'deleted']
+export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted']
 
 export const emptyDB = (): DB => ({
-  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], deleted: [],
+  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [],
 })
 
-/** Condição sobre uma coluna: valor (=), lista (IN), null (IS NULL) ou { gte } (>=) */
-export type Condition = string | number | null | (string | number)[] | { gte: number }
+/** Condição sobre uma coluna: valor (=), lista (IN), null (IS NULL) ou intervalo { gte, lte } (>=, <=) */
+export type Condition = string | number | null | (string | number)[] | { gte?: number; lte?: number }
 
 export type Loader = {
   db: DB

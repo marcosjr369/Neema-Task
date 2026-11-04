@@ -10,6 +10,9 @@ import { formatDuration, formatShort } from '../../lib/stats'
 import { PRESENCE_CONFIG, type PresenceStatus } from '../../types'
 import Avatar from '../../components/ui/Avatar'
 import { PresenceBar, PresenceLegend, presenceTotals, RANGES, rangeFrom, useTeamActivity, type RangeId } from './shared'
+import { BandDays, ScoreBadge } from './Records'
+import { teamMembers } from '../../lib/org'
+import { analyse, doneIn, GOAL_BANDS, goalSecondsOf, type GoalBand } from '../../lib/records'
 import { PresenceGlyph } from '../../components/ui/icons'
 
 const ACTIVE: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao']
@@ -29,6 +32,22 @@ export default function Reports() {
     .filter(m => scope === 'all' || m.id === org.me.id || (!!m.departmentId && scope.has(m.departmentId)))
     .filter(m => dept === 'all' || m.departmentId === dept)
 
+  // recordes, meta diária e pontuação (as entregas comparam-se com toda a equipa visível, não só com o filtro)
+  const goal = goalSecondsOf(org.org)
+  const visible = teamMembers(org.members, org.org).filter(m => m.status === 'activo' && (scope === 'all' || m.id === org.me.id || (!!m.departmentId && scope.has(m.departmentId))))
+  const maxDone = Math.max(0, ...visible.map(m => doneIn(org.teamTasks.filter(t => t.assigneeId === m.id), from, now + 1)))
+  const analysis = new Map(
+    analyse(
+      people.map(m => ({
+        memberId: m.id,
+        segments: segments.filter(s => s.memberId === m.id),
+        sessions: sessions.filter(s => s.memberId === m.id),
+        tasks: org.teamTasks.filter(t => t.assigneeId === m.id),
+      })),
+      from, now + 1, now, goal, maxDone,
+    ).map(a => [a.memberId, a]),
+  )
+
   const rows = people
     .map(m => {
       const totals = presenceTotals(segments.filter(s => s.memberId === m.id), from, now + 1, now)
@@ -38,12 +57,16 @@ export default function Reports() {
       const done = mine.filter(t => isCompleted(t) && (completedTime(t) ?? 0) >= from).length
       const reviewed = mine.filter(t => t.review && (t.review.at ?? 0) >= from && t.review.status !== 'pending')
       const firstTry = reviewed.filter(t => t.review?.status === 'approved' && t.review.rejections === 0).length
-      return { m, totals, active, inTasks, done, approvalRate: reviewed.length ? firstTry / reviewed.length : null }
+      return { m, totals, active, inTasks, done, approvalRate: reviewed.length ? firstTry / reviewed.length : null, a: analysis.get(m.id)! }
     })
     .sort((a, b) => b.active - a.active)
+  const bandCount = (b: GoalBand | null) => rows.filter(r => r.a.band === b).length
 
   const exportCsv = () => {
-    const head = ['Nome', 'Email', 'Departamento', 'Cargo', ...COLUMNS.map(s => `${PRESENCE_CONFIG[s].label} (h)`), 'Em tarefas (h)', 'Tarefas concluídas', 'Aprovadas à primeira (%)']
+    const head = [
+      'Nome', 'Email', 'Departamento', 'Cargo', ...COLUMNS.map(s => `${PRESENCE_CONFIG[s].label} (h)`), 'Em tarefas (h)', 'Tarefas concluídas', 'Aprovadas à primeira (%)',
+      'Pontuação', 'Recordes', 'Antes do prazo', 'Fora do prazo', 'Dias abaixo da meta', 'Dias na meta', 'Dias acima da meta', 'Média por dia (h)', 'Meta (média)',
+    ]
     const h = (s: number) => (s / 3600).toFixed(2).replace('.', ',')
     const lines = rows.map(r => [
       r.m.name,
@@ -54,6 +77,15 @@ export default function Reports() {
       h(r.inTasks),
       String(r.done),
       r.approvalRate === null ? '' : String(Math.round(r.approvalRate * 100)),
+      r.a.score === null ? '' : String(r.a.score),
+      String(r.a.records),
+      String(r.a.beforeDeadline),
+      String(r.a.late),
+      String(r.a.daysByBand.abaixo),
+      String(r.a.daysByBand.meta),
+      String(r.a.daysByBand.acima),
+      h(r.a.avgPerDay),
+      r.a.band ? GOAL_BANDS.find(b => b.id === r.a.band)!.label : 'Sem registo',
     ])
     const csv = [head, ...lines].map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
     const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
@@ -97,6 +129,20 @@ export default function Reports() {
         <p className="card p-6 text-center font-semibold text-muted">A carregar…</p>
       ) : (
         <>
+          <section className="card flex flex-wrap items-center gap-x-5 gap-y-2 p-3 text-sm font-bold text-muted">
+            <span className="text-ink">
+              Meta diária <b>{formatShort(goal)}</b>{range !== 'hoje' && <span className="font-semibold text-muted"> (média por dia com registo)</span>}:
+            </span>
+            {GOAL_BANDS.map(b => (
+              <span key={b.id} className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-sm" style={{ background: b.color }} />
+                <b className="text-ink">{bandCount(b.id)}</b> {b.label.toLowerCase()}
+              </span>
+            ))}
+            <span><b className="text-ink">{bandCount(null)}</b> sem registo</span>
+            <span className="lg:ml-auto"><b className="text-ink">{rows.reduce((a, r) => a + r.a.records, 0)}</b> recordes batidos</span>
+          </section>
+
           {/* Mobile: cartões */}
           <ul className="space-y-3 lg:hidden">
             {rows.map(r => (
@@ -121,6 +167,12 @@ export default function Reports() {
                     <span className="flex items-center gap-1"><TimerIcon size={14} /> {formatShort(r.inTasks)} em tarefas</span>
                     <span className="flex items-center gap-1"><CheckCircleIcon size={14} /> {r.done}</span>
                   </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-muted">
+                    <ScoreBadge score={r.a.score} />
+                    <span><b className="text-ink">{r.a.records}</b> recordes</span>
+                    <span><b className="text-ink">{r.a.beforeDeadline}</b> antes do prazo</span>
+                    <BandDays a={r.a} />
+                  </div>
                 </Link>
               </li>
             ))}
@@ -136,7 +188,11 @@ export default function Reports() {
                   {COLUMNS.map(s => <th key={s} className="px-2 py-3 text-right" title={PRESENCE_CONFIG[s].label}><span className="inline-flex"><PresenceGlyph status={s} size={18} /></span></th>)}
                   <th className="px-2 py-3 text-right">Em tarefas</th>
                   <th className="px-2 py-3 text-right">Concluídas</th>
-                  <th className="px-4 py-3 text-right">À 1ª</th>
+                  <th className="px-2 py-3 text-right">À 1ª</th>
+                  <th className="px-2 py-3 text-right" title="Tarefas entregues até ao prazo">Prazo</th>
+                  <th className="px-2 py-3" title="Dias abaixo · na meta · acima">Meta</th>
+                  <th className="px-2 py-3 text-right" title="Antes do prazo + aprovadas à 1ª + dias com meta cumprida">Recordes</th>
+                  <th className="px-4 py-3 text-center" title="Meta, prazos, qualidade, foco e entregas (0–100)">Pontuação</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-line font-semibold text-body">
@@ -159,7 +215,14 @@ export default function Reports() {
                     ))}
                     <td className="px-2 text-right tabular-nums">{formatShort(r.inTasks)}</td>
                     <td className="px-2 text-right tabular-nums">{r.done}</td>
-                    <td className="px-4 text-right tabular-nums">{r.approvalRate === null ? '—' : `${Math.round(r.approvalRate * 100)}%`}</td>
+                    <td className="px-2 text-right tabular-nums">{r.approvalRate === null ? '—' : `${Math.round(r.approvalRate * 100)}%`}</td>
+                    <td className="px-2 text-right tabular-nums">
+                      {r.a.beforeDeadline}
+                      {r.a.late > 0 && <span className="text-xs text-danger" title="Fora do prazo"> /{r.a.late}</span>}
+                    </td>
+                    <td className="px-2"><BandDays a={r.a} /></td>
+                    <td className="px-2 text-right font-black text-ink tabular-nums">{r.a.records}</td>
+                    <td className="px-4 text-center"><ScoreBadge score={r.a.score} /></td>
                   </tr>
                 ))}
               </tbody>
