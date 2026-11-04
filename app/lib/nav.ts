@@ -1,5 +1,5 @@
 import {
-  BuildingsIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
+  BuildingsIcon, CalendarBlankIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
   SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
@@ -18,6 +18,7 @@ const ITEMS = {
   inicio: { href: '/', label: 'Início', icon: HouseIcon, color: '#7B61FF' },
   tarefas: { href: '/tarefas', label: 'Tarefas', icon: ListChecksIcon, color: '#12B5A6' },
   foco: { href: '/foco', label: 'Foco', icon: TimerIcon, color: '#F2545B' },
+  calendario: { href: '/calendario', label: 'Calendário', icon: CalendarBlankIcon, color: '#22A6CF' },
   estatisticas: { href: '/estatisticas', label: 'Estatísticas', icon: ChartBarIcon, color: '#EC5BA6' },
   ranking: { href: '/ranking', label: 'Ranking', icon: TrophyIcon, color: '#E0A419' },
   empresa: { href: '/empresa', label: 'Empresa', icon: BuildingsIcon, color: '#4C7DFF' },
@@ -59,13 +60,13 @@ export function navGroups(mode: NavMode): NavGroup[] {
   // a conta da empresa não tem trabalho próprio: a sidebar é o painel
   if (mode === 'company') {
     return [
-      { title: 'Empresa', items: [section('geral'), section('tarefas'), section('relatorios'), section('recordes')] },
+      { title: 'Empresa', items: [section('geral'), ITEMS.calendario, section('tarefas'), section('relatorios'), section('recordes')] },
       { title: 'Equipa', items: [section('pessoas'), section('departamentos'), ITEMS.ranking] },
       { title: 'Gestão', items: [section('definicoes')] },
     ]
   }
   const groups: NavGroup[] = [
-    { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco] },
+    { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario] },
     { title: 'Progresso', items: [ITEMS.estatisticas, ITEMS.ranking] },
   ]
   if (mode === 'manager' || mode === 'admin') {

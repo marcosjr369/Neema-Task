@@ -12,6 +12,7 @@ import Mascot from './components/ui/Mascot'
 import { CategoryBadge, CategoryGlyph } from './components/ui/icons'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, Task } from './types'
 import { formatClock, formatDuration, phaseElapsed, startOfDay, todaySeconds } from './lib/stats'
+import UpcomingEvents from './components/calendar/UpcomingEvents'
 
 /** Deslocamento horizontal dos nós, em zigue-zague */
 const OFFSETS = [0, 44, 66, 44, 0, -44, -66, -44]
@@ -241,6 +242,9 @@ export default function HomePage() {
             </span>
           </Link>
         )}
+
+        {/* no desktop a agenda está no painel direito */}
+        <div className="lg:hidden"><UpcomingEvents /></div>
 
         {notificationPermission === 'default' && (
           <button

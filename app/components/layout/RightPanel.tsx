@@ -14,6 +14,7 @@ import {
   totalXp,
 } from '../../lib/stats'
 import MiniTimer from '../focus/MiniTimer'
+import UpcomingEvents from '../calendar/UpcomingEvents'
 import { CategoryBadge } from '../ui/icons'
 
 /** Coluna lateral direita (desktop): resumo, temporizador, objetivo, prazos */
@@ -61,6 +62,8 @@ export default function RightPanel() {
           </span>
         </Link>
       )}
+
+      <UpcomingEvents />
 
       <section className="card p-4">
         <div className="flex items-baseline justify-between">

@@ -85,6 +85,40 @@ body {
   }
 }
 
+/* Barras de deslocamento finas e discretas (sem setas), em toda a app */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #dcd9e8;
+  border-radius: 999px;
+  /* borda transparente: a barra parece mais fina e afastada da margem */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a0b8;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+/* Firefox (os browsers com ::-webkit-scrollbar usam as regras de cima) */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #dcd9e8 transparent;
+  }
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

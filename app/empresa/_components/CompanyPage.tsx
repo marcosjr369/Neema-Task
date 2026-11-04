@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { BuildingsIcon } from '@phosphor-icons/react'
+import { BuildingsIcon, CalendarBlankIcon } from '@phosphor-icons/react'
 import { useOrg } from '../../context/OrgContext'
 import { sectionHref, visibleSections, type SectionId } from '../../lib/nav'
 import { COMPANY_ACCOUNT_LABEL, ROLE_LABEL } from '../../types'
@@ -78,6 +78,10 @@ export default function CompanyPage({ section }: { section: SectionId }) {
               {org.isCompany ? COMPANY_ACCOUNT_LABEL : ROLE_LABEL[org.me.role]}{org.org.sector ? ` · ${org.org.sector}` : ''} · {org.members.filter(m => m.status === 'activo').length} activos
             </p>
           </div>
+          {/* no telemóvel o calendário não cabe na barra de baixo */}
+          <Link href="/calendario" className="ml-auto rounded-xl p-2 text-[#22A6CF] hover:bg-snow lg:hidden" aria-label="Calendário">
+            <CalendarBlankIcon size={26} />
+          </Link>
         </div>
         <nav className="no-scrollbar -mx-4 mt-3 flex gap-1 overflow-x-auto px-4 lg:hidden" aria-label="Secções da empresa">
           {sections.map(s => (

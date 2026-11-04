@@ -16,6 +16,7 @@ import BreakPrompt from '../focus/BreakPrompt'
 import CelebrationOverlay from '../focus/CelebrationOverlay'
 import MilestoneCelebration from '../focus/MilestoneCelebration'
 import IdleNudge from '../focus/IdleNudge'
+import EventAlerts from '../calendar/EventAlerts'
 import ToastView from '../ui/ToastView'
 import ConsentGate from '../account/ConsentGate'
 import InviteDialog from '../account/InviteDialog'
@@ -27,7 +28,7 @@ import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
 /** Páginas que no desktop usam a largura toda (sem painel direito) */
-const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa']
+const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario']
 /** Páginas em ecrã inteiro, sem navegação */
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
 /** Páginas abertas sem sessão iniciada */
@@ -117,6 +118,7 @@ function Shell({ children }: { children: ReactNode }) {
       <CelebrationOverlay />
       <MilestoneCelebration />
       <IdleNudge />
+      <EventAlerts />
       <ToastView />
       <PresenceSync />
       <ConsentGate />
