@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { BuildingsIcon, CheckCircleIcon, ClockIcon, CrownIcon, InfoIcon, LightningIcon } from '@phosphor-icons/react'
 import { useAccount } from '../context/AccountContext'
-import { useApp } from '../context/AppContext'
+import { useMinute } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
 import { api, errorText, whenVisible } from '../lib/api'
 import { POINTS_HELP } from '../lib/points'
@@ -115,7 +115,7 @@ function OrgList({ list, metric }: { list: OrgRankEntry[] | null; metric: RankMe
 
 export default function RankingPage() {
   const { user } = useAccount()
-  const { now } = useApp()
+  const now = useMinute()
   const org = useOrg()
   const [metric, setMetric] = useState<RankMetric>('points')
   const [period, setPeriod] = useState<Period>('semana')

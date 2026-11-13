@@ -44,13 +44,11 @@ const newId = () =>
     : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 
 type AppContextValue = {
-  now: number
   workspace: Workspace
   orgMode: boolean
   ready: boolean
   tasks: Task[]
   sessions: Session[]
-  allSessions: Session[]
   history?: CarriedHistory
   settings: Settings
   timer: ActiveTimer | null
@@ -85,11 +83,27 @@ type AppContextValue = {
   requestNotifications: () => Promise<void>
 }
 
-const AppContext = createContext<AppContextValue | null>(null)
+/** O relógio e as sessões com a que está a decorrer: mudam a cada segundo com o temporizador ligado */
+type ClockValue = { now: number; allSessions: Session[] }
 
+const AppContext = createContext<AppContextValue | null>(null)
+const ClockContext = createContext<ClockValue | null>(null)
+const MinuteContext = createContext<number>(0)
+
+/** Estado e acções da app. Não muda com o relógio: quem só precisa disto não se redesenha a cada segundo. */
 export function useApp() {
   const ctx = useContext(AppContext)
   if (!ctx) throw new Error('useApp tem de ser usado dentro de <AppProvider>')
+  return ctx
+}
+
+/** A hora certa ao minuto: para calendários, relatórios e listas que não mostram segundos */
+export const useMinute = () => useContext(MinuteContext)
+
+/** O relógio da app (a cada segundo com o temporizador ligado, a cada 30 s sem ele) */
+export function useClock() {
+  const ctx = useContext(ClockContext)
+  if (!ctx) throw new Error('useClock tem de ser usado dentro de <AppProvider>')
   return ctx
 }
 
@@ -589,15 +603,16 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
 
   const activeTask = timer ? tasks.find(t => t.id === timer.taskId) ?? null : null
 
-  const value: AppContextValue = {
-    now,
+  const history = orgCtx?.me.history
+  const updateSettings = account.updateSettings
+  const orgMode = !!org
+  const value = useMemo<AppContextValue>(() => ({
     workspace,
-    orgMode: !!org,
+    orgMode,
     ready,
     tasks,
     sessions,
-    allSessions,
-    history: orgCtx?.me.history,
+    history,
     settings,
     timer,
     activeTask,
@@ -618,7 +633,7 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     startBreak,
     extendFocus,
     backToFocus,
-    updateSettings: account.updateSettings,
+    updateSettings,
     resetAll,
     openTaskSheet,
     closeTaskSheet,
@@ -626,7 +641,15 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     showToast,
     notificationPermission,
     requestNotifications,
-  }
+  }), [workspace, orgMode, ready, tasks, sessions, history, settings, timer, activeTask, prompt, celebration, toast, sheet, addTask, updateTask, deleteTask, setStatus, replaceTask, refreshTasks, startTimer, pauseTimer, resumeTimer, stopTimer, startBreak, extendFocus, backToFocus, updateSettings, resetAll, openTaskSheet, closeTaskSheet, dismissCelebration, showToast, notificationPermission, requestNotifications])
+  const clock = useMemo<ClockValue>(() => ({ now, allSessions }), [now, allSessions])
+  const minute = Math.floor(now / 60000) * 60000
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  return (
+    <AppContext.Provider value={value}>
+      <ClockContext.Provider value={clock}>
+        <MinuteContext.Provider value={minute}>{children}</MinuteContext.Provider>
+      </ClockContext.Provider>
+    </AppContext.Provider>
+  )
 }

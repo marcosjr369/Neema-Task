@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { CalendarBlankIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useMinute } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { DAY_MS, eventsBase, hhmm, useEvents } from '../../lib/calendar'
 import { startOfDay } from '../../lib/stats'
 import { EVENT_KINDS } from '../../types'
 
 export default function UpcomingEvents() {
-  const { now } = useApp()
+  const now = useMinute()
   const org = useOrg()
   const [day] = useState(() => startOfDay(Date.now()))
   const { events } = useEvents(eventsBase(org?.base), day, day + DAY_MS)

@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // o pacote de ícones exporta ~1500 componentes num só ficheiro: sem isto, cada página
+    // compila-os todos (lento em desenvolvimento, build mais pesado)
+    optimizePackageImports: ["@phosphor-icons/react"],
+  },
   async headers() {
     return [
       {

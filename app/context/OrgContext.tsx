@@ -117,7 +117,6 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   const tracksPresence = !!data.me.consentAt && !isCompany
   const resumeWith = useRef(initial.member.presence !== 'offline' ? initial.member.presence : 'trabalho')
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- retoma o dia em curso
     if (tracksPresence && workStartRef.current) setPresence(resumeWith.current)
   }, [tracksPresence, setPresence])
 

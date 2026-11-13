@@ -1,4 +1,4 @@
-import type { Access, BoardPerson, Board, ShareKind, Sheet, User } from '../../types'
+import type { Access, BoardPerson, Board, Diagram, ShareKind, Sheet, User } from '../../types'
 import { fail } from './api'
 import { resolveAccess } from './sharing'
 import type { DB, Loader } from './store'
@@ -8,13 +8,15 @@ import type { DB, Loader } from './store'
  * e a mesma lista de pessoas. Cada tipo vive na sua tabela, com o link (token) numa coluna própria.
  */
 
-export type SharedTable = 'boards' | 'sheets'
-export type SharedResource = Board | Sheet
+export type SharedTable = 'boards' | 'sheets' | 'diagrams'
+export type SharedResource = Board | Sheet | Diagram
 
-export const KIND: Record<SharedTable, ShareKind> = { boards: 'board', sheets: 'sheet' }
-export const NOUN: Record<SharedTable, { one: string; the: string; this: string; path: string }> = {
-  boards: { one: 'quadro', the: 'o quadro', this: 'este quadro', path: '/quadros' },
-  sheets: { one: 'planilha', the: 'a planilha', this: 'esta planilha', path: '/planilhas' },
+export const KIND: Record<SharedTable, ShareKind> = { boards: 'board', sheets: 'sheet', diagrams: 'diagram' }
+/** a: com artigo indefinido; o: terminação do género ("encontrado"/"encontrada") */
+export const NOUN: Record<SharedTable, { one: string; the: string; this: string; a: string; o: string; path: string }> = {
+  boards: { one: 'quadro', the: 'o quadro', this: 'este quadro', a: 'um quadro', o: 'o', path: '/quadros' },
+  sheets: { one: 'planilha', the: 'a planilha', this: 'esta planilha', a: 'uma planilha', o: 'a', path: '/planilhas' },
+  diagrams: { one: 'diagrama', the: 'o diagrama', this: 'este diagrama', a: 'um diagrama', o: 'o', path: '/diagramas' },
 }
 
 const list = (db: DB, table: SharedTable) => db[table] as SharedResource[]
@@ -43,7 +45,7 @@ export const resourceByToken = (table: SharedTable, token: string) => async (l: 
 }
 
 export function findResource(db: DB, table: SharedTable, id: string) {
-  return list(db, table).find(r => r.id === id) ?? fail(404, `${NOUN[table].one[0].toUpperCase()}${NOUN[table].one.slice(1)} não encontrad${table === 'boards' ? 'o' : 'a'}`)
+  return list(db, table).find(r => r.id === id) ?? fail(404, `${NOUN[table].one[0].toUpperCase()}${NOUN[table].one.slice(1)} não encontrad${NOUN[table].o}`)
 }
 
 export const byToken = (db: DB, table: SharedTable, token: string) => list(db, table).find(r => r.sharing.token === token)

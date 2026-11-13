@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { BellIcon, ChartBarIcon, CheckIcon, ClipboardTextIcon, CoffeeIcon, GiftIcon, PlayIcon } from '@phosphor-icons/react'
-import { useApp } from './context/AppContext'
+import { useApp, useClock } from './context/AppContext'
 import { useAccount } from './context/AccountContext'
 import { useOrg } from './context/OrgContext'
 import TopBar from './components/layout/TopBar'
@@ -130,10 +130,8 @@ function PathNode({
 }
 
 export default function HomePage() {
-  const {
-    tasks, allSessions, settings, now, timer, activeTask,
-    openTaskSheet, startTimer, notificationPermission, requestNotifications, ready,
-  } = useApp()
+  const { tasks, settings, timer, activeTask, openTaskSheet, startTimer, notificationPermission, requestNotifications, ready } = useApp()
+  const { allSessions, now } = useClock()
   const { user } = useAccount()
   const firstName = user?.name.split(' ')[0] ?? ''
   const org = useOrg()

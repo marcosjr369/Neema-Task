@@ -7,21 +7,24 @@ import { EyeIcon, LockIcon } from '@phosphor-icons/react'
 import BoardCanvas from '../../components/boards/BoardCanvas'
 import CardDialog from '../../components/boards/CardDialog'
 import PublicSheet from '../../components/sheets/PublicSheet'
+import PublicDiagram from '../../components/diagrams/PublicDiagram'
 import Mascot from '../../components/ui/Mascot'
 import { api, ApiError, errorText } from '../../lib/api'
 import { boardBackground } from '../../lib/boards'
-import type { BoardPerson, BoardView, ShareKind, SheetView } from '../../types'
+import type { BoardPerson, BoardView, DiagramView, ShareKind, SheetView } from '../../types'
 import { Busy } from '../../components/ui/Spinner'
 
 type Res =
   | { status: 'member'; kind: ShareKind; path: string }
   | { status: 'ok'; kind: 'board'; board: BoardView; people: BoardPerson[]; signedIn: boolean }
   | { status: 'ok'; kind: 'sheet'; sheet: SheetView; signedIn: boolean }
+  | { status: 'ok'; kind: 'diagram'; diagram: DiagramView; signedIn: boolean }
   | { status: 'password' | 'private'; kind: ShareKind; signedIn: boolean; requested: boolean }
 
 const WORDS: Record<ShareKind, { the: string; this: string; private: string; place: string; open: string }> = {
   board: { the: 'o quadro', this: 'este quadro', private: 'Quadro privado', place: 'nos teus Quadros', open: 'Abrir quadro' },
   sheet: { the: 'a planilha', this: 'esta planilha', private: 'Planilha privada', place: 'nas tuas Planilhas', open: 'Abrir planilha' },
+  diagram: { the: 'o diagrama', this: 'este diagrama', private: 'Diagrama privado', place: 'nos teus Diagramas', open: 'Abrir diagrama' },
 }
 
 const noop = () => undefined
@@ -30,7 +33,7 @@ function Center({ children }: { children: React.ReactNode }) {
   return <div className="flex min-h-dvh flex-col items-center justify-center bg-snow px-6 py-12 text-center">{children}</div>
 }
 
-/** Link de partilha: abre o quadro ou a planilha só para leitura, pede a senha, ou deixa pedir acesso */
+/** Link de partilha: abre o quadro, a planilha ou o diagrama só para leitura, pede a senha, ou deixa pedir acesso */
 export default function SharedPage() {
   const { token } = useParams<{ token: string }>()
   const router = useRouter()
@@ -134,6 +137,7 @@ export default function SharedPage() {
     )
   }
 
+  if (res.kind === 'diagram') return <PublicDiagram diagram={res.diagram} signedIn={res.signedIn} />
   if (res.kind === 'sheet') return <PublicSheet sheet={res.sheet} signedIn={res.signedIn} />
 
   const { board, people } = res

@@ -55,6 +55,9 @@ const ROUTES: [string, () => Promise<any>][] = [
   ['planilhas/:id', () => import('../../api/planilhas/[id]/route')],
   ['planilhas/:id/ops', () => import('../../api/planilhas/[id]/ops/route')],
   ['planilhas/:id/share', () => import('../../api/planilhas/[id]/share/route')],
+  ['diagramas', () => import('../../api/diagramas/route')],
+  ['diagramas/:id', () => import('../../api/diagramas/[id]/route')],
+  ['diagramas/:id/share', () => import('../../api/diagramas/[id]/share/route')],
   ['ranking', () => import('../../api/ranking/route')],
   ['ranking/empresas', () => import('../../api/ranking/empresas/route')],
 ]

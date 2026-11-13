@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { CalendarBlankIcon, FireIcon, LightningIcon, TimerIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import PresencePicker from '../account/PresencePicker'
 import { computeStreak, formatShort, levelInfo, todaySeconds, totalXp } from '../../lib/stats'
 
 export default function TopBar() {
-  const { allSessions, tasks, history, now, timer } = useApp()
+  const { tasks, history, timer } = useApp()
+  const { allSessions, now } = useClock()
   const { streak, activeToday } = computeStreak(allSessions, tasks, now)
   const xp = totalXp(allSessions, tasks, history)
   const { level } = levelInfo(xp)

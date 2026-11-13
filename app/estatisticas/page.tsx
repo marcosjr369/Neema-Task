@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { CheckCircleIcon, ClockIcon, FireIcon, LightningIcon } from '@phosphor-icons/react'
-import { useApp } from '../context/AppContext'
+import { useApp, useClock } from '../context/AppContext'
 import { CATEGORY_CONFIG } from '../types'
 import { HeaderSkeleton, StatsSkeleton } from '../components/ui/Skeleton'
 import {
@@ -112,7 +112,8 @@ function StatTile({ icon, value, label, color }: { icon: React.ReactNode; value:
 }
 
 export default function StatsPage() {
-  const { allSessions, tasks, history, now, settings, ready } = useApp()
+  const { tasks, history, settings, ready } = useApp()
+  const { allSessions, now } = useClock()
   const [days, setDays] = useState(7)
 
   const series = dailySeries(allSessions, tasks, now, days)

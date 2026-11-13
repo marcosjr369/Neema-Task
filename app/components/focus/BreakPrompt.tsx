@@ -1,11 +1,12 @@
 'use client'
 
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import { formatDuration, phaseElapsed } from '../../lib/stats'
 import Mascot from '../ui/Mascot'
 
 export default function BreakPrompt() {
-  const { prompt, timer, activeTask, now, settings, startBreak, extendFocus, backToFocus, stopTimer, setStatus } = useApp()
+  const { prompt, timer, activeTask, settings, startBreak, extendFocus, backToFocus, stopTimer, setStatus } = useApp()
+  const { now } = useClock()
   if (!prompt || !timer || !activeTask) return null
 
   const elapsed = phaseElapsed(timer, now)

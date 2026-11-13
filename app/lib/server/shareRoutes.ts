@@ -110,7 +110,7 @@ export function shareRoutes(table: SharedTable, param = 'id') {
     )
     if (result.notify && result.notify !== user.id) {
       sendToUser(result.notify, {
-        title: `Partilharam ${noun.one === 'quadro' ? 'um quadro' : 'uma planilha'} contigo`,
+        title: `Partilharam ${noun.a} contigo`,
         body: `${user.name} deu-te acesso a "${result.title}"`,
         url: `${noun.path}/${id}`,
         tag: `${KIND[table]}-${id}`,

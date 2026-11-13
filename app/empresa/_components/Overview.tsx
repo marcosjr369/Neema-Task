@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { CheckCircleIcon, ClipboardTextIcon, ClockCountdownIcon, ClockIcon, UsersThreeIcon, WarningIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useMinute } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { formatDeadline, formatDuration, startOfDay } from '../../lib/stats'
 import { isCompleted } from '../../lib/points'
@@ -33,7 +33,7 @@ function Kpi({ icon, value, label, color, href }: { icon: React.ReactNode; value
 
 export default function Overview({ goTo }: { goTo: (section: SectionId) => void }) {
   const org = useOrgRequired()
-  const { now } = useApp()
+  const now = useMinute()
   const dayStart = startOfDay(now)
   const weekStart = rangeFrom('7d', now)
   const { sessions, segments } = useTeamActivity(weekStart)

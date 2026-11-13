@@ -1,5 +1,5 @@
 import {
-  BuildingsIcon, CalendarBlankIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
+  BuildingsIcon, CalendarBlankIcon, FlowArrowIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
   SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
@@ -20,6 +20,7 @@ const ITEMS = {
   calendario: { href: '/calendario', label: 'Calendário', icon: CalendarBlankIcon, color: '#22A6CF' },
   quadros: { href: '/quadros', label: 'Quadros', icon: KanbanIcon, color: '#7B61FF' },
   planilhas: { href: '/planilhas', label: 'Planilhas', icon: TableIcon, color: '#12B5A6' },
+  diagramas: { href: '/diagramas', label: 'Diagramas', icon: FlowArrowIcon, color: '#FF8A3D' },
   estatisticas: { href: '/estatisticas', label: 'Estatísticas', icon: ChartBarIcon, color: '#EC5BA6' },
   ranking: { href: '/ranking', label: 'Ranking', icon: TrophyIcon, color: '#E0A419' },
   empresa: { href: '/empresa', label: 'Empresa', icon: BuildingsIcon, color: '#4C7DFF' },
@@ -51,14 +52,14 @@ export const PERSONAL_ONLY_PATHS = ['/', '/tarefas', '/foco', '/estatisticas']
 export function navGroups(mode: NavMode): NavGroup[] {
   if (mode === 'company') {
     return [
-      { title: 'Empresa', items: [section('geral'), ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, section('tarefas'), section('relatorios'), section('recordes')] },
+      { title: 'Empresa', items: [section('geral'), ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas, section('tarefas'), section('relatorios'), section('recordes')] },
       { title: 'Equipa', items: [section('pessoas'), section('departamentos'), ITEMS.ranking] },
       { title: 'Gestão', items: [section('definicoes')] },
     ]
   }
   const groups: NavGroup[] = [
     { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario] },
-    { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas] },
+    { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas] },
     { title: 'Progresso', items: [ITEMS.estatisticas, ITEMS.ranking] },
   ]
   if (mode === 'manager' || mode === 'admin') {

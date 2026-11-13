@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { CaretLeftIcon, EnvelopeSimpleIcon, PhoneIcon } from '@phosphor-icons/react'
-import { useApp } from '../../../context/AppContext'
+import { useApp, useMinute } from '../../../context/AppContext'
 import { useOrg } from '../../../context/OrgContext'
 import { completedTime, isCompleted, rangeStats } from '../../../lib/points'
 import { formatDuration, startOfDay } from '../../../lib/stats'
@@ -20,7 +20,8 @@ import { Sk } from '../../../components/ui/Skeleton'
 
 function Report({ memberId }: { memberId: string }) {
   const org = useOrg()!
-  const { now, tasks: myTasks } = useApp()
+  const { tasks: myTasks } = useApp()
+  const now = useMinute()
   const [range, setRange] = useState<RangeId>('7d')
   const from = rangeFrom(range, now)
   const { sessions, segments, loaded } = useTeamActivity(from, undefined, memberId)

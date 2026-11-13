@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react'
 import {
   ArrowDownIcon, ArrowUpIcon, CaretLeftIcon, CaretRightIcon, CrownIcon, MedalIcon, MoonIcon, SealCheckIcon, SunIcon, TargetIcon, TimerIcon,
 } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useMinute } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { teamMembers } from '../../lib/org'
 import {
@@ -95,7 +95,7 @@ function Highlight({ icon, color, title, m, value }: { icon: ReactNode; color: s
 
 export default function Records() {
   const org = useOrgRequired()
-  const { now } = useApp()
+  const now = useMinute()
   const [period, setPeriod] = useState<RecordPeriod>('semana')
   const [offset, setOffset] = useState(0)
   const [dept, setDept] = useState('all')

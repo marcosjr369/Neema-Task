@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { PlayIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { formatDuration, todaySeconds } from '../../lib/stats'
 import { pushNotification, sounds } from '../../lib/sounds'
@@ -12,7 +12,8 @@ import { api } from '../../lib/api'
 import Mascot from '../ui/Mascot'
 
 export default function IdleNudge() {
-  const { allSessions, timer, now, settings, tasks, startTimer } = useApp()
+  const { timer, settings, tasks, startTimer } = useApp()
+  const { allSessions, now } = useClock()
   const org = useOrg()
   const router = useRouter()
   const [shown, setShown] = useState<{ title: string; body: string } | null>(null)

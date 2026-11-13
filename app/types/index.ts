@@ -390,7 +390,7 @@ export type Sharing = {
 /** O que o browser recebe da partilha */
 export type SharingInfo = Omit<Sharing, 'password' | 'token'> & { token?: string; hasPassword: boolean }
 
-export type ShareKind = 'board' | 'sheet'
+export type ShareKind = 'board' | 'sheet' | 'diagram'
 
 export type ShareGrant = {
   id: string
@@ -521,3 +521,28 @@ export type Sheet = {
 export type SheetView = Omit<Sheet, 'sharing'> & { sharing: SharingInfo }
 
 export type SheetSummary = Omit<BoardSummary, 'lists' | 'cards' | 'color'> & { tabs: number }
+
+/* ─── Diagramas ───────────────────────────────────────────────────────── */
+
+/** Diagrama/fluxo desenhado no editor do diagrams.net (draw.io), guardado como XML */
+export type Diagram = {
+  id: string
+  title: string
+  orgId?: string
+  ownerId: string
+  createdAt: number
+  updatedAt: number
+  /** quem gravou o conteúdo por último */
+  updatedBy?: string
+  /** conteúdo no formato do draw.io (<mxfile>…) */
+  xml: string
+  /** versão: sobe a cada gravação do conteúdo (para não apagar as alterações de outra pessoa) */
+  rev: number
+  /** miniatura (data:image/svg+xml;base64,…), mostrada só com <img> */
+  preview?: string
+  sharing: Sharing
+}
+
+export type DiagramView = Omit<Diagram, 'sharing'> & { sharing: SharingInfo }
+
+export type DiagramSummary = Omit<BoardSummary, 'lists' | 'cards' | 'color' | 'background'> & { preview?: string }

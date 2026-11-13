@@ -2,21 +2,33 @@
 
 import Link from 'next/link'
 import { CalendarBlankIcon, CheckIcon, ClockIcon, ListChecksIcon, PaperclipIcon, PauseIcon, PlayIcon, UserCircleIcon, UsersThreeIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock, useMinute } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { ReviewBadge } from './ReviewBadge'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, Task } from '../../types'
 import { formatDeadline, formatDuration, taskSeconds } from '../../lib/stats'
 import { CategoryBadge } from '../ui/icons'
 
+/** Tempo da tarefa a contar ao segundo: só a tarefa com o temporizador ligado o usa */
+function LiveTime({ taskId }: { taskId: string }) {
+  const { allSessions } = useClock()
+  return <>{formatDuration(taskSeconds(allSessions, taskId))}</>
+}
+
+/** Tempo das outras tarefas: só muda quando há sessões novas */
+function SavedTime({ taskId }: { taskId: string }) {
+  const { sessions } = useApp()
+  return <>{formatDuration(taskSeconds(sessions, taskId))}</>
+}
+
 export default function TaskItem({ task }: { task: Task }) {
-  const { allSessions, timer, now, startTimer, pauseTimer, setStatus } = useApp()
+  const { timer, startTimer, pauseTimer, setStatus } = useApp()
+  const now = useMinute()
   const org = useOrg()
   const assignedBy = org && task.createdBy && task.createdBy !== org.me.id ? org.memberById(task.createdBy) : undefined
   const locked = task.review?.status === 'approved' || (task.status === 'done' && task.review?.status === 'pending')
   const checklist = task.checklist ?? []
   const cat = CATEGORY_CONFIG[task.category]
-  const secs = taskSeconds(allSessions, task.id)
   const isActive = timer?.taskId === task.id
   const isRunning = isActive && !!timer?.segmentStart
   const done = task.status === 'done'
@@ -49,7 +61,7 @@ export default function TaskItem({ task }: { task: Task }) {
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold text-muted">
             <span className="flex items-center gap-1" style={isRunning ? { color: cat.dark } : undefined}>
-              <ClockIcon size={12} /> {formatDuration(secs)}
+              <ClockIcon size={12} /> {isActive ? <LiveTime taskId={task.id} /> : <SavedTime taskId={task.id} />}
             </span>
             {deadline && !done && (
               <span className={`flex items-center gap-1 ${deadline.late ? 'text-danger' : ''}`}>

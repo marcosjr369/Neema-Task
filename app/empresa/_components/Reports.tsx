@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { CheckCircleIcon, DownloadSimpleIcon, TimerIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useMinute } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { completedTime, isCompleted } from '../../lib/points'
 import { formatDuration, formatShort } from '../../lib/stats'
@@ -21,7 +21,7 @@ const COLUMNS: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao', 'pausa', '
 
 export default function Reports() {
   const org = useOrgRequired()
-  const { now } = useApp()
+  const now = useMinute()
   const [range, setRange] = useState<RangeId>('hoje')
   const [dept, setDept] = useState('all')
   const from = rangeFrom(range, now)

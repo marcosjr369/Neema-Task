@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { BellRingingIcon, LinkIcon, MapPinIcon, XIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { eventsBase, hhmm, involves, isLink, useEvents, whenText } from '../../lib/calendar'
 import { pushNotification, sounds } from '../../lib/sounds'
@@ -33,7 +33,8 @@ const windowNow = () => {
 }
 
 export default function EventAlerts() {
-  const { now, showToast } = useApp()
+  const { showToast } = useApp()
+  const { now } = useClock()
   const org = useOrg()
   const router = useRouter()
   const [range, setRange] = useState(windowNow)

@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { Board, CalendarEvent, DeletedUser, Department, Member, Org, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
+import type { Board, CalendarEvent, DeletedUser, Department, Diagram, Member, Org, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
 import * as fileStore from './store-file'
 import * as pgStore from './store-pg'
 
@@ -32,13 +32,14 @@ export type DB = {
   boards: Board[]
   grants: ShareGrant[]
   sheets: Sheet[]
+  diagrams: Diagram[]
 }
 
 export type Table = keyof DB
-export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets']
+export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets', 'diagrams']
 
 export const emptyDB = (): DB => ({
-  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [],
+  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [], diagrams: [],
 })
 
 export type Condition = string | number | null | (string | number)[] | { gte?: number; lte?: number }
@@ -56,8 +57,15 @@ export function read(scope: Scope = 'all'): Promise<DB> {
   return usingPostgres() ? pgStore.read(scope) : fileStore.read()
 }
 
-export function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
-  return usingPostgres() ? pgStore.mutate(scope, fn) : fileStore.mutate(fn)
+const g = globalThis as unknown as { __neemaUsers?: Map<string, unknown> }
+
+export async function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
+  try {
+    return await (usingPostgres() ? pgStore.mutate(scope, fn) : fileStore.mutate(fn))
+  } finally {
+    // a conta em cache (só em desenvolvimento, ver auth.ts) pode ter mudado
+    g.__neemaUsers?.clear()
+  }
 }
 
 export const newId = () => crypto.randomUUID()

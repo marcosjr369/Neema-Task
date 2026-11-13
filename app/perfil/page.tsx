@@ -5,12 +5,12 @@ import {
   ArrowCounterClockwiseIcon, BellIcon, BellRingingIcon, BellSlashIcon, CheckIcon, LockIcon, MinusIcon,
   PencilSimpleIcon, PlusIcon, SpeakerHighIcon, SpeakerSlashIcon,
 } from '@phosphor-icons/react'
-import { useApp } from '../context/AppContext'
+import { useApp, useClock } from '../context/AppContext'
 import { useAccount } from '../context/AccountContext'
 import { Settings } from '../types'
 import { sounds } from '../lib/sounds'
 import { POINTS_HELP } from '../lib/points'
-import { achievementProgress, bestStreak, formatShort, levelInfo, sumSeconds, totalXp } from '../lib/stats'
+import { achievementProgress, formatShort, levelInfo, totalXp } from '../lib/stats'
 import { achievements as listAchievements, isUnlocked } from '../lib/achievements'
 import { REMINDER_INTERVALS } from '../lib/nudges'
 import PushCard from '../components/account/PushCard'
@@ -64,7 +64,8 @@ function Toggle({ label, desc, on, onChange, icon }: { label: string; desc?: str
 }
 
 function ProfileHeader() {
-  const { allSessions, tasks, history } = useApp()
+  const { tasks, history } = useApp()
+  const { allSessions } = useClock()
   const { user, updateMe } = useAccount()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(user?.name ?? '')
@@ -125,7 +126,8 @@ function ProfileHeader() {
 }
 
 function Summary() {
-  const { allSessions, tasks, history } = useApp()
+  const { tasks, history } = useApp()
+  const { allSessions } = useClock()
   const { hours, done, record } = achievementProgress(allSessions, tasks, history)
   const achievements = listAchievements(allSessions, tasks, history)
   const unlocked = achievements.filter(isUnlocked).length

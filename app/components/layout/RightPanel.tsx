@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { CalendarBlankIcon, FireIcon, LightningIcon, TimerIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import {
   computeStreak,
   dailySeries,
@@ -18,7 +18,8 @@ import UpcomingEvents from '../calendar/UpcomingEvents'
 import { CategoryBadge } from '../ui/icons'
 
 export default function RightPanel() {
-  const { allSessions, tasks, history, now, settings, timer } = useApp()
+  const { tasks, history, settings, timer } = useApp()
+  const { allSessions, now } = useClock()
   const { streak, activeToday } = computeStreak(allSessions, tasks, now)
   const xp = totalXp(allSessions, tasks, history)
   const lvl = levelInfo(xp)

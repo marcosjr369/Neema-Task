@@ -2,14 +2,15 @@ import { body, fail, handle, requireUser } from '../../../lib/server/api'
 import { currentUser } from '../../../lib/server/auth'
 import { publicView } from '../../../lib/server/boards'
 import { publicSheetView } from '../../../lib/server/sheets'
+import { publicDiagramView } from '../../../lib/server/diagrams'
 import { accessOf, byToken, KIND, NOUN, peopleOf, resourceByToken, type SharedTable } from '../../../lib/server/shared'
 import { accessKey, checkPassword, grantOf, passwordAttempt, validKey } from '../../../lib/server/sharing'
 import { sendToUser } from '../../../lib/server/push'
 import { mutate, newId, read, type DB } from '../../../lib/server/store'
-import type { Board, Sheet, User } from '../../../types'
+import type { Board, Diagram, Sheet, User } from '../../../types'
 
 /**
- * Entrada pelo link de partilha (/p/<token>) de um quadro ou de uma planilha. Não exige sessão.
+ * Entrada pelo link de partilha (/p/<token>) de um quadro, de uma planilha ou de um diagrama. Não exige sessão.
  * Respostas (campo "status"):
  * - member: tens acesso com a tua conta → abre na app ("path");
  * - ok: vês só para leitura (link público ou senha certa);
@@ -18,12 +19,12 @@ import type { Board, Sheet, User } from '../../../types'
  */
 
 const MAX_PENDING = 50
-const TABLES: SharedTable[] = ['boards', 'sheets']
+const TABLES: SharedTable[] = ['boards', 'sheets', 'diagrams']
 const NOT_FOUND = 'Este link não existe ou foi desactivado'
 
 const optionalUser = () => currentUser().catch(() => null) as Promise<User | null>
 
-/** Procura o token nos quadros e depois nas planilhas */
+/** Procura o token nos quadros, nas planilhas e nos diagramas */
 async function find(token: string, load: (table: SharedTable) => Promise<DB>) {
   for (const table of TABLES) {
     const db = await load(table)
@@ -42,6 +43,7 @@ export const GET = handle<{ token: string }>(async (req, { token }) => {
   const s = r.sharing
   const open = !r.orgId && (s.visibility === 'link' || (s.visibility === 'private' && validKey(r.id, s.password, req.headers.get('x-share-key'))))
   if (open) {
+    if (table === 'diagrams') return { status: 'ok', kind, diagram: publicDiagramView(r as Diagram), signedIn: !!user }
     if (table === 'sheets') return { status: 'ok', kind, sheet: publicSheetView(r as Sheet), signedIn: !!user }
     const board = r as Board
     const people = peopleOf(db, board).filter(p => board.cards.some(c => c.memberIds.includes(p.userId)))

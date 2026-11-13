@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { CoffeeIcon, PauseIcon, PlayIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import { CATEGORY_CONFIG } from '../../types'
 import { formatClock, phaseElapsed } from '../../lib/stats'
 import { CategoryGlyph } from '../ui/icons'
 
 export default function MiniTimer() {
-  const { timer, activeTask, now, pauseTimer, resumeTimer } = useApp()
+  const { timer, activeTask, pauseTimer, resumeTimer } = useApp()
+  const { now } = useClock()
   if (!timer || !activeTask) return null
 
   const cat = CATEGORY_CONFIG[activeTask.category]

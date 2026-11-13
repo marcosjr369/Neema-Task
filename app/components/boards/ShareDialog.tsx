@@ -29,10 +29,16 @@ function Option({ active, icon, title, text, onClick }: { active: boolean; icon:
   )
 }
 
+const W = {
+  quadro: { the: 'o quadro', of: 'do quadro', in: 'o quadro em Quadros' },
+  planilha: { the: 'a planilha', of: 'da planilha', in: 'a planilha em Planilhas' },
+  diagrama: { the: 'o diagrama', of: 'do diagrama', in: 'o diagrama em Diagramas' },
+}
+
 export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName, onClose, onChanged }: {
   /** ex.: /api/quadros/<id>/share */
   endpoint: string
-  noun?: 'quadro' | 'planilha'
+  noun?: 'quadro' | 'planilha' | 'diagrama'
   isOrg: boolean
   orgName?: string
   onClose: () => void
@@ -94,7 +100,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
             {isOrg ? (
               <>
                 <Option active={s.visibility === 'org'} icon={<UsersThreeIcon size={22} />} title={`Toda a empresa${orgName ? ` (${orgName})` : ''}`}
-                  text={`Todos os colegas vêem ${noun === 'quadro' ? 'o quadro na lista de quadros' : 'a planilha na lista de planilhas'}.`} onClick={() => setVisibility('org')} />
+                  text={`Todos os colegas vêem ${W[noun].the} na lista de ${noun}s.`} onClick={() => setVisibility('org')} />
                 {s.visibility === 'org' && (
                   <div className="flex items-center gap-2 pl-11">
                     <span className="text-sm font-bold text-body">Os colegas</span>
@@ -111,7 +117,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
             ) : (
               <>
                 <Option active={s.visibility === 'link'} icon={<GlobeIcon size={22} />} title="Qualquer pessoa com o link"
-                  text={`Vê ${noun === 'quadro' ? 'o quadro' : 'a planilha'} sem precisar de conta nem de código. Só quem convidares pode editar.`} onClick={() => setVisibility('link')} />
+                  text={`Vê ${W[noun].the} sem precisar de conta nem de código. Só quem convidares pode editar.`} onClick={() => setVisibility('link')} />
                 <Option active={s.visibility === 'private'} icon={<LockIcon size={22} />} title="Privado"
                   text="Só quem convidares, ou quem souber a senha (se definires uma). Os outros podem pedir acesso." onClick={() => setVisibility('private')} />
               </>
@@ -119,9 +125,9 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
           </section>
 
           <section>
-            <p className="label">Link {noun === 'quadro' ? 'do quadro' : 'da planilha'}</p>
+            <p className="label">Link {W[noun].of}</p>
             <div className="flex gap-2">
-              <input className="input py-2 text-sm" readOnly value={link} onFocus={e => e.target.select()} aria-label={`Link ${noun === 'quadro' ? 'do quadro' : 'da planilha'}`} />
+              <input className="input py-2 text-sm" readOnly value={link} onFocus={e => e.target.select()} aria-label={`Link ${W[noun].of}`} />
               <button onClick={copy} className="btn btn-ghost px-3 py-2" aria-label="Copiar link"><CopyIcon size={18} /></button>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 text-xs font-bold text-muted">
@@ -179,7 +185,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
               </select>
               <button className="btn btn-primary py-2 text-sm" disabled={busy || !email.trim()} aria-busy={busy}>Convidar</button>
             </form>
-            <p className="mt-1.5 text-xs font-semibold text-muted">Quem ainda não tem conta na Udacha cria-a com este email e encontra {noun === 'quadro' ? 'o quadro em Quadros' : 'a planilha em Planilhas'}.</p>
+            <p className="mt-1.5 text-xs font-semibold text-muted">Quem ainda não tem conta na Udacha cria-a com este email e encontra {W[noun].in}.</p>
           </section>
 
           {pending.length > 0 && (

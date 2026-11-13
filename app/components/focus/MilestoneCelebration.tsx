@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { CheckCircleIcon, FireIcon, LightningIcon, StarIcon, TargetIcon, type Icon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import { achievements, isUnlocked } from '../../lib/achievements'
 import { completedTime } from '../../lib/points'
 import { computeStreak, formatDuration, levelInfo, startOfDay, todaySeconds, totalXp } from '../../lib/stats'
@@ -18,7 +18,8 @@ const TASK_MILESTONES = [5, 10, 20]
 type Snapshot = { day: number; goal: boolean; level: number; streak: number; unlocked: Set<string>; tasksToday: number }
 
 export default function MilestoneCelebration() {
-  const { ready, allSessions, tasks, history, now, settings, celebration } = useApp()
+  const { ready, tasks, history, settings, celebration } = useApp()
+  const { allSessions, now } = useClock()
   const [queue, setQueue] = useState<Milestone[]>([])
   const prev = useRef<Snapshot | null>(null)
 

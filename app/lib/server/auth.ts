@@ -4,10 +4,24 @@ import { fail } from './api'
 import { clerkUserScope } from './scopes'
 import { mutate, newId, read } from './store'
 
+/**
+ * Em desenvolvimento, a conta de cada sessão fica guardada uns segundos: cada pedido à API
+ * começa por a ler, e a base de dados pode estar longe (~200 ms por ida). Qualquer escrita
+ * limpa a cache (ver store.ts). Em produção não se usa: há várias instâncias do servidor e a
+ * base de dados está na mesma região, por isso ler é barato e evita dados desactualizados.
+ */
+const USER_TTL = 10 * 1000
+const cache = process.env.NODE_ENV === 'production'
+  ? null
+  : ((globalThis as unknown as { __neemaUsers?: Map<string, { user: User; at: number }> }).__neemaUsers ??= new Map())
+
 export async function currentUser(): Promise<User | null> {
   const { userId: clerkId } = await auth()
   if (!clerkId) return null
+  const hit = cache?.get(clerkId)
+  if (hit && Date.now() - hit.at < USER_TTL) return structuredClone(hit.user)
   const existing = (await read(clerkUserScope(clerkId))).users[0]
+  if (existing && cache) cache.set(clerkId, { user: structuredClone(existing), at: Date.now() })
   return existing ?? provisionUser(clerkId)
 }
 

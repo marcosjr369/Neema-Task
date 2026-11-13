@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { CalendarBlankIcon, CheckIcon, MagnifyingGlassIcon, PaperclipIcon, PlusIcon, RepeatIcon, UsersThreeIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useMinute } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { useTaskActions } from '../../context/useTaskActions'
 import { formatDeadline } from '../../lib/stats'
@@ -75,7 +75,8 @@ function GroupRow({ copies, now }: { copies: Task[]; now: number }) {
 
 export default function TeamTasks() {
   const org = useOrgRequired()
-  const { now, openTaskSheet } = useApp()
+  const { openTaskSheet } = useApp()
+  const now = useMinute()
   const actions = useTaskActions()
   const [filter, setFilter] = useState<Filter>(() =>
     org.teamTasks.some(FILTERS[0].test) ? 'rever' : 'todas',

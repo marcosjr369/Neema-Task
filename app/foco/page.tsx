@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckIcon, CoffeeIcon, PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, XIcon, TimerIcon } from '@phosphor-icons/react'
-import { useApp } from '../context/AppContext'
+import { useApp, useClock } from '../context/AppContext'
 import ProgressRing from '../components/ui/ProgressRing'
 import Mascot from '../components/ui/Mascot'
 import { CATEGORY_CONFIG } from '../types'
@@ -32,7 +32,8 @@ function Header({ progress, color, right }: { progress: number; color: string; r
 }
 
 function Picker() {
-  const { tasks, allSessions, startTimer, openTaskSheet } = useApp()
+  const { tasks, startTimer, openTaskSheet } = useApp()
+  const { allSessions } = useClock()
   const open = tasks.filter(t => t.status !== 'done')
 
   return (
@@ -81,10 +82,8 @@ function Picker() {
 }
 
 export default function FocusPage() {
-  const {
-    timer, activeTask, now, allSessions,
-    pauseTimer, resumeTimer, stopTimer, startBreak, backToFocus, setStatus,
-  } = useApp()
+  const { timer, activeTask, pauseTimer, resumeTimer, stopTimer, startBreak, backToFocus, setStatus } = useApp()
+  const { now, allSessions } = useClock()
 
   if (!timer || !activeTask) return <Picker />
 

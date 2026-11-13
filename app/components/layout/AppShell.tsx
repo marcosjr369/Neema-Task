@@ -27,9 +27,9 @@ import Landing from '../landing/Landing'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
-const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas']
+const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas']
 /** páginas que ocupam a largura toda (o quadro desloca-se na horizontal) */
-const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/')
+const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/') || p.startsWith('/diagramas/')
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
 const PUBLIC = ['/entrar', '/convite', '/marcos']
 

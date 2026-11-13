@@ -81,9 +81,10 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
         db.sessions = db.sessions.filter(s => !s.memberId || !memberIds.has(s.memberId))
         db.presence = db.presence.filter(p => p.orgId !== org.id)
         db.events = db.events.filter(e => e.orgId !== org.id)
-        const sharedIds = new Set([...db.boards, ...db.sheets].filter(b => b.orgId === org.id).map(b => b.id))
+        const sharedIds = new Set([...db.boards, ...db.sheets, ...db.diagrams].filter(b => b.orgId === org.id).map(b => b.id))
         db.boards = db.boards.filter(b => !sharedIds.has(b.id))
         db.sheets = db.sheets.filter(s => !sharedIds.has(s.id))
+        db.diagrams = db.diagrams.filter(d => !sharedIds.has(d.id))
         db.grants = db.grants.filter(g => !sharedIds.has(g.resourceId))
         db.departments = db.departments.filter(d => d.orgId !== org.id)
         db.members = db.members.filter(x => x.orgId !== org.id)
@@ -110,12 +111,13 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
     db.sessions = db.sessions.filter(s => s.userId !== userId)
     db.push = db.push.filter(p => p.userId !== userId)
     db.events = db.events.filter(e => e.ownerId !== userId)
-    // quadros e planilhas pessoais apagam-se; os da empresa ficam (passam para o administrador da empresa)
-    const own = new Set([...db.boards, ...db.sheets].filter(b => b.ownerId === userId && !b.orgId).map(b => b.id))
+    // quadros, planilhas e diagramas pessoais apagam-se; os da empresa ficam (passam para o administrador da empresa)
+    const own = new Set([...db.boards, ...db.sheets, ...db.diagrams].filter(b => b.ownerId === userId && !b.orgId).map(b => b.id))
     db.boards = db.boards.filter(b => !own.has(b.id))
     db.sheets = db.sheets.filter(s => !own.has(s.id))
+    db.diagrams = db.diagrams.filter(d => !own.has(d.id))
     db.grants = db.grants.filter(g => !own.has(g.resourceId) && g.userId !== userId && g.email !== user.email)
-    for (const r of [...db.boards, ...db.sheets]) {
+    for (const r of [...db.boards, ...db.sheets, ...db.diagrams]) {
       if (r.ownerId === userId && r.orgId) {
         const admin = db.members.find(m => m.orgId === r.orgId && m.role === 'admin' && m.status === 'activo' && m.userId)
         if (admin?.userId) r.ownerId = admin.userId

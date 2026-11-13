@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
-import { useApp } from '../context/AppContext'
+import { useMinute } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
 import { dayTitle, DAY_MS, eventsBase, eventsOn, hhmm, monthGrid, useEvents } from '../lib/calendar'
 import { startOfDay } from '../lib/stats'
@@ -16,7 +16,7 @@ import { ListSkeleton } from '../components/ui/Skeleton'
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
 function Calendar() {
-  const { now } = useApp()
+  const now = useMinute()
   const org = useOrg()
   const params = useSearchParams()
   const initial = startOfDay(Number(params.get('dia')) || now)

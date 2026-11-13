@@ -35,6 +35,12 @@ const COLUMNS: Record<Table, (r: Row) => Record<string, string | number | null>>
     owner_id: r.ownerId as string,
     token: (r.sharing as { token?: string } | undefined)?.token ?? null,
   }),
+  diagrams: r => ({
+    id: r.id as string,
+    org_id: (r.orgId as string) ?? null,
+    owner_id: r.ownerId as string,
+    token: (r.sharing as { token?: string } | undefined)?.token ?? null,
+  }),
   grants: r => ({ id: r.id as string, resource_id: r.resourceId as string, email: (r.email as string) ?? null, user_id: (r.userId as string) ?? null }),
 }
 
@@ -79,6 +85,10 @@ create table if not exists sheets (id text primary key, org_id text, owner_id te
 create index if not exists sheets_org on sheets (org_id);
 create index if not exists sheets_owner on sheets (owner_id);
 create unique index if not exists sheets_token on sheets (token);
+create table if not exists diagrams (id text primary key, org_id text, owner_id text not null, token text, data jsonb not null);
+create index if not exists diagrams_org on diagrams (org_id);
+create index if not exists diagrams_owner on diagrams (owner_id);
+create unique index if not exists diagrams_token on diagrams (token);
 create table if not exists grants (id text primary key, resource_id text not null, email text, user_id text, data jsonb not null);
 create index if not exists grants_resource on grants (resource_id);
 create index if not exists grants_email on grants (email);
@@ -98,10 +108,11 @@ alter table deleted enable row level security;
 alter table boards enable row level security;
 alter table grants enable row level security;
 alter table sheets enable row level security;
+alter table diagrams enable row level security;
 `
 
-// "__neemaSchema5": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema5?: Promise<void> }
+// "__neemaSchema6": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema6?: Promise<void> }
 
 function client(): Sql {
   if (!g.__neemaSql) {
@@ -111,7 +122,9 @@ function client(): Sql {
       // o "transaction pooler" do Supabase (porta 6543) não suporta prepared statements
       prepare: false,
       max: Number(process.env.DATABASE_POOL_MAX) || 5,
-      idle_timeout: 20,
+      // em produção (funções serverless) as ligações paradas fecham depressa; em desenvolvimento
+      // reabrir uma ligação a uma base distante custa ~2 s, por isso ficam abertas mais tempo
+      idle_timeout: process.env.NODE_ENV === 'production' ? 20 : 300,
       ssl: local ? false : 'require',
       onnotice: () => {},
     })
@@ -120,11 +133,11 @@ function client(): Sql {
 }
 
 function ready(): Promise<void> {
-  g.__neemaSchema5 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
-    g.__neemaSchema5 = undefined
+  g.__neemaSchema6 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
+    g.__neemaSchema6 = undefined
     throw err
   })
-  return g.__neemaSchema5
+  return g.__neemaSchema6
 }
 
 function condition(sql: Sql, col: string, value: Condition) {

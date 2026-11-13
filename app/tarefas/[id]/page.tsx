@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { ArrowUUpLeftIcon, ArrowsOutIcon, CalendarBlankIcon, CaretLeftIcon, ChatCircleIcon, CheckIcon, DownloadSimpleIcon, EyeIcon, FileTextIcon, HourglassMediumIcon, PaperPlaneRightIcon, PaperclipIcon, PauseIcon, PencilSimpleIcon, PlayIcon, RepeatIcon, SealCheckIcon, ShieldCheckIcon, StopIcon, TrashIcon, UserPlusIcon, UsersThreeIcon, XIcon } from '@phosphor-icons/react'
-import { useApp } from '../../context/AppContext'
+import { useApp, useClock } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { useTaskActions } from '../../context/useTaskActions'
 import ProgressRing from '../../components/ui/ProgressRing'
@@ -375,10 +375,8 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const {
-    tasks, allSessions, timer, now,
-    startTimer, pauseTimer, resumeTimer, stopTimer, setStatus, deleteTask, openTaskSheet, updateTask, ready,
-  } = useApp()
+  const { tasks, timer, startTimer, pauseTimer, resumeTimer, stopTimer, setStatus, deleteTask, openTaskSheet, updateTask, ready } = useApp()
+  const { allSessions, now } = useClock()
   const org = useOrg()
   const taskActions = useTaskActions()
   const [confirmDelete, setConfirmDelete] = useState(false)
