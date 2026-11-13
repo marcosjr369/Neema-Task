@@ -25,7 +25,7 @@ export const canEdit = (a: Access | null) => a === 'edit' || a === 'owner'
 export const shareToken = () => crypto.randomBytes(18).toString('base64url')
 
 /** O email só conta se o fornecedor o confirmou (contas antigas não têm o campo: contam) */
-const emailTrusted = (user: User) => user.emailVerified !== false
+export const emailTrusted = (user: User) => user.emailVerified !== false
 
 export function grantOf(grants: ShareGrant[], resourceId: string, user: User | null) {
   if (!user) return undefined

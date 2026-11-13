@@ -1,7 +1,7 @@
 import type { Access, BoardPerson, Board, Diagram, ShareKind, Sheet, User } from '../../types'
 import { fail } from './api'
-import { resolveAccess } from './sharing'
-import type { DB, Loader } from './store'
+import { grantOf, resolveAccess } from './sharing'
+import { mutate, type DB, type Loader } from './store'
 
 /**
  * Recursos partilháveis (quadros e planilhas): o mesmo carregamento, as mesmas regras de acesso
@@ -94,8 +94,21 @@ export async function loadMine(user: User, table: SharedTable, l: Loader) {
   await l.load('users', { id: [...new Set(list(l.db, table).map(r => r.ownerId))] })
 }
 
+/** Abriu um recurso que lhe partilharam: deixa de contar como novidade */
+export async function markSeen(db: DB, r: SharedResource, user: User) {
+  const grant = grantOf(db.grants, r.id, user)
+  if (!grant?.unseen || grant.role === 'pending') return
+  grant.unseen = undefined
+  await mutate(l => l.load('grants', { id: grant.id }), next => {
+    const g = next.grants.find(x => x.id === grant.id)
+    if (g) delete g.unseen
+  }).catch(() => undefined)
+}
+
 export function summaryBase(db: DB, r: SharedResource, user: User, access: Access) {
+  const grant = r.ownerId === user.id ? undefined : grantOf(db.grants, r.id, user)
   return {
+    fresh: !!grant?.unseen && grant.role !== 'pending',
     id: r.id,
     title: r.title,
     orgId: r.orgId,

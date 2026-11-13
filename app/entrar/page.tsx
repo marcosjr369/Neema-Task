@@ -234,12 +234,16 @@ function EnterFlow() {
       if (window.location.hash.startsWith('#/') || params.get('passo') === 'login') return ['login']
       if (fromUrl.code) return ['codigo']
       if (fromUrl.use === 'org' && fromUrl.orgName) return ['login']
+      // a página foi montada de novo no passo da conta (ex.: a meio do registo): continua lá
+      if (fromUrl.use === 'personal') return ['login']
       if (params.get('passo') === 'como') return ['como']
       return ['ola']
     }
     if (pending) return ['login']
     // de volta do Clerk (ex.: Google) a meio de "criar conta", mas a conta já existia: mostra o aviso
     if ((fromUrl.use === 'personal' || fromUrl.use === 'org') && !needsSetup) return ['login']
+    // conta acabada de criar como pessoal: segue para a meta diária (o tipo já foi escolhido)
+    if (fromUrl.use === 'personal') return ['meta']
     if (params.get('passo') === 'criar') return ['criar']
     if (params.get('passo') === 'codigo') return ['codigo']
     if (accountType === 'business') return [businessStart]
@@ -352,7 +356,9 @@ function EnterFlow() {
 
   // Depois do login (a conta chega pelo AccountContext) conclui o que foi escolhido antes:
   // empresa → cria-a com os dados já preenchidos; convite → entra na empresa; pessoal → meta diária
-  const existing = step === 'login' && !!user && !needsSetup && creating
+  /** ecrãs de antes de haver conta: com sessão já não fazem sentido */
+  const beforeAccount = step === 'login' || step === 'ola' || step === 'como'
+  const existing = beforeAccount && !!user && !needsSetup && creating
   useEffect(() => {
     if (!existing) return
     const t = setTimeout(() => router.replace('/'), 3200)
@@ -361,7 +367,7 @@ function EnterFlow() {
 
   const continued = useRef(false)
   useEffect(() => {
-    if (step !== 'login' || !user || continued.current) return
+    if (!beforeAccount || !user || continued.current) return
     continued.current = true
     if (use === 'invite' && code) {
       if (accountType === 'personal') run(() => validate(code))
@@ -380,7 +386,10 @@ function EnterFlow() {
         .finally(() => setBusy(false))
       return
     }
-    go(accountType === 'business' ? businessStart : use === 'personal' ? 'meta' : 'tipo')
+    const next: Step = accountType === 'business' ? businessStart : use === 'personal' ? 'meta' : 'tipo'
+    // vindo do "Olá"/"Vê como funciona" (página montada de novo), esses ecrãs saem do histórico
+    if (step === 'login') go(next)
+    else { setDir('right'); setStack([next]) }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, quando a conta chega
   }, [step, user])
 

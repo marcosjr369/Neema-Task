@@ -105,6 +105,7 @@ export function shareRoutes(table: SharedTable, param = 'id') {
         grant.role = role
         const target = db.users.find(u => u.id === grant!.userId || u.email === grant!.email)
         if (target) grant.userId ??= target.id
+        if (wasNew && grant.userId !== user.id) grant.unseen = true
         return { state: state(db, r), notify: wasNew ? target?.id : undefined, title: r.title }
       },
     )

@@ -36,6 +36,7 @@ function Row({ s }: { s: SheetSummary }) {
             <Icon size={13} /> {s.tabs} folha{s.tabs === 1 ? '' : 's'} · {ago(s.updatedAt)}{!s.mine && s.ownerName ? ` · ${s.ownerName}` : ''}
           </span>
         </span>
+        {s.fresh && <span className="inline-flex items-center gap-1 rounded-lg bg-danger px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Novo</span>}
         {s.access === 'view' && <span className="inline-flex items-center gap-1 rounded-lg bg-snow px-2 py-1 text-xs font-extrabold text-body"><EyeIcon size={13} /> Só ver</span>}
       </Link>
     </li>

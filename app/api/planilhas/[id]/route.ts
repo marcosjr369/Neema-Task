@@ -1,5 +1,5 @@
 import { fail, handle, requireUser } from '../../../lib/server/api'
-import { accessOf, findResource, peopleOf, resourceScope } from '../../../lib/server/shared'
+import { accessOf, findResource, markSeen, peopleOf, resourceScope } from '../../../lib/server/shared'
 import { sheetView } from '../../../lib/server/sheets'
 import { mutate, read } from '../../../lib/server/store'
 import type { Sheet } from '../../../types'
@@ -9,6 +9,7 @@ export const GET = handle<{ id: string }>(async (_req, { id }) => {
   const db = await read(resourceScope('sheets', id))
   const sheet = findResource(db, 'sheets', id) as Sheet
   const access = accessOf(db, sheet, user) ?? fail(403, 'Não tens acesso a esta planilha')
+  await markSeen(db, sheet, user)
   return {
     sheet: sheetView(sheet, access),
     access,

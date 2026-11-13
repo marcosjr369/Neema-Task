@@ -119,6 +119,37 @@ describe('API dos diagramas', () => {
   })
 })
 
+describe('partilhas por ver (ponto no menu)', () => {
+  it('ao partilhar conta como novidade até a pessoa abrir', async () => {
+    const list = await import('../app/api/diagramas/route')
+    const one = await import('../app/api/diagramas/[id]/route')
+    const share = await import('../app/api/diagramas/[id]/share/route')
+    const news = await import('../app/api/me/novidades/route')
+    as = users.ana
+    const id = (await call(list.POST as never, 'POST', {}, { title: 'Novo fluxo', visibility: 'private' })).json.id
+    await call(share.POST as never, 'POST', { id }, { email: 'rui@x.pt', role: 'edit' })
+
+    // a dona não tem novidades; o Rui tem uma, e a lista marca-a como nova
+    expect((await call(news.GET as never, 'GET')).json.diagram).toBe(0)
+    as = users.rui
+    expect((await call(news.GET as never, 'GET')).json).toMatchObject({ diagram: 1, board: 0, sheet: 0 })
+    const listed = (await call(list.GET as never, 'GET')).json.diagrams.find((d: { id: string }) => d.id === id)
+    expect(listed.fresh).toBe(true)
+
+    // abriu: deixa de contar
+    expect((await call(one.GET as never, 'GET', { id })).status).toBe(200)
+    expect((await call(news.GET as never, 'GET')).json.diagram).toBe(0)
+    expect((await call(list.GET as never, 'GET')).json.diagrams.find((d: { id: string }) => d.id === id).fresh).toBe(false)
+
+    // mudar só a permissão não volta a acender o ponto
+    as = users.ana
+    await call(share.POST as never, 'POST', { id }, { email: 'rui@x.pt', role: 'view' })
+    as = users.rui
+    expect((await call(news.GET as never, 'GET')).json.diagram).toBe(0)
+    as = users.ana
+  })
+})
+
 describe('painel: dados em memória', () => {
   it('pedidos seguidos partilham a mesma leitura; uma escrita obriga a ler de novo', async () => {
     const { panelData } = await import('../app/lib/server/panel')

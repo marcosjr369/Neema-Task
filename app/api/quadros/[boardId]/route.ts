@@ -1,5 +1,6 @@
 import { fail, handle, requireUser } from '../../../lib/server/api'
 import { boardAccess, boardPeople, boardScope, boardView, findBoard } from '../../../lib/server/boards'
+import { markSeen } from '../../../lib/server/shared'
 import { mutate, read } from '../../../lib/server/store'
 
 export const GET = handle<{ boardId: string }>(async (_req, { boardId }) => {
@@ -7,6 +8,7 @@ export const GET = handle<{ boardId: string }>(async (_req, { boardId }) => {
   const db = await read(boardScope(boardId))
   const board = findBoard(db, boardId)
   const access = boardAccess(db, board, user) ?? fail(403, 'Não tens acesso a este quadro')
+  await markSeen(db, board, user)
   return {
     board: boardView(board, access),
     access,

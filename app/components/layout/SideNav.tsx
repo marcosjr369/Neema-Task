@@ -15,6 +15,7 @@ import InstallCard from '../ui/InstallCard'
 import WorkspaceSwitcher from '../account/WorkspaceSwitcher'
 import PresencePicker from '../account/PresencePicker'
 import LogoutButton from '../account/LogoutButton'
+import { unseenFor, useUnseenShares } from './useUnseenShares'
 
 function NavLink({ item, badge }: { item: NavItem; badge?: React.ReactNode }) {
   const pathname = usePathname()
@@ -47,9 +48,15 @@ export default function SideNav() {
   const org = useOrg()
   const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done').length ?? 0
   const { level } = levelInfo(totalXp(sessions, tasks, history))
+  const unseen = useUnseenShares(!!user)
 
   const badgeFor = (href: string) => {
     if (href === '/foco' && timer) return <span className="ml-auto h-2.5 w-2.5 animate-pulse rounded-full bg-danger" aria-label="Cronómetro a correr" />
+    const fresh = unseenFor(unseen, href)
+    if (fresh > 0) {
+      const label = fresh === 1 ? '1 partilha por ver' : `${fresh} partilhas por ver`
+      return <span className="ml-auto h-2.5 w-2.5 animate-pulse rounded-full bg-danger" aria-label={label} title={label} />
+    }
     if (href === '/empresa/tarefas' && reviews > 0) {
       return <span className="ml-auto rounded-lg bg-danger px-2 text-xs font-black text-white" aria-label={`${reviews} por rever`}>{reviews}</span>
     }

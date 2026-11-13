@@ -45,6 +45,7 @@ function Card({ d, i }: { d: DiagramSummary; i: number }) {
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={d.preview} alt="" className="max-h-full max-w-full object-contain transition-transform duration-300 ease-out group-hover:scale-[1.06]" loading="lazy" />
             : <FlowArrowIcon size={40} className="text-muted/50 transition-transform duration-300 group-hover:scale-110" />}
+          {d.fresh && <span className="absolute left-2 top-2 shadow-sm inline-flex items-center gap-1 rounded-lg bg-danger px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Novo</span>}
           {d.access === 'view' && <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-xs font-extrabold text-body shadow-sm"><EyeIcon size={13} /> Só ver</span>}
         </span>
         <span className="block border-t-2 border-line px-3 py-2.5">

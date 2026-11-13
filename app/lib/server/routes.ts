@@ -13,6 +13,7 @@ export type RouteModule = Partial<Record<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DEL
 const ROUTES: [string, () => Promise<any>][] = [
   ['convites/:memberId', () => import('../../api/convites/[memberId]/route')],
   ['me', () => import('../../api/me/route')],
+  ['me/novidades', () => import('../../api/me/novidades/route')],
   ['me/nudge', () => import('../../api/me/nudge/route')],
   ['me/timer', () => import('../../api/me/timer/route')],
   ['orgs', () => import('../../api/orgs/route')],

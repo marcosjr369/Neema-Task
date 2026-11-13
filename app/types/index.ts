@@ -407,6 +407,8 @@ export type ShareGrant = {
   role: ShareRole | 'pending'
   createdAt: number
   invitedBy?: string
+  /** partilhado mas a pessoa ainda não o abriu (ponto no menu e "Novo" na lista) */
+  unseen?: boolean
 }
 
 export type Access = 'owner' | 'edit' | 'view'
@@ -482,6 +484,8 @@ export type BoardSummary = {
   orgName?: string
   ownerName?: string
   mine: boolean
+  /** partilhado contigo e ainda não aberto */
+  fresh?: boolean
   access: Access
   visibility: ShareVisibility
   lists: number

@@ -78,10 +78,19 @@ export function mobileNav(mode: NavMode): NavItem[] {
       { ...section('tarefas'), label: 'Tarefas' },
       section('pessoas'),
       ITEMS.ranking,
-      ITEMS.perfil,
     ]
   }
-  return [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.ranking, ...(mode === 'person' ? [] : [ITEMS.empresa]), ITEMS.perfil]
+  return [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.ranking, ...(mode === 'person' ? [] : [ITEMS.empresa])]
+}
+
+/** O resto do menu no telemóvel (botão "Mais"): o que não cabe na barra de baixo, por grupos */
+export function mobileMore(mode: NavMode): NavGroup[] {
+  const inBar = new Set(mobileNav(mode).map(i => i.href))
+  const groups = navGroups(mode)
+    .map(g => ({ ...g, items: g.items.filter(i => !inBar.has(i.href)) }))
+    .filter(g => g.items.length)
+  groups.push({ title: 'Conta', items: [ITEMS.perfil] })
+  return groups
 }
 
 export const navModeOf = (org: { isCompany: boolean; isAdmin: boolean; isManager: boolean } | null): NavMode =>

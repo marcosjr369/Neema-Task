@@ -1,6 +1,6 @@
 import { body, fail, handle, requireUser } from '../../../lib/server/api'
 import { DIAGRAM_LIMITS, cleanPreview, cleanXml, diagramView } from '../../../lib/server/diagrams'
-import { accessOf, findResource, peopleOf, resourceScope } from '../../../lib/server/shared'
+import { accessOf, findResource, markSeen, peopleOf, resourceScope } from '../../../lib/server/shared'
 import { canEdit } from '../../../lib/server/sharing'
 import { mutate, read } from '../../../lib/server/store'
 import type { Diagram } from '../../../types'
@@ -11,6 +11,7 @@ export const GET = handle<{ id: string }>(async (req, { id }) => {
   const db = await read(resourceScope('diagrams', id))
   const diagram = findResource(db, 'diagrams', id) as Diagram
   const access = accessOf(db, diagram, user) ?? fail(403, 'Não tens acesso a este diagrama')
+  await markSeen(db, diagram, user)
   const known = Number(new URL(req.url).searchParams.get('rev'))
   const base = {
     access,

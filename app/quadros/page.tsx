@@ -22,7 +22,10 @@ function BoardTile({ b }: { b: BoardSummary }) {
   return (
     <Link href={`/quadros/${b.id}`} className="group flex h-28 flex-col justify-between rounded-2xl p-3 text-white transition-transform hover:-translate-y-0.5"
       style={{ background: boardBackground(b.color, b.background, true) }}>
-      <span className="line-clamp-2 text-[17px] font-black leading-tight [text-shadow:0_1px_3px_rgb(0_0_0/0.45)]">{b.title}</span>
+      <span className="flex items-start gap-2">
+        <span className="line-clamp-2 flex-1 text-[17px] font-black leading-tight [text-shadow:0_1px_3px_rgb(0_0_0/0.45)]">{b.title}</span>
+        {b.fresh && <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-danger px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Novo</span>}
+      </span>
       <span className="flex items-center gap-2 text-xs font-extrabold text-white/90 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
         <Icon size={14} />
         <span className="truncate">{b.cards} cart{b.cards === 1 ? 'ão' : 'ões'}{!b.mine && b.ownerName ? ` · ${b.ownerName}` : ''}</span>
