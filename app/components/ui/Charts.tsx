@@ -280,16 +280,24 @@ export function DonutChart({
 }
 
 export function ChartCard({
-  title, subtitle, series, points, format = compact, firstCol = 'Dia', children,
-}: { title: string; subtitle?: string; series: Series[]; points: Point[]; format?: (v: number) => string; firstCol?: string; children: ReactNode }) {
+  title, subtitle, series, points, format = compact, firstCol = 'Dia', children, actions, className = 'card',
+}: {
+  title: string; subtitle?: string; series: Series[]; points: Point[]; format?: (v: number) => string; firstCol?: string; children: ReactNode
+  /** controlos extra no cabeçalho (ex.: separadores) */
+  actions?: ReactNode
+  /** classes do contorno (por defeito o .card da app) */
+  className?: string
+}) {
   const [table, setTable] = useState(false)
   return (
-    <section className="card min-w-0 p-4 sm:p-5">
-      <div className="mb-3 flex items-start gap-3">
-        <div className="min-w-0 flex-1">
+    <section className={`${className} min-w-0 p-4 sm:p-5`}>
+      <div className="mb-3 flex flex-wrap items-start gap-3">
+        {/* com separadores, no telemóvel o título fica numa linha e os controlos na de baixo */}
+        <div className={`min-w-0 flex-1 ${actions ? 'max-sm:basis-full' : ''}`}>
           <h3 className="font-black text-ink">{title}</h3>
           {subtitle && <p className="text-xs font-semibold text-muted">{subtitle}</p>}
         </div>
+        {actions}
         <button onClick={() => setTable(t => !t)} className="chip text-xs" aria-pressed={table}>
           {table ? 'Gráfico' : 'Tabela'}
         </button>

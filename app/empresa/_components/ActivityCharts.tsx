@@ -82,9 +82,10 @@ export function TaskStatusDonut({ tasks, from, now, title = 'Estado das tarefas'
   )
 }
 
-export function TrendCharts({
-  range, from, now, sessions, segments, tasks,
-}: { range: RangeId; from: number; now: number; sessions: Session[]; segments: PresenceSegment[]; tasks: Task[] }) {
+export { PRESENCE_SERIES, FOCUS, DONE, hours }
+
+/** Os três conjuntos de dados das tendências (tempo por estado, horas focadas, concluídas) */
+export function trendData(range: RangeId, from: number, now: number, sessions: Session[], segments: PresenceSegment[], tasks: Task[]) {
   const list = buckets(range, from, now)
   const perHour = range === 'hoje'
   const unit = perHour ? 'Hora' : 'Dia'
@@ -104,6 +105,13 @@ export function TrendCharts({
     title: b.title,
     values: { done: tasks.filter(t => { const at = completedTime(t); return at !== undefined && at >= b.start && at < b.end }).length },
   }))
+  return { presence, focus, done, unit, subtitle }
+}
+
+export function TrendCharts({
+  range, from, now, sessions, segments, tasks,
+}: { range: RangeId; from: number; now: number; sessions: Session[]; segments: PresenceSegment[]; tasks: Task[] }) {
+  const { presence, focus, done, unit, subtitle } = trendData(range, from, now, sessions, segments, tasks)
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
