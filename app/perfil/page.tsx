@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import {
   ArrowCounterClockwiseIcon, BellIcon, BellRingingIcon, BellSlashIcon, CheckIcon, LockIcon, MinusIcon,
-  PencilSimpleIcon, PlusIcon, SpeakerHighIcon, SpeakerSlashIcon,
+  PencilSimpleIcon, PlusIcon, SpeakerHighIcon, SpeakerSlashIcon, GraduationCapIcon,
 } from '@phosphor-icons/react'
 import { useApp, useClock } from '../context/AppContext'
 import { useAccount } from '../context/AccountContext'
@@ -108,6 +109,7 @@ function ProfileHeader() {
             {user.email} · desde {new Date(user.createdAt).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
           </p>
         </div>
+        <Link href="/tutorial" aria-label="Tutorial" title="Tutorial" className="rounded-xl p-2 text-muted transition-colors hover:bg-brand-light hover:text-brand"><GraduationCapIcon size={22} /></Link>
         <LogoutButton variant="icon" />
       </div>
       <div className="mt-5">

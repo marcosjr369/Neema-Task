@@ -199,7 +199,11 @@ export type User = {
   timezone?: string
   lastNudgeAt?: number
   nudgeCount?: number
+  /** tutorial: quando viu as boas-vindas e que lições já fez */
+  tutorial?: TutorialProgress
 }
+
+export type TutorialProgress = { seenAt?: number; done?: string[] }
 
 export type DeletedUser = {
   id: string

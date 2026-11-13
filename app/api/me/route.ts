@@ -20,6 +20,8 @@ type Patch = {
   settings?: Partial<Settings>
   workspace?: Workspace
   accountType?: 'personal'
+  /** seen: já viu as boas-vindas; done: lição concluída (id); reset: recomeçar */
+  tutorial?: { seen?: boolean; done?: string; reset?: boolean }
 }
 
 const NUMERIC: Partial<Record<keyof Settings, [number, number]>> = {
@@ -62,6 +64,17 @@ export const PATCH = handle(async req => {
       if (patch.settings.sound !== undefined) next.sound = !!patch.settings.sound
       if (patch.settings.breakAlerts !== undefined) next.breakAlerts = !!patch.settings.breakAlerts
       user.settings = next
+    }
+    if (patch.tutorial) {
+      const t = patch.tutorial
+      const next = t.reset ? {} : { ...user.tutorial }
+      if (t.seen) next.seenAt ??= Date.now()
+      if (typeof t.done === 'string' && /^[a-z-]{2,24}$/.test(t.done)) {
+        const done = new Set(next.done ?? [])
+        done.add(t.done)
+        next.done = [...done].slice(0, 40)
+      }
+      user.tutorial = next
     }
     if (patch.workspace) {
       const ws = patch.workspace

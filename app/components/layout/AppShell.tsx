@@ -19,6 +19,7 @@ import IdleNudge from '../focus/IdleNudge'
 import EventAlerts from '../calendar/EventAlerts'
 import ToastView from '../ui/ToastView'
 import ConsentGate from '../account/ConsentGate'
+import WelcomeTour from '../tutorial/WelcomeTour'
 import InviteDialog from '../account/InviteDialog'
 import { PresenceSync } from '../account/PresenceSync'
 import Splash from '../ui/Splash'
@@ -27,11 +28,12 @@ import Landing from '../landing/Landing'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
-const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas']
+const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/tutorial']
 /** páginas que ocupam a largura toda (o quadro desloca-se na horizontal) */
 const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/') || p.startsWith('/diagramas/')
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
-const PUBLIC = ['/entrar', '/convite', '/marcos']
+// /p/: links de partilha, abertos a quem não tem conta (sem isto, o redireccionamento mandava-os para o login)
+const PUBLIC = ['/entrar', '/convite', '/marcos', '/p/']
 
 function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
@@ -117,6 +119,7 @@ function Shell({ children }: { children: ReactNode }) {
       <ToastView />
       <PresenceSync />
       <ConsentGate />
+      <WelcomeTour />
     </div>
   )
 }

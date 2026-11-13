@@ -37,6 +37,8 @@ type AccountValue = {
   current: Membership | null
   settings: Settings
   updateSettings: (patch: Partial<Settings>) => void
+  /** progresso do tutorial (aplica-se logo no ecrã e grava na conta) */
+  updateTutorial: (patch: { seen?: boolean; done?: string; reset?: boolean }) => void
   refresh: () => Promise<void>
   setWorkspace: (ws: Workspace) => void
   logout: () => Promise<void>
@@ -142,6 +144,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }, 600)
   }, [])
 
+  const updateTutorial = useCallback((patch: { seen?: boolean; done?: string; reset?: boolean }) => {
+    setMe(m => {
+      if (!m?.user) return m
+      const t = patch.reset ? {} : { ...m.user.tutorial }
+      if (patch.seen) t.seenAt ??= Date.now()
+      if (patch.done) t.done = [...new Set([...(t.done ?? []), patch.done])]
+      return { ...m, user: { ...m.user, tutorial: t } }
+    })
+    api('/api/me', { method: 'PATCH', body: { tutorial: patch } }).catch(() => undefined)
+  }, [])
+
   const logout = useCallback(async () => {
     seq.current++ // ignora pedidos ainda em curso da sessão que terminou
     await clerk.signOut().catch(() => undefined)
@@ -210,6 +223,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     current,
     settings,
     updateSettings,
+    updateTutorial,
     refresh,
     setWorkspace,
     logout,
