@@ -6,8 +6,8 @@ import { useAccount } from '../../context/AccountContext'
 import { useOrg } from '../../context/OrgContext'
 import { api, errorText } from '../../lib/api'
 import Mascot from '../ui/Mascot'
+import { Busy } from '../ui/Spinner'
 
-/** Primeira entrada numa empresa: explicar e aceitar o registo de tempo */
 export default function ConsentGate() {
   const org = useOrg()
   const { logout } = useAccount()
@@ -50,7 +50,7 @@ export default function ConsentGate() {
         </ul>
         {error && <p className="mt-3 text-center text-sm font-bold text-danger">{error}</p>}
         <button onClick={accept} disabled={busy} className="btn btn-primary mt-6 w-full">
-          {busy ? 'A guardar…' : 'Aceitar e continuar'}
+          <Busy busy={busy} text="A guardar…">Aceitar e continuar</Busy>
         </button>
         <button onClick={() => logout()} className="btn btn-ghost mt-3 w-full text-body">
           Agora não (terminar sessão)

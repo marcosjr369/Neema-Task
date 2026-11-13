@@ -12,7 +12,6 @@ import { emptyDB, TABLES, type Condition, type DB, type Loader, type Scope, type
 type Sql = postgres.Sql
 type Row = Record<string, unknown>
 
-/** Colunas de filtro de cada tabela, calculadas a partir do objecto */
 const COLUMNS: Record<Table, (r: Row) => Record<string, string | number | null>> = {
   users: r => ({ id: r.id as string, clerk_id: (r.clerkId as string) ?? null, email: (r.email as string) ?? null }),
   orgs: r => ({ id: r.id as string, invite_code: r.inviteCode as string, domain: (r.domain as string) ?? null }),
@@ -24,6 +23,19 @@ const COLUMNS: Record<Table, (r: Row) => Record<string, string | number | null>>
   push: r => ({ id: r.endpoint as string, user_id: r.userId as string }),
   events: r => ({ id: r.id as string, org_id: (r.orgId as string) ?? null, owner_id: (r.ownerId as string) ?? null, start_at: r.start as number }),
   deleted: r => ({ id: r.id as string, deleted_at: r.deletedAt as number }),
+  boards: r => ({
+    id: r.id as string,
+    org_id: (r.orgId as string) ?? null,
+    owner_id: r.ownerId as string,
+    token: (r.sharing as { token?: string } | undefined)?.token ?? null,
+  }),
+  sheets: r => ({
+    id: r.id as string,
+    org_id: (r.orgId as string) ?? null,
+    owner_id: r.ownerId as string,
+    token: (r.sharing as { token?: string } | undefined)?.token ?? null,
+  }),
+  grants: r => ({ id: r.id as string, resource_id: r.resourceId as string, email: (r.email as string) ?? null, user_id: (r.userId as string) ?? null }),
 }
 
 const keyOf = (table: Table, r: Row) => (table === 'push' ? (r.endpoint as string) : (r.id as string))
@@ -59,6 +71,18 @@ create index if not exists events_owner on events (owner_id, start_at);
 create index if not exists events_start on events (start_at);
 create table if not exists deleted (id text primary key, deleted_at bigint not null, data jsonb not null);
 create index if not exists deleted_at on deleted (deleted_at);
+create table if not exists boards (id text primary key, org_id text, owner_id text not null, token text, data jsonb not null);
+create index if not exists boards_org on boards (org_id);
+create index if not exists boards_owner on boards (owner_id);
+create unique index if not exists boards_token on boards (token);
+create table if not exists sheets (id text primary key, org_id text, owner_id text not null, token text, data jsonb not null);
+create index if not exists sheets_org on sheets (org_id);
+create index if not exists sheets_owner on sheets (owner_id);
+create unique index if not exists sheets_token on sheets (token);
+create table if not exists grants (id text primary key, resource_id text not null, email text, user_id text, data jsonb not null);
+create index if not exists grants_resource on grants (resource_id);
+create index if not exists grants_email on grants (email);
+create index if not exists grants_user on grants (user_id);
 -- Sem políticas, o RLS fecha estas tabelas à API pública do Supabase (chaves anon/authenticated).
 -- A app liga como dona das tabelas (DATABASE_URL), por isso não é afectada.
 alter table users enable row level security;
@@ -71,10 +95,13 @@ alter table presence enable row level security;
 alter table push enable row level security;
 alter table events enable row level security;
 alter table deleted enable row level security;
+alter table boards enable row level security;
+alter table grants enable row level security;
+alter table sheets enable row level security;
 `
 
-// "__neemaSchema3": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema3?: Promise<void> }
+// "__neemaSchema5": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema5?: Promise<void> }
 
 function client(): Sql {
   if (!g.__neemaSql) {
@@ -92,13 +119,12 @@ function client(): Sql {
   return g.__neemaSql
 }
 
-/** Cria as tabelas na primeira utilização (idempotente) */
 function ready(): Promise<void> {
-  g.__neemaSchema3 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
-    g.__neemaSchema3 = undefined
+  g.__neemaSchema5 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
+    g.__neemaSchema5 = undefined
     throw err
   })
-  return g.__neemaSchema3
+  return g.__neemaSchema5
 }
 
 function condition(sql: Sql, col: string, value: Condition) {
@@ -129,39 +155,55 @@ async function loadScope(sql: Sql, scope: Scope): Promise<{ db: DB; snap: Snapsh
     const list = db[table] as unknown as Row[]
     for (const { data } of rows) {
       const k = `${table}:${keyOf(table, data)}`
-      if (snap.has(k)) continue // já carregada por outra condição
+      if (snap.has(k)) continue
       snap.set(k, JSON.stringify(data))
       list.push(data)
     }
   }
   if (scope === 'all') {
-    for (const t of TABLES) await load(t)
+    await Promise.all(TABLES.map(t => load(t)))
   } else {
     await scope({ db, load })
   }
   return { db, snap }
 }
 
+const UPSERT_CHUNK = 1000
+
+/**
+ * Grava só o que mudou: por tabela, um único "insert … on conflict" com todas as linhas
+ * novas/alteradas e um "delete" com as removidas. Os pedidos seguem todos de uma vez
+ * (na mesma ligação da transacção), em vez de esperar pela resposta de cada um.
+ */
 async function save(sql: Sql, db: DB, snap: Snapshot) {
+  const writes: Promise<unknown>[] = []
   for (const table of TABLES) {
     const rows = db[table] as unknown as Row[]
     const present = new Set<string>()
+    const changed: Record<string, unknown>[] = []
     for (const row of rows) {
       const k = `${table}:${keyOf(table, row)}`
       present.add(k)
-      const json = JSON.stringify(row)
-      if (snap.get(k) === json) continue
-      const record: Record<string, unknown> = { ...COLUMNS[table](row), data: sql.json(row as postgres.JSONValue) }
-      const cols = Object.keys(record)
-      // os tipos do postgres.js não aceitam colunas dinâmicas; o SQL gerado é o normal
-      const values = sql(record as never, cols as never) as unknown as postgres.Fragment
-      const updates = sql(record as never, cols.filter(c => c !== 'id') as never) as unknown as postgres.Fragment
-      await sql`insert into ${sql(table)} ${values} on conflict (id) do update set ${updates}`
+      if (snap.get(k) === JSON.stringify(row)) continue
+      changed.push({ ...COLUMNS[table](row), data: sql.json(row as postgres.JSONValue) })
+    }
+    if (changed.length) {
+      const cols = Object.keys(changed[0])
+      const updates = cols
+        .filter(c => c !== 'id')
+        .map(c => sql`${sql(c)} = excluded.${sql(c)}`)
+        .reduce((acc, f) => sql`${acc}, ${f}`)
+      for (let i = 0; i < changed.length; i += UPSERT_CHUNK) {
+        // os tipos do postgres.js não aceitam colunas dinâmicas; o SQL gerado é o normal
+        const values = sql(changed.slice(i, i + UPSERT_CHUNK) as never, cols as never) as unknown as postgres.Fragment
+        writes.push(sql`insert into ${sql(table)} ${values} on conflict (id) do update set ${updates}`.execute())
+      }
     }
     // só apaga o que foi lido neste pedido e já não está na lista
     const removed = [...snap.keys()].filter(k => k.startsWith(`${table}:`) && !present.has(k)).map(k => k.slice(table.length + 1))
-    if (removed.length) await sql`delete from ${sql(table)} where id = any(${sql.array(removed)})`
+    if (removed.length) writes.push(sql`delete from ${sql(table)} where id = any(${sql.array(removed)})`.execute())
   }
+  await Promise.all(writes)
 }
 
 export async function read(scope: Scope): Promise<DB> {
@@ -172,9 +214,11 @@ export async function read(scope: Scope): Promise<DB> {
 export async function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
   await ready()
   return client().begin(async tx => {
-    // uma escrita de cada vez em todo o sistema (simples e seguro para equipas pequenas/médias)
-    await tx`select pg_advisory_xact_lock(7301)`
-    const { db, snap } = await loadScope(tx as unknown as Sql, scope)
+    // uma escrita de cada vez em todo o sistema (simples e seguro para equipas pequenas/médias).
+    // O bloqueio segue logo, seguido das leituras na mesma ligação: o servidor trata-os por ordem,
+    // por isso as leituras só correm com o bloqueio já obtido, sem esperar uma viagem de rede a mais.
+    const lock = tx`select pg_advisory_xact_lock(7301)`.execute()
+    const [, { db, snap }] = await Promise.all([lock, loadScope(tx as unknown as Sql, scope)])
     const result = await fn(db)
     await save(tx as unknown as Sql, db, snap)
     return result

@@ -1,9 +1,5 @@
 import { ptPT } from '@clerk/localizations'
 
-/**
- * Português de Portugal do Clerk, com os textos do login no mesmo tom da app ("tu", curto).
- * O resto vem da tradução oficial.
- */
 export const CLERK_LOCALIZATION = {
   ...ptPT,
   formFieldLabel__emailAddress: 'Email',

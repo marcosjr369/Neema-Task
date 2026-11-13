@@ -5,7 +5,6 @@ import { effectivePresence, setPresence, visibleMembers } from '../../../../lib/
 import { isWorking } from '../../../../lib/org'
 import { PRESENCE_CONFIG, type PresenceStatus } from '../../../../types'
 
-/** Segmentos de presença: ?from=&to=&memberId= (equipa visível ao membro) */
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const url = new URL(req.url)
   const now = Date.now()
@@ -20,7 +19,6 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const segments = db.presence
     .filter(p => ids.has(p.memberId) && p.start < to && (p.end ?? now) > from)
     .map(p => {
-      // segmento aberto de quem deixou de dar sinal: termina no último sinal
       if (p.end !== null) return p
       const m = lastSeen.get(p.memberId)!
       return effectivePresence(m, now) === 'offline' ? { ...p, end: Math.max(p.start, (m.lastSeen ?? p.start) + 60 * 1000) } : p
@@ -28,12 +26,6 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   return { segments }
 })
 
-/**
- * Muda o estado do próprio (também serve de sinal periódico).
- * work: 'start' começa o dia de trabalho, 'end' termina-o. Mudar de estado sem ter começado
- * (ex.: iniciar o cronómetro) também começa o dia; o sinal periódico (beat) não, para um
- * separador esquecido não reabrir o dia que já terminou noutro.
- */
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { me } = await requirePerson(orgId)
   const { status, work, beat } = await body<{ status?: PresenceStatus; work?: 'start' | 'end'; beat?: boolean }>(req)

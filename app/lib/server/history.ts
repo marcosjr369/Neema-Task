@@ -8,7 +8,6 @@ import type { DB, Loader } from './store'
  * aos pontos e conquistas dele (e da empresa). As tarefas pessoais continuam privadas.
  */
 
-/** Carrega as sessões e tarefas do utilizador (pessoais e das empresas onde já está activo) */
 export async function loadHistory(l: Loader, userId: string) {
   await l.load('members', { user_id: userId })
   const ids = l.db.members.filter(m => m.userId === userId && m.status === 'activo').map(m => m.id)
@@ -21,7 +20,6 @@ export async function loadHistory(l: Loader, userId: string) {
 }
 
 export function historyOf(db: DB, userId: string, orgId: string, now = Date.now()): CarriedHistory | undefined {
-  // só o trabalho próprio de cada empresa (o resumo que lá trouxe já está contado no espaço pessoal)
   const others = new Set(
     db.members.filter(m => m.userId === userId && m.orgId !== orgId && m.status === 'activo').map(m => m.id),
   )
@@ -32,7 +30,6 @@ export function historyOf(db: DB, userId: string, orgId: string, now = Date.now(
   return { at: now, xp: totalXp(sessions, tasks), seconds: sumSeconds(sessions), done: p.done, record: p.record, longest: p.longest }
 }
 
-/** Activa o membro e junta-lhe o histórico do utilizador */
 export function activateMember(db: DB, member: Member, userId: string, now = Date.now()) {
   member.history = historyOf(db, userId, member.orgId, now)
   member.userId = userId

@@ -5,7 +5,6 @@ import { mutate, read } from '../../lib/server/store'
 
 type Sub = { endpoint?: string; keys?: { p256dh?: string; auth?: string } }
 
-/** Chave pública VAPID e se este dispositivo já está registado (?endpoint=) */
 export const GET = handle(async req => {
   const user = await requireUser()
   const endpoint = new URL(req.url).searchParams.get('endpoint')
@@ -18,7 +17,6 @@ export const GET = handle(async req => {
   }
 })
 
-/** Regista este dispositivo para receber lembretes com a app fechada */
 export const POST = handle(async req => {
   const user = await requireUser()
   if (!pushConfigured()) fail(503, 'Notificações push não configuradas no servidor')
@@ -34,7 +32,6 @@ export const POST = handle(async req => {
       await l.load('push', { id: endpoint! })
     },
     db => {
-    // o mesmo browser pode ter estado ligado a outra conta: fica com a actual
     db.push = db.push.filter(p => p.endpoint !== endpoint)
     db.push.push({ endpoint: endpoint!, keys: { p256dh: keys!.p256dh!, auth: keys!.auth! }, userId: user.id, createdAt: Date.now(), userAgent })
     const u = db.users.find(x => x.id === user.id)!
@@ -43,7 +40,6 @@ export const POST = handle(async req => {
   )
 })
 
-/** Deixa de enviar para este dispositivo */
 export const DELETE = handle(async req => {
   const user = await requireUser()
   const { endpoint } = await body<{ endpoint?: string }>(req)

@@ -6,6 +6,7 @@ import { useOrgRequired } from '../../context/OrgContext'
 import { api, errorText } from '../../lib/api'
 import { ORG_SIZES, SECTORS } from '../../lib/org'
 import { DEFAULT_DAILY_GOAL_HOURS } from '../../lib/records'
+import { Busy } from '../../components/ui/Spinner'
 
 export default function Settings() {
   const org = useOrgRequired()
@@ -94,7 +95,7 @@ export default function Settings() {
         </label>
       </div>
       <button type="submit" disabled={busy} className="btn btn-primary">
-        {busy ? 'A guardar…' : 'Guardar'}
+        <Busy busy={busy} text="A guardar…">Guardar</Busy>
       </button>
     </form>
   )

@@ -9,6 +9,7 @@ import { useOrg } from '../../context/OrgContext'
 import { useTaskActions } from '../../context/useTaskActions'
 import ProgressRing from '../../components/ui/ProgressRing'
 import Mascot from '../../components/ui/Mascot'
+import { DetailSkeleton } from '../../components/ui/Skeleton'
 import Avatar from '../../components/ui/Avatar'
 import { ReviewBadge } from '../../components/tasks/ReviewBadge'
 import { fileUrl } from '../../lib/api'
@@ -17,6 +18,7 @@ import { CATEGORY_CONFIG, PRIORITY_CONFIG, STATUS_LABEL, type Attachment, type M
 import { canReviewTask, groupSiblings, isCompanyAccount } from '../../lib/org'
 import { formatClock, formatDeadline, formatDuration, phaseElapsed, startOfDay } from '../../lib/stats'
 import { CategoryGlyph } from '../../components/ui/icons'
+import { Busy } from '../../components/ui/Spinner'
 
 const RECURRENCE_LABEL = { diaria: 'Repete todos os dias', semanal: 'Repete todas as semanas', mensal: 'Repete todos os meses' }
 
@@ -40,7 +42,6 @@ function useManages() {
   }
 }
 
-/** Tarefa de grupo, vista por quem gere: cada responsável com a sua entrega e revisão */
 function GroupPanel({ task }: { task: Task }) {
   const org = useOrg()!
   const { openTaskSheet } = useApp()
@@ -98,7 +99,7 @@ function GroupPanel({ task }: { task: Task }) {
                     <button onClick={() => { setRejecting(c.id); setNote('') }} className="rounded-lg p-2 text-danger hover:bg-danger-light cursor-pointer" aria-label={`Devolver a ${m?.name}`}>
                       <ArrowUUpLeftIcon size={18} />
                     </button>
-                    <button onClick={() => actions.approve(c.id)} disabled={actions.busy} className="btn btn-accent h-9 px-3 text-xs" aria-label={`Aprovar ${m?.name}`}>
+                    <button onClick={() => actions.approve(c.id)} disabled={actions.busy} aria-busy={actions.busy} className="btn btn-accent h-9 px-3 text-xs" aria-label={`Aprovar ${m?.name}`}>
                       <CheckIcon size={16} /> <span className="hidden sm:inline">Aprovar</span>
                     </button>
                   </div>
@@ -109,7 +110,7 @@ function GroupPanel({ task }: { task: Task }) {
                   <input className="input py-2" placeholder={`O que falta corrigir, ${m?.name.split(' ')[0] ?? ''}?`} value={note} onChange={e => setNote(e.target.value)} autoFocus />
                   <button onClick={() => setRejecting(null)} className="btn btn-ghost px-3 text-body" aria-label="Cancelar"><XIcon size={16} /></button>
                   <button
-                    disabled={actions.busy || !note.trim()}
+                    disabled={actions.busy || !note.trim()} aria-busy={actions.busy}
                     onClick={async () => { if (await actions.reject(c.id, note.trim())) setRejecting(null) }}
                     className={`btn px-3 ${note.trim() ? 'btn-danger' : 'btn-disabled'}`}
                   >
@@ -126,7 +127,6 @@ function GroupPanel({ task }: { task: Task }) {
   )
 }
 
-/** Aprovação, anexos e comentários (só tarefas de empresa) */
 function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
   const org = useOrg()!
   const actions = useTaskActions()
@@ -138,7 +138,6 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
   const assignee = org.memberById(task.assigneeId)
   const creator = org.memberById(task.createdBy)
   const reviewer = org.memberById(task.reviewerId)
-  // a conta da empresa aparece com o nome da empresa
   const nameOf = (m: Member) => (m.id === org.me.id ? 'Mim' : isCompanyAccount(m, org.org) ? org.org.name : m.name)
   const isManager = useManages()(task)
   const canReview = canReviewTask(task, org.me, isManager)
@@ -149,7 +148,6 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
 
   return (
     <>
-      {/* Tarefa de grupo: quem gere vê todos; o responsável vê só o andamento */}
       {task.groupId && isManager && <GroupPanel task={task} />}
       {task.groupId && !isManager && task.groupSummary && (
         <p className="flex items-center gap-2 rounded-xl bg-accent-light px-3 py-2 text-sm font-bold text-accent-dark">
@@ -157,7 +155,6 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
         </p>
       )}
 
-      {/* Quem e como */}
       <section className="card divide-y-2 divide-line">
         <div className="flex items-center gap-3 p-3">
           <Avatar name={assignee?.name ?? '?'} picture={assignee?.picture} size={36} presence={assignee?.presence} />
@@ -190,7 +187,6 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
         )}
       </section>
 
-      {/* Estado da revisão */}
       {pending && (
         <section className="card border-warm/50 bg-warm-light p-4">
           <p className="flex items-center gap-2 font-black text-warm-dark"><HourglassMediumIcon size={20} weight="duotone" /> À espera de aprovação</p>
@@ -215,7 +211,7 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
                   <>
                     <button onClick={() => setRejecting(false)} className="btn btn-ghost px-4 text-body" aria-label="Cancelar"><XIcon size={18} /></button>
                     <button
-                      disabled={actions.busy || !reviewNote.trim()}
+                      disabled={actions.busy || !reviewNote.trim()} aria-busy={actions.busy}
                       onClick={async () => {
                         if (await actions.reject(task.id, reviewNote.trim())) {
                           setRejecting(false)
@@ -232,7 +228,7 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
                     <button onClick={() => setRejecting(true)} className="btn btn-ghost flex-1 text-danger">
                       <ArrowUUpLeftIcon size={18} /> Devolver
                     </button>
-                    <button disabled={actions.busy} onClick={() => actions.approve(task.id)} className="btn btn-accent flex-1">
+                    <button disabled={actions.busy} aria-busy={actions.busy} onClick={() => actions.approve(task.id)} className="btn btn-accent flex-1">
                       <CheckIcon size={18} /> Aprovar
                     </button>
                   </>
@@ -256,14 +252,13 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
         </section>
       )}
 
-      {/* Anexos */}
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="label mb-0">Anexos {task.attachments?.length ? `(${task.attachments.length})` : ''}</h2>
           {canUpload && (
             <>
               <button onClick={() => fileInput.current?.click()} disabled={actions.busy} className="text-sm font-extrabold uppercase tracking-wide text-accent cursor-pointer">
-                {actions.busy ? 'A enviar…' : '+ Anexar'}
+                <Busy busy={actions.busy} text="A enviar…">+ Anexar</Busy>
               </button>
               <input
                 ref={fileInput}
@@ -332,7 +327,6 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
         )}
       </section>
 
-      {/* Comentários */}
       <section>
         <h2 className="label flex items-center gap-1.5"><ChatCircleIcon size={14} /> Comentários</h2>
         <div className="card">
@@ -368,7 +362,7 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
             className={`flex gap-2 p-2 ${comments.length ? 'border-t-2 border-line' : ''}`}
           >
             <input className="input py-2" placeholder="Escreve um comentário…" value={comment} onChange={e => setComment(e.target.value)} maxLength={2000} />
-            <button type="submit" disabled={!comment.trim() || actions.busy} className="btn btn-primary px-4" aria-label="Enviar comentário">
+            <button type="submit" disabled={!comment.trim() || actions.busy} aria-busy={actions.busy} className="btn btn-primary px-4" aria-label="Enviar comentário">
               <PaperPlaneRightIcon size={18} />
             </button>
           </form>
@@ -383,13 +377,14 @@ export default function TaskDetailPage() {
   const router = useRouter()
   const {
     tasks, allSessions, timer, now,
-    startTimer, pauseTimer, resumeTimer, stopTimer, setStatus, deleteTask, openTaskSheet, updateTask,
+    startTimer, pauseTimer, resumeTimer, stopTimer, setStatus, deleteTask, openTaskSheet, updateTask, ready,
   } = useApp()
   const org = useOrg()
   const taskActions = useTaskActions()
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const task = tasks.find(t => t.id === id) ?? org?.teamTasks.find(t => t.id === id)
+  if (!task && (!ready || (org && !org.teamLoaded))) return <DetailSkeleton />
   if (!task) {
     return (
       <div className="flex flex-col items-center px-6 py-20 text-center">
@@ -421,7 +416,6 @@ export default function TaskDetailPage() {
   const checklist = task.checklist ?? []
   const checkDone = checklist.filter(c => c.done).length
 
-  // Sessões agrupadas por dia (mais recentes primeiro)
   const history = [...sessions].sort((a, b) => b.start - a.start).slice(0, 20)
 
   return (
@@ -467,7 +461,6 @@ export default function TaskDetailPage() {
 
         {org && <OrgPanel task={task} isOwner={isOwner} />}
 
-        {/* Checklist */}
         {checklist.length > 0 && (
           <section>
             <h2 className="label">Checklist · {checkDone}/{checklist.length}</h2>
@@ -493,7 +486,6 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {/* Cronómetro: só para o responsável */}
         {isOwner && (
           <section className="card flex flex-col items-center border-b-4 p-5" style={isActive ? { borderColor: isBreak ? '#12B5A6' : cat.color } : undefined}>
             <ProgressRing size={190} stroke={14} progress={ringProgress} color={isBreak ? '#12B5A6' : cat.color} track={isActive ? (isBreak ? '#DCF7F3' : cat.light) : '#E9E7F2'}>
@@ -538,7 +530,6 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {/* Estado */}
         {isOwner && !approved && (
           <section>
             <h2 className="label">Estado</h2>
@@ -564,7 +555,6 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {/* Números */}
         {isOwner && (
           <section className="grid grid-cols-3 gap-2">
             {[
@@ -580,7 +570,6 @@ export default function TaskDetailPage() {
           </section>
         )}
 
-        {/* Histórico */}
         {isOwner && (
           <section>
             <h2 className="label">Histórico de sessões</h2>
@@ -636,7 +625,6 @@ export default function TaskDetailPage() {
             <button
               onClick={() => {
                 deleteTask(task.id)
-                // o grupo perdeu uma cópia: actualiza o resumo das outras
                 if (groupSize > 1) org?.refreshTeam()
                 router.replace(org && !isOwner ? '/empresa/tarefas' : '/tarefas')
               }}

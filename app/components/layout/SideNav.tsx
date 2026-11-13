@@ -40,7 +40,6 @@ function NavLink({ item, badge }: { item: NavItem; badge?: React.ReactNode }) {
   )
 }
 
-/** Navegação lateral (desktop) */
 export default function SideNav() {
   const { timer, openTaskSheet, allSessions, tasks, history } = useApp()
   const { user } = useAccount()

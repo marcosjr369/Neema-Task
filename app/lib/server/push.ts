@@ -17,7 +17,6 @@ function setup() {
   configured = true
 }
 
-/** Envia para todos os dispositivos do utilizador; remove os que já não existem */
 export async function sendToUser(userId: string, payload: PushPayload) {
   if (!pushConfigured()) return 0
   setup()

@@ -1,7 +1,5 @@
 import type { AccountType } from '../../../types'
 
-/** Formatação partilhada pelas páginas do painel */
-
 export const TYPE: Record<AccountType | 'none', { label: string; cls: string }> = {
   personal: { label: 'Pessoal', cls: 'bg-brand-light text-brand-dark' },
   business: { label: 'Empresa', cls: 'bg-accent-light text-accent-dark' },
@@ -13,7 +11,6 @@ export const date = (ts: number) => new Date(ts).toLocaleDateString('pt-PT', { d
 export const dateTime = (ts: number) =>
   new Date(ts).toLocaleString('pt-PT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-/** "há 5 min", "há 3 dias"… */
 export function ago(ts: number | undefined, now: number) {
   if (!ts) return 'Nunca'
   const m = Math.floor((now - ts) / 60000)

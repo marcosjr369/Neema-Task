@@ -12,11 +12,6 @@ import { api, ApiError, errorText } from '../../../lib/api'
 import type { PanelOverview, PanelUser } from '../../../lib/server/panelStats'
 import ConfirmUserModal, { type ActionResult, type UserAction } from './ConfirmUserModal'
 
-/*
- * Estrutura do painel (/marcos/faz): entrada com email e palavra-passe, menu lateral por secções,
- * barra de topo com o período, avisos em toast, e os dados partilhados por todas as páginas.
- */
-
 export const RANGES = [7, 30, 90] as const
 export type Range = (typeof RANGES)[number]
 
@@ -27,9 +22,7 @@ type PanelValue = {
   days: Range
   loading: boolean
   reload: () => Promise<void>
-  /** abre a confirmação com palavra-passe para desactivar / reactivar / eliminar */
   ask: (user: Target, action: UserAction) => void
-  /** sobe a cada actualização (as fichas de detalhe voltam a carregar) */
   version: number
 }
 
@@ -41,7 +34,6 @@ export function usePanel() {
   return ctx
 }
 
-/** Dados de uma ficha (utilizador/empresa) com o período do painel; recarrega com "Actualizar" */
 export function usePanelFetch<T>(path: string) {
   const { days, version } = usePanel()
   const [state, setState] = useState<{ key: string; data: T | null; error: string }>({ key: '', data: null, error: '' })
@@ -54,7 +46,6 @@ export function usePanelFetch<T>(path: string) {
       .catch(err => { if (alive) setState(s => ({ key, data: s.data, error: errorText(err) })) })
     return () => { alive = false }
   }, [path, days, key])
-  // enquanto a nova resposta não chega, mantém a anterior (sem saltos)
   return { data: state.data, error: state.error, loading: state.key !== key }
 }
 
@@ -66,7 +57,6 @@ type NavItem = {
   desc: string
   icon: Icon
   count?: (d: PanelOverview) => number
-  /** a página usa o período (7/30/90 dias) */
   range: boolean
 }
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -157,7 +147,6 @@ function Login({ onDone }: { onDone: (email: string) => void }) {
   )
 }
 
-/** Aviso no canto (resultado das acções); fecha sozinho */
 function Toast({ text, onClose }: { text: string; onClose: () => void }) {
   useEffect(() => {
     const id = setTimeout(onClose, 7000)
@@ -213,7 +202,6 @@ function SideNav({ pathname, data, email, onLogout }: { pathname: string; data: 
           </div>
         ))}
       </nav>
-      {/* quem está com a sessão aberta */}
       <div className="m-3 flex items-center gap-3 rounded-2xl border-2 border-line p-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink text-white"><ShieldCheckIcon size={20} weight="fill" /></span>
         <span className="min-w-0 flex-1">
@@ -279,7 +267,6 @@ export default function PanelShell({ children }: { children: ReactNode }) {
         r.clerk === 'falhou' ? 'o Clerk não respondeu (apaga a conta lá à mão)' : '',
       ].filter(Boolean)
       setNotice(`${u.name} foi eliminado.${extra.length ? ` ${extra.join(' · ')}.` : ''}`)
-      // estava na ficha dessa pessoa: volta à lista
       if (pathname.includes(u.id)) router.push(`${BASE}/utilizadores`)
     } else {
       setNotice(
@@ -308,7 +295,6 @@ export default function PanelShell({ children }: { children: ReactNode }) {
       <SideNav pathname={pathname} data={data} email={email} onLogout={logout} />
 
       <div className="min-h-dvh lg:pl-64">
-        {/* topo: onde estou, período e actualizar; no mobile também o menu */}
         <header className="sticky top-0 z-20 border-b-2 border-line bg-white/95 backdrop-blur">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-4 sm:px-6">
             <span className="lg:hidden"><Mascot size={36} /></span>

@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { api, errorText } from '../lib/api'
+import { api, errorText, throttled, whenVisible } from '../lib/api'
 import { assignableMembers, canManageRole, isCompanyAccount, isWorking, managedDepartmentIds, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
@@ -9,11 +9,9 @@ type OrgData = { org: Org; me: Member; departments: Department[]; members: Membe
 
 type OrgValue = OrgData & {
   base: string
-  /** sessão iniciada com a conta da própria empresa (gere, mas não é funcionário) */
   isCompany: boolean
   isAdmin: boolean
   isManager: boolean
-  /** departamentos geridos ('all' = admin) */
   scope: Set<string> | 'all'
   assignable: Member[]
   memberById: (id?: string) => Member | undefined
@@ -21,21 +19,22 @@ type OrgValue = OrgData & {
   refresh: () => Promise<void>
   presence: PresenceStatus
   setPresence: (status: PresenceStatus) => void
-  /** início do dia de trabalho em curso; null se ainda não começou ou já terminou */
   workStart: number | null
   startWork: () => void
   endWork: () => void
-  /** tarefas que giro ou criei (supervisores e admins) */
   teamTasks: Task[]
   refreshTeam: () => Promise<void>
   upsertTeamTask: (task: Task) => void
   removeTeamTask: (id: string) => void
   error: string | null
+  /** a equipa (membros, departamentos) já chegou do servidor: antes disso as listas estão vazias */
+  loaded: boolean
+  /** as tarefas da equipa já chegaram (quem não gere equipa: sempre true) */
+  teamLoaded: boolean
 }
 
 const OrgContext = createContext<OrgValue | null>(null)
 
-/** Dados da empresa activa, ou null no espaço pessoal */
 export function useOrg() {
   return useContext(OrgContext)
 }
@@ -57,6 +56,8 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   useEffect(() => { workStartRef.current = workStart }, [workStart])
   const [teamTasks, setTeamTasks] = useState<Task[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [teamFetched, setTeamFetched] = useState(false)
   const presenceRef = useRef(presence)
   useEffect(() => { presenceRef.current = presence }, [presence])
 
@@ -68,6 +69,8 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     } catch (err) {
       setError(errorText(err))
     }
+    // mesmo com erro: mostra o erro em vez de ficar a carregar para sempre
+    setLoaded(true)
   }, [base])
 
   const isManager = canManageRole(data.me.role)
@@ -78,6 +81,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       const { tasks } = await api<{ tasks: Task[] }>(`${base}/tasks?scope=team`)
       setTeamTasks(tasks)
     } catch { /* offline */ }
+    setTeamFetched(true)
   }, [base, isManager])
 
   const applyLocal = useCallback((status: PresenceStatus, start: number | null) => {
@@ -90,13 +94,11 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   const sendPresence = useCallback(async (body: { status?: PresenceStatus; work?: 'start' | 'end'; beat?: boolean }) => {
     try {
       const res = await api<{ presence: PresenceStatus; workStart?: number }>(`${base}/presence`, { body })
-      // o dia foi terminado noutro separador ou dispositivo
       if (body.beat && res.presence === 'offline') applyLocal('offline', null)
       else if (res.workStart) setWorkStart(res.workStart)
     } catch { /* tenta de novo no próximo sinal */ }
   }, [base, applyLocal])
 
-  // mudar de estado sem ter começado (ex.: iniciar o cronómetro) também começa o dia
   const setPresence = useCallback((status: PresenceStatus) => {
     applyLocal(status, status === 'offline' ? null : workStartRef.current ?? Date.now())
     sendPresence({ status })
@@ -111,8 +113,6 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     sendPresence({ work: 'end' })
   }, [sendPresence, applyLocal])
 
-  // Ao abrir a app, um dia de trabalho já começado continua (só depois do consentimento).
-  // A conta da empresa não tem estado.
   const isCompany = isCompanyAccount(data.me, data.org)
   const tracksPresence = !!data.me.consentAt && !isCompany
   const resumeWith = useRef(initial.member.presence !== 'offline' ? initial.member.presence : 'trabalho')
@@ -128,15 +128,16 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     const beat = setInterval(() => {
       if (presenceRef.current !== 'offline') sendPresence({ status: presenceRef.current, beat: true })
     }, HEARTBEAT)
-    const poll = setInterval(() => {
+    // a presença continua a bater; os dados da equipa só se recarregam com o separador à vista
+    const poll = setInterval(whenVisible(() => {
       refresh()
       refreshTeam()
-    }, 30 * 1000)
-    const onFocus = () => {
+    }), 45 * 1000)
+    const onFocus = throttled(() => {
       refresh()
       refreshTeam()
       if (presenceRef.current !== 'offline') sendPresence({ status: presenceRef.current, beat: true })
-    }
+    })
     window.addEventListener('focus', onFocus)
     return () => {
       clearInterval(beat)
@@ -152,7 +153,6 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
 
   const value = useMemo<OrgValue>(() => {
     const all = data.members.length ? data.members : [data.me]
-    // "members" são as pessoas da equipa; a conta da empresa só aparece por id (ex.: quem atribuiu)
     const members = teamMembers(all, data.org)
     return {
       ...data,
@@ -176,8 +176,10 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       upsertTeamTask,
       removeTeamTask,
       error,
+      loaded,
+      teamLoaded: !isManager || teamFetched,
     }
-  }, [data, base, isCompany, isManager, refresh, presence, setPresence, workStart, startWork, endWork, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error])
+  }, [data, base, isCompany, isManager, refresh, presence, setPresence, workStart, startWork, endWork, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error, loaded, teamFetched])
 
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>
 }

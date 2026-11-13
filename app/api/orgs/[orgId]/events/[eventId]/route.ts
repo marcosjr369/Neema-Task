@@ -5,7 +5,6 @@ import type { EventResponse } from '../../../../../types'
 
 type Action = { action: 'update'; patch: EventInput } | { action: 'respond'; response: EventResponse }
 
-/** Editar (quem agendou ou um administrador) ou responder ao convite (convidado) */
 export const PATCH = handle<{ orgId: string; eventId: string }>(async (req, { orgId, eventId }) => {
   const { db, org, me } = await requireMember(orgId)
   const input = await body<Action>(req)
@@ -24,7 +23,6 @@ export const PATCH = handle<{ orgId: string; eventId: string }>(async (req, { or
       const timeChanged = fields.start !== e.start || fields.end !== e.end
       Object.assign(e, fields)
       if (patch.attendeeIds !== undefined) {
-        // convidados são de quem agendou (um administrador a editar não se convida a si)
         const owner = db.members.find(m => m.id === e.createdBy) ?? me
         const next = checkAttendees(db, org, owner.id === me.id ? me : { ...owner, role: me.role }, patch.attendeeIds)
         added = next.filter(id => !e.attendeeIds.includes(id))
@@ -32,7 +30,6 @@ export const PATCH = handle<{ orgId: string; eventId: string }>(async (req, { or
         e.responses = Object.fromEntries(Object.entries(e.responses ?? {}).filter(([id]) => next.includes(id)))
       }
       if (timeChanged) {
-        // nova hora: os avisos voltam a ser enviados e as respostas recomeçam
         e.sentPre = false
         e.sentStart = false
         e.responses = {}
@@ -55,6 +52,5 @@ export const DELETE = handle<{ orgId: string; eventId: string }>(async (_req, { 
     d.events = d.events.filter(x => x.id !== eventId)
     return e
   })
-  // cancelado antes de acontecer: avisa os convidados
   if (event.end > Date.now()) notifyMembers(db, event.attendeeIds.filter(id => event.responses?.[id] !== 'nao'), event, () => 'Evento cancelado')
 })

@@ -1,19 +1,13 @@
 import { EVENT_KINDS, EVENT_LEAD_MINUTES, type CalendarEvent, type EventKind, type Member, type Org, type User } from '../../types'
 import { isCompanyAccount } from '../org'
-import { fail, isManager } from './api'
+import { fail } from './api'
 import { pushConfigured, sendToUser } from './push'
 import { mutate, read, type DB } from './store'
-
-/*
- * Calendário: validação, quem recebe os avisos e o envio dos lembretes push
- * (5 minutos antes e à hora do evento), mesmo com a app fechada.
- */
 
 export type EventInput = Partial<Pick<CalendarEvent, 'title' | 'description' | 'kind' | 'start' | 'end' | 'location' | 'attendeeIds'>>
 
 const DAY = 24 * 3600 * 1000
 
-/** Valida e limpa os campos vindos do cliente; parcial ao editar */
 export function cleanEvent(input: EventInput, current?: CalendarEvent) {
   const out: Partial<CalendarEvent> = {}
   if (input.title !== undefined || !current) {
@@ -56,14 +50,12 @@ export function timeText(ms: number, timeZone?: string) {
   }
 }
 
-/** Utilizadores que recebem os avisos: quem agendou e os convidados que não recusaram */
 export function recipients(db: DB, e: CalendarEvent): string[] {
   if (e.ownerId) return [e.ownerId]
   const ids = [e.createdBy, ...e.attendeeIds.filter(id => e.responses?.[id] !== 'nao')]
   return [...new Set(ids.map(id => db.members.find(m => m.id === id && m.orgId === e.orgId)?.userId).filter((x): x is string => !!x))]
 }
 
-/** Avisa os convidados (convite novo, alteração ou cancelamento); não espera nem falha o pedido */
 export function notifyMembers(db: DB, memberIds: string[], e: CalendarEvent, title: (u?: User) => string) {
   if (!pushConfigured() || !memberIds.length) return
   const userIds = [...new Set(memberIds.map(id => db.members.find(m => m.id === id)?.userId).filter((x): x is string => !!x))]
@@ -78,11 +70,9 @@ export function notifyMembers(db: DB, memberIds: string[], e: CalendarEvent, tit
   }
 }
 
-/** Envia os avisos devidos: 5 min antes e à hora (cada um uma só vez) */
 export async function runEventReminders(now = Date.now()) {
   if (!pushConfigured()) return { sent: 0 }
   const lead = EVENT_LEAD_MINUTES * 60 * 1000
-  // eventos que começaram há pouco ou começam nos próximos minutos
   const db = await read(async l => {
     await l.load('events', { start_at: { gte: now - 10 * 60 * 1000, lte: now + lead + 60 * 1000 } })
     await l.load('members', { org_id: [...new Set(l.db.events.map(e => e.orgId).filter((x): x is string => !!x))] })
@@ -133,7 +123,6 @@ export async function runEventReminders(now = Date.now()) {
 const LOOP_MS = 30 * 1000
 const g = globalThis as unknown as { __neemaEvents?: ReturnType<typeof setInterval> }
 
-/** Verifica os eventos a cada 30 s no próprio servidor Node (ver instrumentation.ts) */
 export function startEventLoop() {
   if (g.__neemaEvents || !pushConfigured()) return
   g.__neemaEvents = setInterval(() => {
@@ -141,7 +130,6 @@ export function startEventLoop() {
   }, LOOP_MS)
 }
 
-/** Convidados válidos: pessoas activas da empresa (sem a conta da empresa nem quem agenda) */
 export function checkAttendees(db: DB, org: Org, me: Member, ids: unknown): string[] {
   if (!Array.isArray(ids)) return []
   const list = [...new Set(ids.map(String))].filter(id => id !== me.id)
@@ -150,7 +138,5 @@ export function checkAttendees(db: DB, org: Org, me: Member, ids: unknown): stri
     const m = db.members.find(x => x.id === id && x.orgId === org.id && x.status === 'activo')
     if (!m || isCompanyAccount(m, org)) fail(400, 'Convidado inválido')
   }
-  // agendar com outras pessoas: administradores, supervisores e chefes de departamento
-  if (list.length && !isManager(me)) fail(403, 'Só administradores e supervisores podem convidar outras pessoas')
   return list
 }

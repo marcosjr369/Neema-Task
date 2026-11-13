@@ -14,7 +14,6 @@ export type TaskPatch = Partial<
 
 const RECURRENCES: Recurrence[] = ['diaria', 'semanal', 'mensal']
 
-/** Valida e limpa os campos editáveis vindos do cliente */
 export function cleanTaskFields(input: TaskPatch): Partial<Task> {
   const out: Partial<Task> = {}
   if (input.title !== undefined) out.title = String(input.title).trim().slice(0, 120)
@@ -41,7 +40,6 @@ export function cleanTaskFields(input: TaskPatch): Partial<Task> {
   return out
 }
 
-/** Supervisor escolhido para a tarefa: tem de poder aprovar e não pode ser o próprio responsável */
 export function checkReviewer(db: DB, org: Org, reviewerId: string, assigneeId?: string) {
   const reviewer = db.members.find(m => m.id === reviewerId && m.orgId === org.id)
   if (!reviewer || !canSuperviseTask(reviewer, org)) fail(400, 'Escolhe um supervisor ou administrador para aprovar')
@@ -54,7 +52,6 @@ export function pickId(db: DB, id?: string) {
   return id && /^[\w-]{8,64}$/.test(id) && !db.tasks.some(t => t.id === id) ? id : newId()
 }
 
-/** Constrói uma tarefa nova a partir dos campos já validados */
 export function buildTask(id: string, fields: Partial<Task>, extra: Partial<Task>): Task {
   const category = fields.category ?? 'trabalho'
   const now = Date.now()
@@ -75,7 +72,6 @@ export function buildTask(id: string, fields: Partial<Task>, extra: Partial<Task
   }
 }
 
-/** Validação de sessões vindas do cliente (sem duplicados, sem tempos impossíveis) */
 export function cleanSessions(db: DB, input: Session[], allowedTasks: Set<string>, owner: Partial<Session>) {
   const known = new Set(db.sessions.map(s => s.id))
   const now = Date.now()
@@ -107,7 +103,6 @@ export function addComment(task: Task, author: { id: string; name: string }, tex
   ]
 }
 
-/** Apaga a tarefa, as sessões e devolve os anexos a remover do disco */
 export function deleteTask(db: DB, taskId: string) {
   const task = db.tasks.find(t => t.id === taskId)
   db.tasks = db.tasks.filter(t => t.id !== taskId)
@@ -115,19 +110,16 @@ export function deleteTask(db: DB, taskId: string) {
   return task?.attachments?.map(a => a.id) ?? []
 }
 
-/** Campos que, numa tarefa de grupo, são iguais para todos (a checklist junta-se à parte) */
 export const SHARED_FIELDS = [
   'title', 'description', 'category', 'priority', 'focusDuration', 'deadline', 'tags',
   'requiresApproval', 'requiresAttachment', 'recurrence',
 ] as const
 
-/** Checklist nova com o progresso que cada pessoa já tinha (itens com o mesmo id) */
 export function mergeChecklist(next: ChecklistItem[], current: ChecklistItem[] = []) {
   const done = new Map(current.map(c => [c.id, c.done]))
   return next.map(c => ({ ...c, done: done.get(c.id) ?? false }))
 }
 
-/** Cópia nova da tarefa de grupo para outra pessoa: mesmos campos, trabalho do zero */
 export function cloneForAssignee(task: Task, assignee: { id: string; departmentId?: string }, creatorId: string): Task {
   const now = Date.now()
   return {
@@ -149,9 +141,45 @@ export function cloneForAssignee(task: Task, assignee: { id: string; departmentI
   }
 }
 
-/** Para as respostas: junta o resumo do grupo (sem alterar o objecto gravado) */
 export function withGroup(db: DB, task: Task): Task {
   if (!task.groupId) return task
   const list = groupSiblings(db.tasks, task)
   return { ...task, groupSummary: { total: list.length, done: list.filter(isCompleted).length } }
+}
+
+function shift(ts: number, r: NonNullable<Task['recurrence']>) {
+  const d = new Date(ts)
+  if (r === 'diaria') d.setDate(d.getDate() + 1)
+  else if (r === 'semanal') d.setDate(d.getDate() + 7)
+  else d.setMonth(d.getMonth() + 1)
+  return d.getTime()
+}
+
+export function spawnNext(db: DB, task: Task) {
+  if (!task.recurrence) return
+  const now = Date.now()
+  let deadline: string | undefined
+  if (task.deadline) {
+    let next = shift(new Date(task.deadline).getTime(), task.recurrence)
+    while (next < now) next = shift(next, task.recurrence)
+    deadline = new Date(next).toISOString()
+  }
+  db.tasks.push({
+    ...task,
+    id: newId(),
+    status: 'todo',
+    createdAt: now,
+    updatedAt: now,
+    completedAt: undefined,
+    deadline,
+    notified: false,
+    review: undefined,
+    attachments: [],
+    comments: [],
+    // mesmos ids: nas tarefas de grupo, as cópias da repetição seguinte continuam a corresponder
+    checklist: task.checklist?.map(c => ({ ...c, done: false })),
+    // cada pessoa gera a sua cópia; o grupo da repetição seguinte junta-as pelo número
+    occurrence: task.groupId ? (task.occurrence ?? 0) + 1 : undefined,
+    groupSummary: undefined,
+  })
 }

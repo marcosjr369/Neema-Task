@@ -29,7 +29,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'conta', label: 'Conta' },
 ]
 
-
 function Stepper({
   label, value, unit, min, max, step, onChange,
 }: { label: string; value: number; unit: string; min: number; max: number; step: number; onChange: (v: number) => void }) {
@@ -64,7 +63,6 @@ function Toggle({ label, desc, on, onChange, icon }: { label: string; desc?: str
   )
 }
 
-/** Cabeçalho: foto, nome editável, nível */
 function ProfileHeader() {
   const { allSessions, tasks, history } = useApp()
   const { user, updateMe } = useAccount()
@@ -353,7 +351,6 @@ function AccountTab() {
 
 export default function ProfilePage() {
   const org = useOrg()
-  // a conta da empresa não tem progresso próprio: o perfil mostra a equipa
   return org?.isCompany ? <CompanyProfile /> : <PersonProfile />
 }
 

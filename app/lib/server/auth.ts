@@ -1,14 +1,9 @@
 import { auth, currentUser as clerkCurrentUser } from '@clerk/nextjs/server'
 import type { User } from '../../types'
+import { fail } from './api'
 import { clerkUserScope } from './scopes'
 import { mutate, newId, read } from './store'
 
-/**
- * Sessões geridas pelo Clerk (Google, Microsoft, Apple, Facebook, GitHub, email…).
- * A nossa tabela "users" guarda o perfil da app, ligado ao Clerk pelo clerkId.
- */
-
-/** Utilizador com sessão iniciada; na primeira visita cria-o a partir do perfil do Clerk */
 export async function currentUser(): Promise<User | null> {
   const { userId: clerkId } = await auth()
   if (!clerkId) return null
@@ -21,7 +16,8 @@ async function provisionUser(clerkId: string): Promise<User | null> {
   if (!profile) return null
   const primary = profile.primaryEmailAddress ?? profile.emailAddresses[0]
   const email = primary?.emailAddress.trim().toLowerCase() ?? ''
-  if (!email) return null
+  // sem email não há conta na app; um erro claro em vez de "sem sessão" (que deixava a entrada presa)
+  if (!email) fail(409, 'A tua conta não tem email. Entra com um método que partilhe o email (Google, Microsoft ou email e código).')
   // só um email confirmado pelo Clerk se liga a contas ou convites que já existam
   const verified = primary?.verification?.status === 'verified'
   const name = profile.fullName || [profile.firstName, profile.lastName].filter(Boolean).join(' ') || email.split('@')[0]

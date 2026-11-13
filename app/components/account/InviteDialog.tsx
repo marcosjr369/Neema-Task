@@ -7,7 +7,6 @@ import { useAccount } from '../../context/AccountContext'
 import { errorText } from '../../lib/api'
 import Modal from '../ui/Modal'
 
-/** Convite de uma empresa para uma conta que já existia: aceitar ou recusar */
 export default function InviteDialog() {
   const { user, loading, invites, accountType, answerInvite } = useAccount()
   const pathname = usePathname()
@@ -26,7 +25,6 @@ export default function InviteDialog() {
     setError('')
   }
   const answer = async (accept: boolean) => {
-    // conta pessoal: passa a conta de empresa, por isso confirma primeiro
     if (accept && accountType === 'personal' && !confirming) {
       setConfirming(true)
       return
@@ -52,7 +50,7 @@ export default function InviteDialog() {
           <button onClick={() => (confirming ? setConfirming(false) : answer(false))} disabled={busy} className="btn btn-ghost flex-1 text-body">
             {confirming ? 'Voltar' : 'Recusar'}
           </button>
-          <button onClick={() => answer(true)} disabled={busy} className="btn btn-primary flex-1">
+          <button onClick={() => answer(true)} disabled={busy} aria-busy={busy} className="btn btn-primary flex-1">
             {busy ? 'Um momento…' : confirming ? 'Confirmar' : 'Aceitar'}
           </button>
         </div>

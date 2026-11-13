@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { CheckCircleIcon, ClockIcon, FireIcon, LightningIcon } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import { CATEGORY_CONFIG } from '../types'
+import { HeaderSkeleton, StatsSkeleton } from '../components/ui/Skeleton'
 import {
   bestStreak,
   categoryBreakdown,
@@ -50,7 +51,6 @@ function DailyChart({ data, goalSeconds }: { data: DayPoint[]; goalSeconds: numb
       </div>
 
       <div className="relative h-44" onMouseLeave={() => setHover(null)}>
-        {/* linha do objetivo */}
         <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-line" style={{ bottom: `${goalPct}%` }}>
           <span className="absolute -top-5 right-0 bg-white pl-1 text-[11px] font-extrabold uppercase text-muted">
             Objetivo {formatShort(goalSeconds)}
@@ -112,7 +112,7 @@ function StatTile({ icon, value, label, color }: { icon: React.ReactNode; value:
 }
 
 export default function StatsPage() {
-  const { allSessions, tasks, history, now, settings } = useApp()
+  const { allSessions, tasks, history, now, settings, ready } = useApp()
   const [days, setDays] = useState(7)
 
   const series = dailySeries(allSessions, tasks, now, days)
@@ -134,6 +134,15 @@ export default function StatsPage() {
     .filter(x => x.seconds > 0)
     .sort((a, b) => b.seconds - a.seconds)
     .slice(0, 5)
+
+  if (!ready) {
+    return (
+      <div className="px-4 pb-6 pt-5 lg:px-0 lg:pt-6">
+        <HeaderSkeleton />
+        <StatsSkeleton />
+      </div>
+    )
+  }
 
   return (
     <div>

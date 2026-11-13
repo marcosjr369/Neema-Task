@@ -8,7 +8,6 @@ const MAX_UPLOAD = 15 * 1024 * 1024
 
 type Params = { orgId: string; taskId: string }
 
-/** Descarregar um anexo: ?id=<anexo>[&ver=1 para abrir no browser] (só quem vê a tarefa) */
 export const GET = handle<Params>(async (req, { orgId, taskId }) => {
   const { db, me } = await requireMember(orgId, { tasks: true })
   const url = new URL(req.url)
@@ -30,7 +29,6 @@ export const GET = handle<Params>(async (req, { orgId, taskId }) => {
   })
 })
 
-/** Anexar um ficheiro (multipart, campo "file") como prova do trabalho */
 export const POST = handle<Params>(async (req, { orgId, taskId }) => {
   const { db, me } = await requireMember(orgId, { tasks: true })
   const task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
@@ -65,7 +63,6 @@ export const POST = handle<Params>(async (req, { orgId, taskId }) => {
   })
 })
 
-/** ?id=<anexo> */
 export const DELETE = handle<Params>(async (req, { orgId, taskId }) => {
   const { me } = await requireMember(orgId)
   const id = new URL(req.url).searchParams.get('id')

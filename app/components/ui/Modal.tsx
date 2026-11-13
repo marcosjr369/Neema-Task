@@ -3,7 +3,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { XIcon } from '@phosphor-icons/react'
 
-/** Folha inferior no mobile, diálogo centrado no desktop */
 export default function Modal({
   title, onClose, children, footer, wide = false,
 }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean }) {

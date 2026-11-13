@@ -6,7 +6,6 @@ import { useOrg } from '../../context/OrgContext'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES } from '../../types'
 import { PresenceGlyph } from '../ui/icons'
 
-/** Começar e terminar o trabalho; durante o dia, o estado rápido (a trabalhar, pausa, almoço, reunião…) */
 export default function PresencePicker({ compact = false }: { compact?: boolean }) {
   const org = useOrg()
   const [open, setOpen] = useState(false)

@@ -1,5 +1,5 @@
 import {
-  BuildingsIcon, CalendarBlankIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
+  BuildingsIcon, CalendarBlankIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
   SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
@@ -8,7 +8,6 @@ export type NavItem = {
   label: string
   icon: Icon
   color: string
-  /** só fica activo no endereço exacto (ex.: a visão geral, que tem sub-páginas) */
   exact?: boolean
 }
 
@@ -19,13 +18,13 @@ const ITEMS = {
   tarefas: { href: '/tarefas', label: 'Tarefas', icon: ListChecksIcon, color: '#12B5A6' },
   foco: { href: '/foco', label: 'Foco', icon: TimerIcon, color: '#F2545B' },
   calendario: { href: '/calendario', label: 'Calendário', icon: CalendarBlankIcon, color: '#22A6CF' },
+  quadros: { href: '/quadros', label: 'Quadros', icon: KanbanIcon, color: '#7B61FF' },
+  planilhas: { href: '/planilhas', label: 'Planilhas', icon: TableIcon, color: '#12B5A6' },
   estatisticas: { href: '/estatisticas', label: 'Estatísticas', icon: ChartBarIcon, color: '#EC5BA6' },
   ranking: { href: '/ranking', label: 'Ranking', icon: TrophyIcon, color: '#E0A419' },
   empresa: { href: '/empresa', label: 'Empresa', icon: BuildingsIcon, color: '#4C7DFF' },
   perfil: { href: '/perfil', label: 'Perfil', icon: UserIcon, color: '#FF8A3D' },
 } satisfies Record<string, NavItem>
-
-// ─── Secções do painel da empresa (cada uma com o seu endereço) ─────────────
 
 export type SectionId = 'geral' | 'tarefas' | 'relatorios' | 'recordes' | 'pessoas' | 'departamentos' | 'definicoes'
 
@@ -43,30 +42,23 @@ export const SECTIONS: (NavItem & { id: SectionId; admin?: boolean })[] = [
 
 const section = (id: SectionId) => SECTIONS.find(s => s.id === id)!
 
-/** Secções que o membro vê (departamentos e definições só para administradores) */
 export const visibleSections = (isAdmin: boolean) => SECTIONS.filter(s => !s.admin || isAdmin)
 
-/**
- * Quem está a usar a app: uma pessoa (funcionário ou conta pessoal), quem gere (supervisor),
- * um administrador, ou a conta da empresa
- */
 export type NavMode = 'person' | 'manager' | 'admin' | 'company'
 
-/** Páginas de trabalho próprio que a conta da empresa não usa (reencaminham para o painel) */
 export const PERSONAL_ONLY_PATHS = ['/', '/tarefas', '/foco', '/estatisticas']
 
-/** Navegação lateral (desktop), agrupada por secções. "Equipa" só para supervisores e admins. */
 export function navGroups(mode: NavMode): NavGroup[] {
-  // a conta da empresa não tem trabalho próprio: a sidebar é o painel
   if (mode === 'company') {
     return [
-      { title: 'Empresa', items: [section('geral'), ITEMS.calendario, section('tarefas'), section('relatorios'), section('recordes')] },
+      { title: 'Empresa', items: [section('geral'), ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, section('tarefas'), section('relatorios'), section('recordes')] },
       { title: 'Equipa', items: [section('pessoas'), section('departamentos'), ITEMS.ranking] },
       { title: 'Gestão', items: [section('definicoes')] },
     ]
   }
   const groups: NavGroup[] = [
     { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario] },
+    { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas] },
     { title: 'Progresso', items: [ITEMS.estatisticas, ITEMS.ranking] },
   ]
   if (mode === 'manager' || mode === 'admin') {
@@ -75,7 +67,6 @@ export function navGroups(mode: NavMode): NavGroup[] {
   return groups
 }
 
-/** Barra de baixo (mobile); as estatísticas abrem a partir do Início e do topo */
 export function mobileNav(mode: NavMode): NavItem[] {
   if (mode === 'company') {
     return [

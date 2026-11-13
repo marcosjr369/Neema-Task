@@ -5,7 +5,6 @@ import type { CalendarEvent } from '../../../types'
 
 const DAY = 24 * 3600 * 1000
 
-/** Eventos do espaço pessoal: ?from=&to= */
 export const GET = handle(async req => {
   const user = await requirePersonal()
   const url = new URL(req.url)

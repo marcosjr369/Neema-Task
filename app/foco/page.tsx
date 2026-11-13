@@ -31,7 +31,6 @@ function Header({ progress, color, right }: { progress: number; color: string; r
   )
 }
 
-/** Escolha de tarefa quando não há temporizador activo */
 function Picker() {
   const { tasks, allSessions, startTimer, openTaskSheet } = useApp()
   const open = tasks.filter(t => t.status !== 'done')

@@ -9,15 +9,9 @@ import {
 import Mascot, { type MascotMood, type MascotPose } from '../ui/Mascot'
 import ProgressRing from '../ui/ProgressRing'
 
-/*
- * Página inicial para quem ainda não tem sessão: apresenta a app, com a Udacha animada,
- * e leva ao registo (/entrar). Quem já tem sessão vê a app em "/".
- */
-
 const START = '/entrar?passo=como'
 const LOGIN = '/entrar?passo=login'
 
-/** Mostra o conteúdo com uma animação quando entra no ecrã */
 function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -43,7 +37,6 @@ function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; 
   )
 }
 
-/** Ícone a flutuar num cartão branco (decoração das ilustrações) */
 function Floating({ icon: I, color, className, delay = 0, rotate = 0, size = 56 }: { icon: Icon; color: string; className: string; delay?: number; rotate?: number; size?: number }) {
   return (
     <span
@@ -104,7 +97,6 @@ function Hero() {
   )
 }
 
-/** Poses que a Udacha vai trocando no hero, com o que diz em cada uma */
 const SCENES: { pose: MascotPose; mood: MascotMood; say: string }[] = [
   { pose: 'wave', mood: 'happy', say: 'Olá! Eu sou a Udacha.' },
   { pose: 'dance', mood: 'excited', say: 'Bora focar?' },
@@ -113,7 +105,6 @@ const SCENES: { pose: MascotPose; mood: MascotMood; say: string }[] = [
   { pose: 'celebrate', mood: 'excited', say: '+15 XP!' },
 ]
 
-/** Emblema colorido a flutuar à volta da Udacha */
 function Badge({ icon: I, bg, className, delay, rotate }: { icon: Icon; bg: string; className: string; delay: number; rotate: number }) {
   return (
     <span
@@ -126,7 +117,6 @@ function Badge({ icon: I, bg, className, delay, rotate }: { icon: Icon; bg: stri
   )
 }
 
-/** A Udacha num palco colorido; muda de pose sozinho ou ao clicar */
 function HeroStage() {
   const [n, setN] = useState(0)
   useEffect(() => {
@@ -136,14 +126,12 @@ function HeroStage() {
   const scene = SCENES[n % SCENES.length]
   return (
     <div className="relative mx-auto flex h-[270px] w-full max-w-md items-end justify-center sm:h-[460px]">
-      {/* fundo: círculo suave */}
       <span className="absolute bottom-2 left-1/2 h-[220px] w-[220px] -translate-x-1/2 rounded-full bg-brand-light sm:h-[360px] sm:w-[360px]" aria-hidden />
 
       <Badge icon={LightningIcon} bg="#FFC53D" className="left-[6%] top-[18%]" delay={0} rotate={-10} />
       <Badge icon={FireIcon} bg="#FF8A3D" className="right-[6%] top-[34%]" delay={0.8} rotate={8} />
       <Badge icon={CheckIcon} bg="#12B5A6" className="bottom-[14%] left-[4%]" delay={1.5} rotate={6} />
 
-      {/* balão de fala */}
       <div key={`say-${n}`} className="absolute left-1/2 top-0 z-10 animate-bubble sm:top-[6%]">
         <div className="relative whitespace-nowrap rounded-2xl border-2 border-line bg-white px-3 py-2 text-sm font-extrabold sm:px-4 sm:py-2.5 sm:text-lg text-ink shadow-[0_4px_0_#E9E7F2]">
           {scene.say}
@@ -173,7 +161,6 @@ const STRIP: { icon: Icon; label: string; color: string }[] = [
   { icon: CheckCircleIcon, label: 'Aprovações', color: '#4C7DFF' },
 ]
 
-/** Faixa contínua com as áreas da app */
 function Strip() {
   const items = [...STRIP, ...STRIP]
   return (
@@ -210,7 +197,6 @@ function Feature({
   )
 }
 
-/** Telemóvel com uma tarefa a correr */
 function PhoneArt() {
   return (
     <>
@@ -241,7 +227,6 @@ function PhoneArt() {
   )
 }
 
-/** Anel do cronómetro com o aviso de pausa */
 function FocusArt() {
   const [progress, setProgress] = useState(0.15)
   useEffect(() => {
@@ -266,7 +251,6 @@ function FocusArt() {
   )
 }
 
-/** Pódio do ranking com a Udacha a festejar */
 function RankingArt() {
   const bars = [
     { h: 'h-24', place: 2, color: '#C0C0C0', delay: 200 },
@@ -292,7 +276,6 @@ function RankingArt() {
   )
 }
 
-/** Equipa: tarefa aprovada com anexo */
 function TeamArt() {
   const team = [
     { name: 'AS', color: '#EC5BA6' },
@@ -323,10 +306,6 @@ function TeamArt() {
   )
 }
 
-/**
- * A Udacha salta do logótipo do cabeçalho e voa em curva até ao palco da chamada final,
- * dando uma cambalhota pelo caminho. Com movimento reduzido, aparece logo no sítio.
- */
 function flyFromLogo(target: HTMLElement) {
   const show = () => { target.style.opacity = '1' }
   const logo = document.querySelector<HTMLElement>('[data-mascot-logo]')
@@ -337,7 +316,6 @@ function flyFromLogo(target: HTMLElement) {
   const dx = a.left + a.width / 2 - (b.left + b.width / 2)
   const dy = a.top + a.height / 2 - (b.top + b.height / 2)
   const s0 = Math.max(0.12, (a.height * 2.2) / b.height)
-  // ponto de controlo da curva: segue para o lado do palco quase à altura do logótipo e depois cai
   const cx = dx * 0.1
   const cy = dy + 60
   const steps = 16
@@ -353,7 +331,6 @@ function flyFromLogo(target: HTMLElement) {
   const flight = target.animate(frames, { duration: 1300, easing: 'cubic-bezier(0.45, 0, 0.3, 1)' })
   flight.onfinish = () => {
     show()
-    // aterragem com "squash" e o logótipo volta a aparecer
     target.animate(
       [{ transform: 'scale(1.15, 0.85)' }, { transform: 'scale(0.95, 1.06)' }, { transform: 'scale(1)' }],
       { duration: 380, easing: 'ease-out' },
@@ -388,7 +365,6 @@ function FinalCta() {
         </Reveal>
       </div>
       <div className="relative mt-10 h-[320px]">
-        {/* colinas no fundo, a continuar para o rodapé */}
         <svg className="absolute inset-x-0 bottom-0 h-56 w-full" viewBox="0 0 1440 220" preserveAspectRatio="none" aria-hidden>
           <path d="M0 80 Q240 40 420 90 Q600 150 720 150 Q840 150 1020 90 Q1200 40 1440 80 L1440 220 L0 220 Z" fill="#7B61FF" />
         </svg>
@@ -397,7 +373,6 @@ function FinalCta() {
         <Floating icon={TrophyIcon} color="#E0A419" className="right-[14%] top-8" delay={0.5} rotate={10} />
         <Floating icon={CheckCircleIcon} color="#12B5A6" className="right-[28%] top-28" delay={1.2} rotate={-6} size={48} />
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-          {/* invisível até chegar a voar do logótipo */}
           <div ref={landing} className="opacity-0">
             <Mascot size={240} pose="jump" mood="excited" />
           </div>

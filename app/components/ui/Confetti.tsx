@@ -6,7 +6,6 @@ const COLORS = ['#7B61FF', '#12B5A6', '#FFC53D', '#FF8A3D', '#EC5BA6', '#4C7DFF'
 
 type Piece = { left: number; delay: number; duration: number; dx: number; spin: number; color: string; w: number; h: number; round: boolean }
 
-/** Chuva de confetes (só CSS); desliga-se com prefers-reduced-motion */
 export default function Confetti({ count = 60 }: { count?: number }) {
   const [pieces] = useState<Piece[]>(() =>
     Array.from({ length: count }, (_, i) => ({

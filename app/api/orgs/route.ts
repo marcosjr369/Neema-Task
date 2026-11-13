@@ -5,10 +5,6 @@ import type { Department, Member, Org } from '../../types'
 import { userScope } from '../../lib/server/scopes'
 import { accountTypeOf, businessRoleOf, EMPLOYEE_ONLY, PERSONAL_ONLY } from '../../lib/account'
 
-/**
- * Criar empresa (só contas de empresa). A conta que cria passa a ser a conta da própria
- * empresa: administra tudo, mas não é funcionário (ver isCompanyAccount).
- */
 export const POST = handle(async req => {
   const user = await requireUser()
   const input = await body<{ name?: string; sector?: string; size?: string; domain?: string; departments?: string[] }>(req)
@@ -18,7 +14,6 @@ export const POST = handle(async req => {
     const me = db.users.find(u => u.id === user.id)!
     const mine = db.members.filter(m => m.userId === me.id && m.status === 'activo')
     if (accountTypeOf(me, mine.length > 0) === 'personal') fail(403, PERSONAL_ONLY)
-    // funcionários (mesmo administradores convidados) não criam empresas: só a conta de uma empresa
     const ownsOrg = db.orgs.some(o => o.createdBy === me.id)
     if (businessRoleOf(me, ownsOrg, mine.length > 0) === 'employee') fail(403, EMPLOYEE_ONLY)
     const now = Date.now()

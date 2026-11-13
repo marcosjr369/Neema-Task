@@ -12,12 +12,10 @@ export type Achievement = {
   color: string
 }
 
-/** Conquistas e o progresso actual de cada uma (usadas no Perfil e nas celebrações) */
 export function achievements(sessions: Session[], tasks: Task[], history?: CarriedHistory): Achievement[] {
   return achievementsFrom(achievementProgress(sessions, tasks, history))
 }
 
-/** As mesmas conquistas a partir dos números já calculados (ex.: vindos do servidor) */
 export function achievementsFrom({ done, hours, record, longest }: AchievementProgress): Achievement[] {
   return [
     { id: 'primeiro-passo', icon: RocketIcon, title: 'Primeiro passo', desc: 'Concluir 1 tarefa', value: done, target: 1, color: '#7B61FF' },

@@ -20,13 +20,6 @@ export const isStandalone = () =>
 
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
 
-/**
- * Estado da instalação da PWA.
- * - 'installed': já está a correr como app
- * - 'available': o browser permite instalar com um clique (Chrome/Edge/Android)
- * - 'ios': Safari no iPhone/iPad — instalação manual pelo botão Partilhar
- * - 'unavailable': browser sem suporte ou critérios ainda não cumpridos
- */
 export function useInstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
   const [installed, setInstalled] = useState(() => isStandalone())

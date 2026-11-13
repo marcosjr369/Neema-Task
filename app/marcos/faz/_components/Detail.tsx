@@ -10,8 +10,6 @@ import type { DayWork, PanelTask } from '../../../lib/server/panelDetail'
 import { ChartCard, ColumnChart, compact, type Point, type Series } from '../../../components/ui/Charts'
 import { date, dayLabel } from './format'
 
-/* Peças das fichas de detalhe (utilizador e empresa) */
-
 export function BackLink({ href, label }: { href: string; label: string }) {
   return (
     <Link href={href} className="inline-flex items-center gap-1.5 text-sm font-extrabold text-muted hover:text-body">
@@ -42,7 +40,6 @@ export function Stat({ label, value, hint }: { label: string; value: string; hin
   )
 }
 
-/** Lista de pares rótulo → valor (dados da ficha) */
 export function InfoList({ rows }: { rows: [string, ReactNode][] }) {
   return (
     <dl className="divide-y-2 divide-line">
@@ -71,7 +68,6 @@ export function Section({ title, right, children, className = '' }: { title: str
 const FOCUS: Series[] = [{ key: 'hours', name: 'Horas de foco', color: '#7B61FF' }]
 const DONE: Series[] = [{ key: 'tasks', name: 'Tarefas concluídas', color: '#0D9488' }]
 
-/** Foco e tarefas por dia, lado a lado (duas medidas, dois gráficos) */
 export function WorkCharts({ series, days }: { series: DayWork[]; days: number }) {
   const points = useMemo(() => {
     const mk = (v: (d: DayWork) => Record<string, number>): Point[] =>
@@ -101,7 +97,6 @@ const STATUS_CLS: Record<TaskStatus, string> = {
 }
 const REVIEW = { pending: 'Em revisão', approved: 'Aprovada', rejected: 'Devolvida' } as const
 
-/** Tarefas (pessoais ou de empresa), com filtro por estado */
 export function TaskTable({ tasks, showOrg = false, showAssignee = false }: { tasks: PanelTask[]; showOrg?: boolean; showAssignee?: boolean }) {
   const [filter, setFilter] = useState<'todas' | 'abertas' | TaskStatus>('abertas')
   const rows = tasks.filter(t => filter === 'todas' || (filter === 'abertas' ? t.status !== 'done' : t.status === filter))

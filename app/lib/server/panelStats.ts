@@ -3,12 +3,9 @@ import { accountTypeOf } from '../account'
 import { completedTime, isCompleted, rangeStats } from '../points'
 import type { DB } from './store'
 
-/** Métricas do painel de administração, calculadas sobre a base de dados inteira */
-
 const DAY = 24 * 60 * 60 * 1000
 
 export type DayStat = {
-  /** AAAA-MM-DD no fuso de quem vê */
   day: string
   signupsPersonal: number
   signupsBusiness: number
@@ -27,7 +24,6 @@ export type PanelUser = {
   disabled: boolean
   orgs: { id: string; name: string; role: Role }[]
   lastActive?: number
-  /** no período escolhido */
   focusSeconds: number
   tasksDone: number
   points: number
@@ -67,11 +63,9 @@ export type PanelOverview = {
   series: DayStat[]
   users: PanelUser[]
   orgs: PanelOrg[]
-  /** utilizadores eliminados, do mais recente para o mais antigo */
   deleted: DeletedUser[]
 }
 
-/** Data AAAA-MM-DD de um instante, no fuso indicado (UTC se o fuso for inválido) */
 export function dayKeyFn(timeZone: string) {
   let fmt: Intl.DateTimeFormat
   try {
@@ -82,7 +76,6 @@ export function dayKeyFn(timeZone: string) {
   return (ts: number) => fmt.format(ts)
 }
 
-/** Lista das últimas `days` datas (AAAA-MM-DD) no fuso indicado, da mais antiga para hoje */
 export function dayKeys(now: number, days: number, key: (ts: number) => string) {
   const [y, m, d] = key(now).split('-').map(Number)
   const today = Date.UTC(y, m - 1, d)
@@ -95,7 +88,6 @@ export function panelOverview(db: DB, days: number, timeZone: string, now = Date
   const inRange = new Set(keys)
   const from = now - (days + 1) * DAY // margem: o filtro fino é pela data no fuso
 
-  // quem é dono de cada sessão/tarefa (pessoal: userId/ownerId; empresa: membro → utilizador)
   const userOfMember = new Map(db.members.filter(m => m.userId).map(m => [m.id, m.userId!]))
   const ownerOfSession = (s: DB['sessions'][number]) => s.userId ?? (s.memberId ? userOfMember.get(s.memberId) : undefined)
   const ownerOfTask = (t: DB['tasks'][number]) => t.ownerId ?? (t.assigneeId ? userOfMember.get(t.assigneeId) : undefined)
@@ -103,7 +95,6 @@ export function panelOverview(db: DB, days: number, timeZone: string, now = Date
   const inOrg = new Set(activeMemberships.map(m => m.userId!))
   const typeOf = (u: DB['users'][number]): AccountType | 'none' => accountTypeOf(u, inOrg.has(u.id)) ?? 'none'
 
-  // dias com actividade e última actividade de cada utilizador
   const activeDays = new Map<string, Set<string>>()
   const lastActive = new Map<string, number>()
   const touch = (userId: string | undefined, ts: number) => {
@@ -144,7 +135,6 @@ export function panelOverview(db: DB, days: number, timeZone: string, now = Date
   }
   const rangeFrom = Date.parse(`${keys[0]}T00:00:00Z`) - 14 * 60 * 60 * 1000 // cobre qualquer fuso
 
-  // trabalho de cada utilizador no período
   const sessionsBy = new Map<string, DB['sessions']>()
   for (const s of db.sessions) {
     const owner = ownerOfSession(s)

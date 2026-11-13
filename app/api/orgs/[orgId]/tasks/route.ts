@@ -5,7 +5,6 @@ import { buildTask, checkReviewer, cleanTaskFields, pickId, withGroup, type Task
 import { isCompanyAccount } from '../../../../lib/org'
 import type { Task } from '../../../../types'
 
-/** ?scope=mine (atribuídas a mim) | team (as que giro ou criei) */
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { db, me } = await requireMember(orgId, { tasks: true })
   const scope = new URL(req.url).searchParams.get('scope') ?? 'mine'
@@ -18,7 +17,6 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   return { tasks: tasks.map(t => withGroup(db, t)) }
 })
 
-/** Cria a tarefa; com assigneeIds (2+ pessoas) cria uma tarefa de grupo: uma cópia por pessoa */
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { db, org, me } = await requireMember(orgId)
   const input = await body<TaskPatch & { assigneeId?: string; assigneeIds?: string[]; reviewerId?: string | null; id?: string }>(req)
@@ -35,7 +33,6 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
     if (a!.id !== me.id && !canManage(db, me, a)) fail(403, `Só podes atribuir tarefas à tua equipa (${a!.name})`)
     return a!
   })
-  // o supervisor não pode ser nenhum dos responsáveis
   const reviewerId = input.reviewerId ? ids.map(id => checkReviewer(db, org, input.reviewerId!, id))[0] : undefined
 
   const fields = cleanTaskFields(input)
@@ -50,7 +47,6 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
         assigneeId: assignee.id,
         createdBy: me.id,
         departmentId: assignee.departmentId,
-        // tarefas atribuídas por outra pessoa precisam de aprovação por omissão
         requiresApproval: fields.requiresApproval ?? assignee.id !== me.id,
         reviewerId,
         requiresAttachment: fields.requiresAttachment ?? false,

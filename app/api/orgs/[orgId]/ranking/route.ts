@@ -4,14 +4,12 @@ import { rangeStats, withHistory } from '../../../../lib/points'
 import { teamMembers } from '../../../../lib/org'
 import type { RankEntry, RankMetric } from '../../../../types'
 
-/** Ranking dos funcionários e dos departamentos. ?from=<ms>&metric= */
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const url = new URL(req.url)
   const from = Number(url.searchParams.get('from')) || 0
   const { db, org, me } = await requireMember(orgId, { tasks: true, sessions: { since: from } })
   const metric = (url.searchParams.get('metric') as RankMetric) || 'points'
 
-  // só pessoas: a conta da empresa não compete com a equipa
   const members = teamMembers(db.members, org).filter(m => m.orgId === orgId && m.status === 'activo')
   const tasks = db.tasks.filter(t => t.orgId === orgId)
   const entries: RankEntry[] = members.map(m => ({

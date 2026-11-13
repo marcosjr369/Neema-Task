@@ -6,7 +6,6 @@ import { useOrg } from '../../context/OrgContext'
 import type { Member } from '../../types'
 import Avatar from './Avatar'
 
-/** Escolha de várias pessoas da empresa, com pesquisa e atalho para um departamento inteiro */
 export default function MemberPicker({
   people, value, onChange, label, summary,
 }: { people: Member[]; value: string[]; onChange: (ids: string[]) => void; label: string; summary: (n: number) => string }) {

@@ -8,6 +8,7 @@ import { useOrg } from '../../context/OrgContext'
 import { sectionHref, visibleSections, type SectionId } from '../../lib/nav'
 import { COMPANY_ACCOUNT_LABEL, ROLE_LABEL } from '../../types'
 import Mascot from '../../components/ui/Mascot'
+import { ListSkeleton, StatsSkeleton } from '../../components/ui/Skeleton'
 import Overview from './Overview'
 import TeamTasks from './TeamTasks'
 import People from './People'
@@ -16,17 +17,12 @@ import Reports from './Reports'
 import Records from './Records'
 import Settings from './Settings'
 
-/**
- * Painel da empresa. Cada secção tem o seu endereço (/empresa, /empresa/pessoas, …):
- * no desktop navega-se pela sidebar; no telemóvel pelas abas do topo.
- */
 export default function CompanyPage({ section }: { section: SectionId }) {
   const org = useOrg()
   const router = useRouter()
   const sections = visibleSections(!!org?.isAdmin)
   const allowed = sections.some(s => s.id === section)
 
-  // secção só de administradores aberta por quem não é: volta à visão geral
   useEffect(() => {
     if (org?.isManager && !allowed) router.replace('/empresa')
   }, [org?.isManager, allowed, router])
@@ -69,7 +65,6 @@ export default function CompanyPage({ section }: { section: SectionId }) {
           </span>
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-black text-ink">
-              {/* no desktop a sidebar já diz onde estamos: o título é a secção */}
               <span className="lg:hidden">{org.org.name}</span>
               <span className="hidden lg:inline">{current.label}</span>
             </h1>
@@ -102,13 +97,22 @@ export default function CompanyPage({ section }: { section: SectionId }) {
 
       <div className="px-4 pt-5 lg:px-0">
         {org.error && <p className="card mb-4 bg-danger-light p-3 text-sm font-bold text-danger">{org.error}</p>}
-        {section === 'geral' && <Overview goTo={goTo} />}
-        {section === 'tarefas' && <TeamTasks />}
-        {section === 'relatorios' && <Reports />}
-        {section === 'recordes' && <Records />}
-        {section === 'pessoas' && <People />}
-        {section === 'departamentos' && <Departments />}
-        {section === 'definicoes' && <Settings />}
+        {/* até a equipa chegar, as listas estariam vazias ("sem funcionários"…): mostra a forma do conteúdo */}
+        {!org.loaded ? (
+          section === 'geral' || section === 'relatorios' || section === 'recordes' ? <StatsSkeleton /> : <ListSkeleton rows={6} />
+        ) : section === 'tarefas' && !org.teamLoaded ? (
+          <ListSkeleton rows={6} />
+        ) : (
+          <>
+            {section === 'geral' && <Overview goTo={goTo} />}
+            {section === 'tarefas' && <TeamTasks />}
+            {section === 'relatorios' && <Reports />}
+            {section === 'recordes' && <Records />}
+            {section === 'pessoas' && <People />}
+            {section === 'departamentos' && <Departments />}
+            {section === 'definicoes' && <Settings />}
+          </>
+        )}
       </div>
     </div>
   )

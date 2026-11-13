@@ -6,7 +6,6 @@ import type { Task } from '../types'
 import { useApp } from './AppContext'
 import { useOrg } from './OrgContext'
 
-/** Acções sobre tarefas de empresa que mantêm as listas (minhas e da equipa) em dia */
 export function useTaskActions() {
   const org = useOrg()
   const { replaceTask, refreshTasks, showToast } = useApp()
@@ -17,7 +16,6 @@ export function useTaskActions() {
     if (org?.isManager) org.upsertTeamTask(task)
   }, [replaceTask, org])
 
-  // tarefas de grupo: a resposta traz também as outras cópias (resumo do grupo actualizado)
   const call = useCallback(async (fn: () => Promise<{ task: Task; tasks?: Task[] }>, success?: string) => {
     setBusy(true)
     try {
@@ -47,13 +45,11 @@ export function useTaskActions() {
       call(() => api(url(id), { method: 'PATCH', body: { action: 'status', status } })),
     update: (id: string, patch: Record<string, unknown>) =>
       call(() => api(url(id), { method: 'PATCH', body: { action: 'update', patch } })),
-    /** Edita a tarefa de grupo (campos para todos; assigneeIds acrescenta/retira pessoas) e recarrega as listas */
     updateGroup: async (id: string, patch: Record<string, unknown>, success?: string) => {
       const task = await call(() => api(url(id), { method: 'PATCH', body: { action: 'update', patch: { ...patch, group: true } } }), success)
       if (task) await Promise.all([org?.refreshTeam(), refreshTasks()])
       return task
     },
-    /** Cria uma tarefa para várias pessoas (uma cópia por pessoa) */
     createGroup: async (data: Record<string, unknown>, assigneeIds: string[]) => {
       setBusy(true)
       try {
@@ -68,7 +64,6 @@ export function useTaskActions() {
         setBusy(false)
       }
     },
-    /** Apaga todas as cópias da tarefa de grupo */
     removeGroup: async (id: string) => {
       try {
         await api(`${url(id)}?group=1`, { method: 'DELETE' })

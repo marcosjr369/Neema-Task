@@ -17,11 +17,6 @@ const TASK_MILESTONES = [5, 10, 20]
 
 type Snapshot = { day: number; goal: boolean; level: number; streak: number; unlocked: Set<string>; tasksToday: number }
 
-/**
- * Celebra metas no centro do ecrã: meta diária, novo nível, sequência de dias,
- * conquistas e tarefas do dia. Compara com o estado anterior, por isso só celebra
- * o que acontece durante a sessão (recarregar a página não repete celebrações).
- */
 export default function MilestoneCelebration() {
   const { ready, allSessions, tasks, history, now, settings, celebration } = useApp()
   const [queue, setQueue] = useState<Milestone[]>([])
@@ -86,7 +81,6 @@ export default function MilestoneCelebration() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `list` e `today` derivam dos valores observados
   }, [ready, day, goal, level, streak, unlockedIds, tasksToday])
 
-  // espera que a celebração da tarefa concluída feche
   const current = celebration ? null : queue[0]
 
   useEffect(() => {
@@ -108,7 +102,6 @@ export default function MilestoneCelebration() {
         className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-white text-center shadow-2xl animate-bubble"
         style={{ transformOrigin: 'center' }}
       >
-        {/* raios a girar atrás da mascote */}
         <div className="relative flex h-56 items-end justify-center overflow-hidden" style={{ background: `${current.color}18` }}>
           <div
             className="absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 animate-spin-slow opacity-60"

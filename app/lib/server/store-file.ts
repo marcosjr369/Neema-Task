@@ -2,8 +2,6 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { emptyDB, type DB } from './store'
 
-/** Armazenamento num ficheiro JSON (.data/db.json), para desenvolvimento sem base de dados */
-
 // NEEMA_DATA_DIR permite usar outra pasta (ex.: testes sem tocar nos dados do servidor de desenvolvimento)
 export const DATA_DIR = process.env.NEEMA_DATA_DIR ? path.resolve(process.env.NEEMA_DATA_DIR) : path.join(process.cwd(), '.data')
 export const UPLOAD_DIR = path.join(DATA_DIR, 'uploads')
@@ -29,7 +27,6 @@ async function load(): Promise<DB> {
   try {
     db = { ...emptyDB(), ...JSON.parse(await fs.readFile(DB_FILE, 'utf8')) }
   } catch {
-    // ficheiro inexistente (ou apagado): começa vazio
     db = emptyDB()
     await persist(db)
   }

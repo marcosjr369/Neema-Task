@@ -18,7 +18,6 @@ export type Task = {
   category: TaskCategory
   status: TaskStatus
   priority: Priority
-  /** minutos de foco antes do alerta de pausa */
   focusDuration: number
   deadline?: string
   tags: string[]
@@ -28,7 +27,6 @@ export type Task = {
   checklist?: ChecklistItem[]
 } & OrgTaskFields
 
-/** Um bloco contínuo de tempo trabalhado numa tarefa */
 export type Session = {
   id: string
   taskId: string
@@ -36,9 +34,7 @@ export type Session = {
   start: number
   end: number
   seconds: number
-  /** sessões de empresa: membro que trabalhou */
   memberId?: string
-  /** sessões pessoais: utilizador */
   userId?: string
 }
 
@@ -51,10 +47,8 @@ export type ActiveTimer = {
   segmentStart: number | null
   /** segundos já contados nesta fase antes de segmentStart */
   accumulated: number
-  /** segundos de foco até ao alerta de pausa */
   blockSeconds: number
   breakSeconds: number
-  /** alerta desta fase já disparou */
   alerted: boolean
   pomodoros: number
 }
@@ -89,14 +83,10 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export type CategoryConfig = {
   label: string
-  /** cor principal */
   color: string
-  /** sombra / borda inferior dos botões 3D */
   dark: string
-  /** fundo suave */
   light: string
   defaultFocus: number
-  /** true = descanso/lazer: sem alertas de pausa */
   isRest: boolean
 }
 
@@ -123,8 +113,6 @@ export const PRIORITY_CONFIG: Record<Priority, { label: string; color: string }>
   media: { label: 'Média', color: '#FFC53D' },
   alta: { label: 'Alta', color: '#F2545B' },
 }
-
-// ─── Contas, empresas e equipas ─────────────────────────────────────────────
 
 export type ChecklistItem = { id: string; text: string; done: boolean }
 
@@ -155,21 +143,17 @@ export type Review = {
   by?: string
   at?: number
   comment?: string
-  /** quantas vezes foi rejeitada (aprovação à primeira dá bónus) */
   rejections: number
 }
 
 export type Recurrence = 'diaria' | 'semanal' | 'mensal'
 
-/** Campos extra das tarefas de empresa (todos em ids de membro) */
 export type OrgTaskFields = {
-  /** tarefas pessoais: utilizador dono */
   ownerId?: string
   orgId?: string
   assigneeId?: string
   createdBy?: string
   departmentId?: string
-  /** quem aprova a tarefa (id de membro); sem isto, aprova quem gere o responsável */
   reviewerId?: string
   requiresApproval?: boolean
   requiresAttachment?: boolean
@@ -191,14 +175,8 @@ export type OrgTaskFields = {
 
 export type RankingVisibility = 'nome' | 'iniciais' | 'oculto'
 
-/**
- * Tipo de conta, escolhido uma vez na entrada:
- *  - pessoal: só o espaço pessoal; ranking entre contas pessoais
- *  - empresa: só empresas (quem cria fica administrador; funcionários entram por convite)
- */
 export type AccountType = 'personal' | 'business'
 
-/** Dentro das contas de empresa: a conta da empresa ou a de um funcionário (não mudam depois) */
 export type BusinessRole = 'company' | 'employee'
 
 export type User = {
@@ -208,31 +186,22 @@ export type User = {
   picture?: string
   /** false quando o fornecedor não confirmou o email (não entra em empresas pelo domínio) */
   emailVerified?: boolean
-  /** identificador do utilizador no Clerk (login) */
   clerkId?: string
   createdAt: number
   rankingVisibility: RankingVisibility
   accountType?: AccountType
-  /** contas de empresa: a conta da própria empresa (criou-a) ou de um funcionário (entrou por convite) */
   businessRole?: BusinessRole
-  /** desactivado no painel de administração: não usa a app (e fica bloqueado no Clerk) */
   disabled?: boolean
   disabledAt?: number
   settings?: Partial<Settings>
-  /** último espaço usado */
   workspace?: Workspace
-  /** cronómetro activo por espaço ('personal' ou id da empresa) */
   timers?: Record<string, ActiveTimer>
-  /** fuso horário do dispositivo (para o horário dos lembretes) */
   timezone?: string
-  /** último lembrete de inactividade e quantos seguidos (frases cada vez mais tristes) */
   lastNudgeAt?: number
   nudgeCount?: number
 }
 
-/** Registo de um utilizador eliminado no painel (os dados dele já foram apagados) */
 export type DeletedUser = {
-  /** id que o utilizador tinha */
   id: string
   name: string
   email: string
@@ -241,11 +210,8 @@ export type DeletedUser = {
   createdAt: number
   deletedAt: number
   reason?: string
-  /** empresas a que pertencia (nome · papel) */
   orgs: string[]
-  /** empresas apagadas com ele (era a única pessoa) */
   deletedOrgs: string[]
-  /** totais de sempre, no momento da eliminação */
   focusSeconds: number
   tasksDone: number
 }
@@ -258,7 +224,6 @@ export const ROLE_LABEL: Record<Role, string> = {
   membro: 'Funcionário',
 }
 
-/** Progresso de uma pessoa da equipa (perfil da empresa) */
 export type TeamProgress = {
   id: string
   name: string
@@ -272,7 +237,6 @@ export type TeamProgress = {
   progress: { done: number; hours: number; record: number; longest: number }
 }
 
-/** Como aparece a conta que criou a empresa (gere tudo, mas não é funcionário) */
 export const COMPANY_ACCOUNT_LABEL = 'Conta da empresa'
 
 export type Org = {
@@ -280,12 +244,10 @@ export type Org = {
   name: string
   sector: string
   size?: string
-  /** domínio de email (ex.: empresa.com) cujos utilizadores podem entrar sem convite */
   domain?: string
   inviteCode: string
   createdAt: number
   createdBy: string
-  /** não aparece no ranking geral de empresas */
   hideFromRanking?: boolean
   /** meta diária de trabalho activo por pessoa, em horas (vazio = 8h) */
   dailyGoalHours?: number
@@ -296,7 +258,6 @@ export type Department = {
   orgId: string
   name: string
   color: string
-  /** ids de membro */
   supervisorIds: string[]
 }
 
@@ -328,17 +289,13 @@ export type Member = {
   role: Role
   status: 'activo' | 'pendente'
   joinedAt?: number
-  /** aceitou o registo de tempo e estado */
   consentAt?: number
   presence: PresenceStatus
   lastSeen?: number
-  /** início do dia de trabalho em curso ("Começar a trabalhar"); vazio depois de terminar */
   workStart?: number
-  /** pontos e conquistas que a pessoa já tinha quando aceitou o convite */
   history?: CarriedHistory
 }
 
-/** Resumo do que a pessoa fez antes de entrar na empresa (conta pessoal e outras empresas) */
 export type CarriedHistory = { at: number; xp: number; seconds: number; done: number; record: number; longest: number }
 
 export type PresenceSegment = {
@@ -352,12 +309,10 @@ export type PresenceSegment = {
 
 export type Membership = { org: Org; member: Member }
 
-/** Espaço de trabalho activo no cliente */
 export type Workspace = { kind: 'personal' } | { kind: 'org'; orgId: string; memberId: string }
 
 export type RankMetric = 'points' | 'hours' | 'tasks'
 
-/** Linha do ranking geral de empresas (totais e média por pessoa activa) */
 export type OrgRankEntry = {
   id: string
   name: string
@@ -367,7 +322,6 @@ export type OrgRankEntry = {
   tasks: number
   points: number
   isMine: boolean
-  /** escondida do ranking geral (só a própria equipa a vê) */
   hidden?: boolean
 }
 
@@ -382,8 +336,6 @@ export type RankEntry = {
   isMe: boolean
 }
 
-// ─── Calendário ─────────────────────────────────────────────────────────────
-
 export type EventKind = 'reuniao' | 'compromisso' | 'lembrete'
 
 export const EVENT_KINDS: Record<EventKind, { label: string; color: string; light: string }> = {
@@ -394,30 +346,178 @@ export const EVENT_KINDS: Record<EventKind, { label: string; color: string; ligh
 
 export type EventResponse = 'sim' | 'nao'
 
-/** Evento do calendário: da empresa (orgId, ids de membro) ou pessoal (ownerId, id de utilizador) */
 export type CalendarEvent = {
   id: string
   orgId?: string
   ownerId?: string
-  /** membro (empresa) ou utilizador (pessoal) que agendou */
   createdBy: string
   title: string
   description?: string
   kind: EventKind
   start: number
   end: number
-  /** sala ou link da chamada */
   location?: string
-  /** convidados (ids de membro), além de quem agendou */
   attendeeIds: string[]
-  /** respostas dos convidados */
   responses?: Record<string, EventResponse>
-  /** avisos push já enviados (5 min antes e à hora) */
   sentPre?: boolean
   sentStart?: boolean
   createdAt: number
   updatedAt: number
 }
 
-/** Minutos de antecedência do primeiro aviso */
 export const EVENT_LEAD_MINUTES = 5
+
+/* ─── Partilha (quadros e, mais tarde, planilhas) ─────────────────────── */
+
+export type ShareRole = 'view' | 'edit'
+
+/**
+ * - org: todos os membros activos da empresa (com orgRole);
+ * - link: qualquer pessoa com o link vê, mesmo sem conta (só quadros pessoais);
+ * - private: só quem foi convidado, ou quem souber a senha (se houver).
+ */
+export type ShareVisibility = 'org' | 'link' | 'private'
+
+export type Sharing = {
+  visibility: ShareVisibility
+  orgRole?: ShareRole
+  /** parte final do link público (/p/<token>) */
+  token: string
+  /** só no servidor: nunca vai para o browser */
+  password?: { salt: string; hash: string; at: number }
+}
+
+/** O que o browser recebe da partilha */
+export type SharingInfo = Omit<Sharing, 'password' | 'token'> & { token?: string; hasPassword: boolean }
+
+export type ShareKind = 'board' | 'sheet'
+
+export type ShareGrant = {
+  id: string
+  resourceId: string
+  kind: ShareKind
+  email: string
+  userId?: string
+  name?: string
+  /** pending: pedido de acesso à espera do dono */
+  role: ShareRole | 'pending'
+  createdAt: number
+  invitedBy?: string
+}
+
+export type Access = 'owner' | 'edit' | 'view'
+
+export const ACCESS_LABEL: Record<Access, string> = { owner: 'Dono', edit: 'Pode editar', view: 'Só ver' }
+
+/* ─── Quadros ─────────────────────────────────────────────────────────── */
+
+export type BoardLabel = { id: string; name: string; color: string }
+
+export type BoardList = {
+  id: string
+  title: string
+  color?: string
+  pinned?: boolean
+  archived?: boolean
+  createdAt: number
+}
+
+export type CardComment = { id: string; userId: string; name: string; text: string; at: number }
+
+export type BoardCard = {
+  id: string
+  listId: string
+  title: string
+  description?: string
+  labelIds: string[]
+  /** ids de utilizador */
+  memberIds: string[]
+  /** AAAA-MM-DD */
+  start?: string
+  due?: string
+  dueDone?: boolean
+  /** cor da capa */
+  cover?: string
+  checklist?: ChecklistItem[]
+  comments?: CardComment[]
+  archived?: boolean
+  createdAt: number
+  createdBy: string
+  updatedAt: number
+}
+
+export type Board = {
+  id: string
+  title: string
+  description?: string
+  color: string
+  /** foto de fundo (id de BOARD_IMAGES); vazio = só a cor */
+  background?: string
+  /** quadro da empresa (vazio = pessoal) */
+  orgId?: string
+  /** utilizador que criou e gere o quadro */
+  ownerId: string
+  createdAt: number
+  updatedAt: number
+  lists: BoardList[]
+  cards: BoardCard[]
+  labels: BoardLabel[]
+  sharing: Sharing
+}
+
+/** Quadro como chega ao browser (sem a senha) */
+export type BoardView = Omit<Board, 'sharing'> & { sharing: SharingInfo }
+
+export type BoardPerson = { userId: string; name: string; picture?: string }
+
+export type BoardSummary = {
+  id: string
+  title: string
+  color: string
+  background?: string
+  orgId?: string
+  orgName?: string
+  ownerName?: string
+  mine: boolean
+  access: Access
+  visibility: ShareVisibility
+  lists: number
+  cards: number
+  updatedAt: number
+}
+
+/* ─── Planilhas ───────────────────────────────────────────────────────── */
+
+export type CellAlign = 'left' | 'center' | 'right'
+
+/** num2: 2 casas decimais; eur: moeda; pct: percentagem */
+export type NumberFormat = 'num2' | 'eur' | 'pct'
+
+export type CellFmt = { b?: boolean; i?: boolean; align?: CellAlign; bg?: string; nf?: NumberFormat }
+
+export type SheetTab = {
+  id: string
+  name: string
+  rows: number
+  cols: number
+  /** "A1" → o que foi escrito (texto, número ou fórmula começada por "=") */
+  cells: Record<string, string>
+  fmt?: Record<string, CellFmt>
+  /** largura das colunas em px, por índice */
+  widths?: Record<string, number>
+}
+
+export type Sheet = {
+  id: string
+  title: string
+  orgId?: string
+  ownerId: string
+  createdAt: number
+  updatedAt: number
+  tabs: SheetTab[]
+  sharing: Sharing
+}
+
+export type SheetView = Omit<Sheet, 'sharing'> & { sharing: SharingInfo }
+
+export type SheetSummary = Omit<BoardSummary, 'lists' | 'cards' | 'color'> & { tabs: number }

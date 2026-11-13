@@ -20,7 +20,6 @@ export const PATCH = handle<{ orgId: string; memberId: string }>(async (req, { o
     if (patch.jobTitle !== undefined) m.jobTitle = patch.jobTitle.trim().slice(0, 60) || undefined
     if (patch.phone !== undefined) m.phone = patch.phone.trim().slice(0, 30) || undefined
 
-    // a conta da empresa é sempre administradora e não pertence a departamentos
     const companyAccount = isCompanyAccount(m, db.orgs.find(o => o.id === orgId))
     if (companyAccount && patch.role && patch.role !== 'admin') fail(400, 'A conta da empresa é sempre administradora')
 
@@ -34,7 +33,6 @@ export const PATCH = handle<{ orgId: string; memberId: string }>(async (req, { o
         if (m.role === 'admin' && activeAdmins(db, orgId) <= 1) fail(400, 'A empresa precisa de pelo menos um administrador')
         m.role = patch.role
       }
-      // um supervisor gere o seu departamento; quem deixa de o ser sai das listas
       db.departments.forEach(d => {
         if (d.orgId !== orgId) return
         if (m.role !== 'supervisor') d.supervisorIds = d.supervisorIds.filter(id => id !== m.id)
@@ -45,13 +43,11 @@ export const PATCH = handle<{ orgId: string; memberId: string }>(async (req, { o
   })
 })
 
-/** Remover funcionário (admin) ou sair da empresa (o próprio) */
 export const DELETE = handle<{ orgId: string; memberId: string }>(async (_req, { orgId, memberId }) => {
   const { me } = await requireMember(orgId)
   if (me.role !== 'admin' && me.id !== memberId) fail(403, 'Sem permissão')
   return mutate(orgScope(orgId, { presence: 'open' }), db => {
     const m = db.members.find(x => x.id === memberId && x.orgId === orgId) ?? fail(404, 'Funcionário não encontrado')
-    // a conta que criou a empresa é a dona: não sai nem é removida
     if (m.userId && m.userId === db.orgs.find(o => o.id === orgId)?.createdBy) fail(400, 'A conta que criou a empresa não pode sair nem ser removida')
     if (m.role === 'admin' && activeAdmins(db, orgId) <= 1) fail(400, 'Não podes remover o único administrador')
     db.members = db.members.filter(x => x.id !== m.id)

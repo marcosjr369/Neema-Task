@@ -11,7 +11,6 @@ import { usePanel, usePanelFetch } from '../../_components/PanelShell'
 import { BackLink, DetailState, InfoList, Section, Stat, TaskTable, WorkCharts } from '../../_components/Detail'
 import { ago, date } from '../../_components/format'
 
-/** Ficha de uma empresa: dados, funcionários, departamentos, presença, tarefas e estatísticas */
 export default function PanelOrgPage() {
   const { id } = useParams<{ id: string }>()
   const { days } = usePanel()

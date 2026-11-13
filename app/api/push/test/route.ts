@@ -1,7 +1,6 @@
 import { fail, handle, requireUser } from '../../../lib/server/api'
 import { pushConfigured, sendToUser } from '../../../lib/server/push'
 
-/** Envia uma notificação de teste para os dispositivos do próprio */
 export const POST = handle(async () => {
   const user = await requireUser()
   if (!pushConfigured()) fail(503, 'Notificações push não configuradas no servidor')

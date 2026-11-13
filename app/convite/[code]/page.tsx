@@ -4,7 +4,6 @@ import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Mascot from '../../components/ui/Mascot'
 
-/** Link de convite partilhável: /convite/ABC123 */
 export default function InvitePage() {
   const { code } = useParams<{ code: string }>()
   const router = useRouter()

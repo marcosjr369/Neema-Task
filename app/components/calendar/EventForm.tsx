@@ -10,10 +10,10 @@ import { EVENT_KINDS, EVENT_LEAD_MINUTES, type CalendarEvent, type EventKind } f
 import Modal from '../ui/Modal'
 import MemberPicker from '../ui/MemberPicker'
 import { KIND_ICON } from './EventCard'
+import { Busy } from '../ui/Spinner'
 
 const DURATIONS = [15, 30, 45, 60, 90, 120]
 
-/** Próxima meia hora (hoje) ou 9h (outro dia) */
 function defaultStart(day: number) {
   const now = Date.now()
   const d = new Date(day)
@@ -26,7 +26,6 @@ function defaultStart(day: number) {
   return d.getTime()
 }
 
-/** Agendar ou editar um evento; quem gere pode convidar qualquer pessoa da empresa */
 export default function EventForm({ event, day, onClose }: { event: CalendarEvent | null; day: number; onClose: () => void }) {
   const org = useOrg()
   const { showToast } = useApp()
@@ -40,7 +39,7 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
   const [description, setDescription] = useState(event?.description ?? '')
   const [attendees, setAttendees] = useState<string[]>(event?.attendeeIds ?? [])
   const [busy, setBusy] = useState(false)
-  const canInvite = !!org?.isManager
+  const canInvite = !!org
   const people = org ? org.members.filter(m => m.status === 'activo' && m.id !== org.me.id) : []
 
   const startMs = fromInputs(date, start)
@@ -80,7 +79,7 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
       onClose={onClose}
       footer={
         <button type="submit" form="event-form" disabled={busy || !title.trim()} className={`btn w-full ${title.trim() ? 'btn-primary' : 'btn-disabled'}`}>
-          {busy ? 'A guardar…' : event ? 'Guardar alterações' : attendees.length ? `Agendar com ${attendees.length} pessoa${attendees.length === 1 ? '' : 's'}` : 'Agendar'}
+          <Busy busy={busy} text="A guardar…">{event ? 'Guardar alterações' : attendees.length ? `Agendar com ${attendees.length} pessoa${attendees.length === 1 ? '' : 's'}` : 'Agendar'}</Busy>
         </button>
       }
     >
@@ -125,7 +124,6 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
               className="input"
               value={start}
               onChange={e => {
-                // mantém a duração ao mudar a hora de início
                 const keep = duration > 0 ? duration : 30
                 setStart(e.target.value)
                 setEnd(timeInput(fromInputs(date, e.target.value) + keep * 60000))

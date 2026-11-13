@@ -27,11 +27,10 @@ import Landing from '../landing/Landing'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
-/** Páginas que no desktop usam a largura toda (sem painel direito) */
-const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario']
-/** Páginas em ecrã inteiro, sem navegação */
+const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas']
+/** páginas que ocupam a largura toda (o quadro desloca-se na horizontal) */
+const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/')
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
-/** Páginas abertas sem sessão iniciada */
 const PUBLIC = ['/entrar', '/convite', '/marcos']
 
 function Shell({ children }: { children: ReactNode }) {
@@ -40,7 +39,6 @@ function Shell({ children }: { children: ReactNode }) {
   const { openTaskSheet, sheet } = useApp()
   const org = useOrg()
   const isCompany = !!org?.isCompany
-  // a conta da empresa não tem trabalho próprio: Início, Tarefas, Foco e Estatísticas levam ao painel
   const redirect = isCompany && PERSONAL_ONLY_PATHS.includes(pathname)
   const immersive = IMMERSIVE.some(p => pathname.startsWith(p))
   const wide = WIDE.some(p => pathname === p || pathname.startsWith(`${p}/`))
@@ -55,7 +53,6 @@ function Shell({ children }: { children: ReactNode }) {
     syncPush().catch(() => undefined)
   }, [])
 
-  // Atalho de teclado "N" para nova tarefa
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -80,7 +77,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="lg:pl-64">
             <div
               className={`mx-auto flex lg:gap-8 lg:px-8 ${
-                pathname === '/tarefas' ? 'lg:max-w-none' : wide ? 'lg:max-w-6xl' : 'lg:max-w-5xl'
+                FULL(pathname) ? 'lg:max-w-none' : wide ? 'lg:max-w-6xl' : 'lg:max-w-5xl'
               }`}
             >
               <div className="relative mx-auto flex min-h-dvh w-full min-w-0 max-w-lg flex-col bg-white sm:border-x-2 sm:border-line lg:mx-0 lg:max-w-none lg:flex-1 lg:border-x-0">
@@ -90,7 +87,6 @@ function Shell({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          {/* Mobile: botão + e temporizador flutuante */}
           <div className="pointer-events-none fixed inset-x-0 bottom-[76px] z-30 mx-auto flex max-w-lg flex-col items-end gap-3 px-4 pb-[env(safe-area-inset-bottom)] lg:hidden">
             {showFab && (
               <button
@@ -103,7 +99,6 @@ function Shell({ children }: { children: ReactNode }) {
             )}
             <MiniTimer />
           </div>
-          {/* Desktop em páginas largas: temporizador no canto */}
           {wide && (
             <div className="pointer-events-none fixed bottom-6 right-6 z-30 hidden w-[340px] lg:block">
               <MiniTimer />
@@ -126,30 +121,25 @@ function Shell({ children }: { children: ReactNode }) {
   )
 }
 
-/**
- * Sem sessão só abrem as páginas de entrada; com sessão, escolhe os providers
- * conforme o espaço activo (pessoal ou empresa).
- */
 function Workspace({ children }: { children: ReactNode }) {
-  const { workspace, current, user, loading, switching, needsSetup, disabled, logout } = useAccount()
+  const { workspace, current, user, loading, switching, needsSetup, disabled, failed, refresh, logout } = useAccount()
   const pathname = usePathname()
   const router = useRouter()
   const isPublic = PUBLIC.some(p => pathname.startsWith(p))
-  // "/" sem sessão é a página de apresentação; com sessão, o início da app
   const isLanding = pathname === '/'
 
   useEffect(() => {
-    if (loading || isPublic || disabled) return
+    if (loading || isPublic || disabled || failed) return
     if (!user) {
       if (!isLanding) router.replace('/entrar')
       return
     }
-    // conta nova que ainda não escolheu o tipo (ou de empresa sem empresa) → entrada
     if (needsSetup) router.replace('/entrar')
-  }, [loading, user, needsSetup, disabled, isPublic, isLanding, router])
+  }, [loading, user, needsSetup, disabled, failed, isPublic, isLanding, router])
 
-  // painel de administração: página própria, com palavra-passe (não depende da conta)
   if (pathname.startsWith('/marcos')) return <main className="min-h-dvh bg-snow">{children}</main>
+  // link de partilha: abre com ou sem sessão, fora dos espaços da conta
+  if (pathname.startsWith('/p/')) return <main className="min-h-dvh bg-white">{children}</main>
   // na entrada, o login acabado de fazer não troca a página pelo ecrã de carregamento (perdia os passos)
   if (loading && !(switching && isPublic)) return <Splash />
   if (disabled) {
@@ -159,6 +149,19 @@ function Workspace({ children }: { children: ReactNode }) {
         <h1 className="mt-4 text-2xl font-black text-ink">Conta desactivada</h1>
         <p className="mt-1 max-w-xs font-semibold text-muted">A tua conta foi desactivada. Se achas que é um engano, fala com o suporte.</p>
         <button onClick={() => logout()} className="btn btn-primary mt-6">Terminar sessão</button>
+      </main>
+    )
+  }
+  // sessão iniciada no Clerk, mas a conta não chegou do servidor: em vez do login (que, com a
+  // sessão já aberta, voltava a redireccionar em ciclo), deixa tentar outra vez ou sair
+  if (!user && failed) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-white px-6 text-center">
+        <Mascot size={110} mood="sad" />
+        <h1 className="mt-4 text-2xl font-black text-ink">Não consegui abrir a tua conta</h1>
+        <p className="mt-1 max-w-xs font-semibold text-muted">{failed}</p>
+        <button onClick={() => refresh()} className="btn btn-primary mt-6">Tentar outra vez</button>
+        <button onClick={() => logout()} className="mt-3 font-bold text-muted hover:text-body cursor-pointer">Terminar sessão</button>
       </main>
     )
   }
@@ -185,7 +188,6 @@ function Workspace({ children }: { children: ReactNode }) {
   )
 }
 
-/** Estilo por omissão dos ícones: traço "bold", arredondado como o resto da UI */
 const ICONS = { weight: 'bold' as const, size: 22, mirrored: false }
 
 export default function AppShell({ children }: { children: ReactNode }) {

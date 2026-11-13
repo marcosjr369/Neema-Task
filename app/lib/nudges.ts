@@ -1,4 +1,3 @@
-/** Frases da Udacha quando não estás a trabalhar; cada lembrete seguido é mais triste */
 const NUDGES = [
   { title: 'Tenho saudades tuas…', body: (t: string) => `Já passou ${t} sem focares. Vamos voltar?` },
   { title: 'A Udacha está triste', body: (t: string) => `Não trabalhas há ${t}. Só 25 minutos, prometo que vale a pena.` },
@@ -6,7 +5,6 @@ const NUDGES = [
   { title: 'Ainda estás aí?', body: (t: string) => `${t} parado. Uma tarefa pequena já me deixa feliz outra vez.` },
 ]
 
-/** `count` = quantos lembretes seguidos já foram enviados; `idleFor` já formatado (ex.: "1h 20min") */
 export function nudgeMessage(count: number, idleFor: string) {
   const n = NUDGES[Math.min(count, NUDGES.length - 1)]
   return { title: n.title, body: n.body(idleFor) }

@@ -1,18 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { FireIcon, LightningIcon, TimerIcon } from '@phosphor-icons/react'
+import { usePathname } from 'next/navigation'
+import { CalendarBlankIcon, FireIcon, LightningIcon, TimerIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import PresencePicker from '../account/PresencePicker'
 import { computeStreak, formatShort, levelInfo, todaySeconds, totalXp } from '../../lib/stats'
 
-/** Barra superior com nível, sequência, XP e tempo de hoje */
 export default function TopBar() {
   const { allSessions, tasks, history, now, timer } = useApp()
   const { streak, activeToday } = computeStreak(allSessions, tasks, now)
   const xp = totalXp(allSessions, tasks, history)
   const { level } = levelInfo(xp)
   const today = todaySeconds(allSessions, now)
+  const onCalendar = usePathname().startsWith('/calendario')
 
   return (
     <header className="sticky top-0 z-20 border-b-2 border-line bg-white/95 backdrop-blur lg:hidden">
@@ -28,6 +29,14 @@ export default function TopBar() {
         </Link>
         <Link href="/foco" className="flex items-center gap-1 font-extrabold" style={{ color: timer ? '#F2545B' : '#12B5A6' }} aria-label="Tempo focado hoje">
           <TimerIcon size={22} /> {formatShort(today)}
+        </Link>
+        <Link
+          href="/calendario"
+          aria-label="Calendário"
+          aria-current={onCalendar ? 'page' : undefined}
+          className={`flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${onCalendar ? 'bg-[#22A6CF1f] text-[#22A6CF]' : 'text-muted'}`}
+        >
+          <CalendarBlankIcon size={22} weight={onCalendar ? 'duotone' : 'bold'} />
         </Link>
         <PresencePicker compact />
       </div>

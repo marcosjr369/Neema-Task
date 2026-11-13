@@ -3,11 +3,8 @@ import { totalPoints } from './points'
 
 const DAY = 24 * 60 * 60 * 1000
 
-// ─── Formatação ─────────────────────────────────────────────────────────────
-
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** 1:05:09 ou 05:09 */
 export function formatClock(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds))
   const h = Math.floor(s / 3600)
@@ -16,7 +13,6 @@ export function formatClock(totalSeconds: number) {
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
 }
 
-/** 45 min · 2h 10min */
 export function formatDuration(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60)
   if (m < 1) return totalSeconds > 0 ? `${Math.floor(totalSeconds)}s` : '0 min'
@@ -26,7 +22,6 @@ export function formatDuration(totalSeconds: number) {
   return r ? `${h}h ${r}min` : `${h}h`
 }
 
-/** Versão curta para eixos e chips: 45m · 2,5h */
 export function formatShort(totalSeconds: number) {
   const m = totalSeconds / 60
   if (m < 60) return `${Math.round(m)}m`
@@ -48,22 +43,16 @@ export function formatDeadline(deadline: string, now: number) {
   }
 }
 
-// ─── Datas ──────────────────────────────────────────────────────────────────
-
 export function startOfDay(ts: number) {
   const d = new Date(ts)
   d.setHours(0, 0, 0, 0)
   return d.getTime()
 }
 
-// ─── Temporizador ───────────────────────────────────────────────────────────
-
-/** Segundos decorridos na fase actual do temporizador */
 export function phaseElapsed(t: ActiveTimer, now: number) {
   return t.accumulated + (t.segmentStart ? Math.max(0, (now - t.segmentStart) / 1000) : 0)
 }
 
-/** Sessão "virtual" para o segmento de foco que está a correr agora */
 export function liveSession(t: ActiveTimer | null, tasks: Task[], now: number): Session | null {
   if (!t || t.phase !== 'focus' || !t.segmentStart) return null
   const task = tasks.find(x => x.id === t.taskId)
@@ -76,8 +65,6 @@ export function liveSession(t: ActiveTimer | null, tasks: Task[], now: number): 
     seconds: Math.max(0, (now - t.segmentStart) / 1000),
   }
 }
-
-// ─── Agregações ─────────────────────────────────────────────────────────────
 
 export const sumSeconds = (sessions: Session[]) =>
   sessions.reduce((acc, s) => acc + s.seconds, 0)
@@ -121,7 +108,6 @@ export function dailySeries(sessions: Session[], tasks: Task[], now: number, day
   return out
 }
 
-/** Dias consecutivos (até hoje ou ontem) com tempo focado ou tarefas concluídas */
 export function computeStreak(sessions: Session[], tasks: Task[], now: number) {
   const active = new Set<number>()
   sessions.forEach(s => { if (s.seconds >= 60) active.add(startOfDay(s.start)) })
@@ -157,10 +143,8 @@ export function bestStreak(sessions: Session[], tasks: Task[]) {
   return best
 }
 
-/** Números de que dependem as conquistas (sem ícones: também corre no servidor) */
 export type AchievementProgress = { done: number; hours: number; record: number; longest: number }
 
-/** history: o que a pessoa trouxe ao aceitar o convite da empresa (soma-se ao feito lá dentro) */
 export function achievementProgress(sessions: Session[], tasks: Task[], history?: CarriedHistory): AchievementProgress {
   const done = tasks.filter(t => t.status === 'done' && t.review?.status !== 'pending').length
   const hours = sumSeconds(sessions) / 3600
@@ -195,7 +179,6 @@ export function categoryBreakdown(sessions: Session[]) {
     .sort((a, b) => b.seconds - a.seconds)
 }
 
-/** Hora do dia (0-23) com mais tempo focado */
 export function peakHour(sessions: Session[]) {
   const hours = new Array(24).fill(0)
   sessions.forEach(s => { hours[new Date(s.start).getHours()] += s.seconds })

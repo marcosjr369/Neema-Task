@@ -13,8 +13,8 @@ import { CategoryBadge, CategoryGlyph } from './components/ui/icons'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, Task } from './types'
 import { formatClock, formatDuration, phaseElapsed, startOfDay, todaySeconds } from './lib/stats'
 import UpcomingEvents from './components/calendar/UpcomingEvents'
+import { PageSkeleton } from './components/ui/Skeleton'
 
-/** Deslocamento horizontal dos nós, em zigue-zague */
 const OFFSETS = [0, 44, 66, 44, 0, -44, -66, -44]
 
 function greeting(now: number) {
@@ -27,7 +27,6 @@ function greeting(now: number) {
 
 const PRIORITY_ORDER = { alta: 0, media: 1, baixa: 2 }
 
-/** Cores das "unidades" (um dia de histórico cada), em ciclo */
 const UNIT_COLORS = [
   { bg: '#7B61FF', dark: '#5B43D6' },
   { bg: '#12B5A6', dark: '#0D9488' },
@@ -36,7 +35,6 @@ const UNIT_COLORS = [
   { bg: '#4C7DFF', dark: '#3461E0' },
 ]
 
-/** "Ontem", "seg., 20 out." ou "Mais antigas" (tarefas sem data de conclusão) */
 function dayName(day: number, today: number) {
   if (day === 0) return 'Mais antigas'
   const diff = Math.round((today - day) / 86_400_000)
@@ -44,7 +42,6 @@ function dayName(day: number, today: number) {
   return new Date(day).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-/** Cabeçalho de cada dia do histórico, como as unidades do Duolingo */
 function UnitBanner({ index, label, count, seconds }: { index: number; label: string; count: number; seconds: number }) {
   const c = UNIT_COLORS[index % UNIT_COLORS.length]
   return (
@@ -61,7 +58,6 @@ function UnitBanner({ index, label, count, seconds }: { index: number; label: st
   )
 }
 
-/** Baú no fim de cada dia: dourado quando a meta de foco desse dia foi cumprida */
 function Chest({ index, open, label, live = false }: { index: number; open: boolean; label: string; live?: boolean }) {
   return (
     <div style={{ transform: `translateX(${OFFSETS[index % OFFSETS.length]}px)` }}>
@@ -103,7 +99,6 @@ function PathNode({
             </span>
           </span>
         )}
-        {/* Udacha ao lado da tarefa actual, do lado oposto ao zigue-zague */}
         {current && (
           <span className={`pointer-events-none absolute top-0 ${offset > 0 ? 'right-full mr-4' : 'left-full ml-4'}`}>
             <Mascot size={88} animated wave={cheer} mood={cheer ? 'excited' : 'happy'} />
@@ -137,7 +132,7 @@ function PathNode({
 export default function HomePage() {
   const {
     tasks, allSessions, settings, now, timer, activeTask,
-    openTaskSheet, startTimer, notificationPermission, requestNotifications,
+    openTaskSheet, startTimer, notificationPermission, requestNotifications, ready,
   } = useApp()
   const { user } = useAccount()
   const firstName = user?.name.split(' ')[0] ?? ''
@@ -154,17 +149,15 @@ export default function HomePage() {
     .filter(t => t.status === 'done' && (t.completedAt ?? 0) >= dayStart)
     .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0))
 
-  // histórico: tarefas concluídas em dias anteriores, agrupadas por dia (mais antigo primeiro)
   const pastByDay = new Map<number, Task[]>()
   for (const t of tasks) {
     if (t.status !== 'done' || (t.completedAt ?? 0) >= dayStart) continue
-    const day = t.completedAt ? startOfDay(t.completedAt) : 0 // sem data: grupo "mais antigas"
+    const day = t.completedAt ? startOfDay(t.completedAt) : 0
     pastByDay.set(day, [...(pastByDay.get(day) ?? []), t])
   }
   const pastDays = [...pastByDay.entries()]
     .sort(([a], [b]) => a - b)
     .map(([day, list]) => ({ day, tasks: list.sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0)) }))
-  // foco por dia, para saber em que dias a meta foi cumprida (baú aberto)
   const focusByDay = new Map<number, number>()
   allSessions.forEach(s => { const d = startOfDay(s.start); focusByDay.set(d, (focusByDay.get(d) ?? 0) + s.seconds) })
 
@@ -179,10 +172,8 @@ export default function HomePage() {
     })
   const path = [...doneToday, ...open]
   const next = open[0]
-  // nós do histórico antes de hoje (tarefas + um baú por dia): o zigue-zague continua a partir daí
   const todayStart = pastDays.reduce((a, d) => a + d.tasks.length + 1, 0)
 
-  // com histórico, abre já na tarefa actual (como o Duolingo abre na lição em curso)
   const scrolled = useRef(false)
   useEffect(() => {
     if (scrolled.current || pastDays.length === 0) return
@@ -191,12 +182,13 @@ export default function HomePage() {
     el?.scrollIntoView({ block: 'center' })
   }, [pastDays.length])
 
+  if (!ready) return <><TopBar /><PageSkeleton stats rows={4} /></>
+
   return (
     <>
       <TopBar />
 
       <div className="space-y-5 px-4 pt-5">
-        {/* Objetivo diário — banner ao estilo "unidade" */}
         <section className="flex overflow-hidden rounded-2xl bg-brand text-white shadow-[0_4px_0_#5B43D6] animate-rise">
           <div className="flex shrink-0 items-end pb-1 pl-3 pt-4">
             <Mascot size={68} animated wave={goalReached} mood={goalReached ? 'excited' : 'happy'} />
@@ -243,7 +235,6 @@ export default function HomePage() {
           </Link>
         )}
 
-        {/* no desktop a agenda está no painel direito */}
         <div className="lg:hidden"><UpcomingEvents /></div>
 
         {notificationPermission === 'default' && (
@@ -261,7 +252,6 @@ export default function HomePage() {
           </button>
         )}
 
-        {/* Continuar / próxima tarefa */}
         {timer && activeTask ? (
           <Link
             href="/foco"
@@ -296,7 +286,6 @@ export default function HomePage() {
           </div>
         ) : null}
 
-        {/* Caminho: todo o histórico por dias e, no fim, o dia de hoje */}
         {path.length === 0 && pastDays.length === 0 ? (
           <section className="flex flex-col items-center px-4 py-10 text-center">
             <Mascot size={130} animated wave />
@@ -311,7 +300,6 @@ export default function HomePage() {
         ) : (
           <section aria-label="Caminho">
             {pastDays.map((d, u) => {
-              // o zigue-zague continua de um dia para o outro
               const start = pastDays.slice(0, u).reduce((a, x) => a + x.tasks.length + 1, 0)
               const secs = focusByDay.get(d.day) ?? 0
               return (
@@ -327,7 +315,6 @@ export default function HomePage() {
               )
             })}
 
-            {/* hoje: concluídas hoje, por fazer e o baú do objetivo diário */}
             <div className="flex items-center gap-3 py-2" id="caminho-hoje">
               <span className="h-0.5 flex-1 bg-line" />
               <h2 className="text-sm font-extrabold uppercase tracking-wider text-muted">

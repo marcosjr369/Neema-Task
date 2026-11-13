@@ -9,6 +9,7 @@ import { DEPT_COLORS } from '../../lib/org'
 import type { Department } from '../../types'
 import Avatar from '../../components/ui/Avatar'
 import Modal from '../../components/ui/Modal'
+import { Busy } from '../../components/ui/Spinner'
 
 function DepartmentForm({ dept, onClose }: { dept: Department | null; onClose: () => void }) {
   const org = useOrgRequired()
@@ -56,12 +57,12 @@ function DepartmentForm({ dept, onClose }: { dept: Department | null; onClose: (
       footer={
         <div className="flex gap-2">
           {dept && (
-            <button type="button" onClick={remove} disabled={busy} className="btn btn-ghost px-4 text-danger" aria-label="Apagar">
+            <button type="button" onClick={remove} disabled={busy} aria-busy={busy} className="btn btn-ghost px-4 text-danger" aria-label="Apagar">
               <TrashIcon size={18} />
             </button>
           )}
           <button type="submit" form="dept-form" disabled={busy || !name.trim()} className="btn btn-primary flex-1">
-            {busy ? 'A guardar…' : 'Guardar'}
+            <Busy busy={busy} text="A guardar…">Guardar</Busy>
           </button>
         </div>
       }

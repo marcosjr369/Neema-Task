@@ -20,7 +20,6 @@ function storage() {
   return g.__neemaStorage.storage
 }
 
-/** Cria o bucket privado na primeira utilização */
 function bucket() {
   g.__neemaBucket ??= (async () => {
     const { data } = await storage().getBucket(BUCKET)

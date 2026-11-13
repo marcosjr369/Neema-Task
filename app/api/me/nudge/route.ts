@@ -2,10 +2,6 @@ import { handle, requireUser } from '../../../lib/server/api'
 import { userScope } from '../../../lib/server/scopes'
 import { mutate } from '../../../lib/server/store'
 
-/**
- * A app aberta mostrou um lembrete: regista-o para o servidor não repetir por push
- * e devolve quantos já houve seguidos (a frase fica mais triste a cada um).
- */
 export const POST = handle(async () => {
   const me = await requireUser()
   return mutate(userScope(me.id, { sessions: 'all' }), db => {

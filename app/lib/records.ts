@@ -3,15 +3,8 @@ import { presenceTotals } from './org'
 import { startOfDay } from './stats'
 import type { Org, PresenceSegment, PresenceStatus, Session, Task } from '../types'
 
-/*
- * Recordes e análise de desempenho: meta diária, tarefas antes do prazo, aprovadas à primeira,
- * e uma pontuação de 0 a 100 que junta vários factores para distinguir os funcionários.
- */
-
 export const DEFAULT_DAILY_GOAL_HOURS = 8
-/** margem à volta da meta: até 15 min abaixo ou acima ainda conta como "na meta" */
 export const GOAL_MARGIN = 15 * 60
-/** estados que contam como trabalho para a meta */
 export const ACTIVE_STATES: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao']
 
 export const goalSecondsOf = (org: Pick<Org, 'dailyGoalHours'>) => (org.dailyGoalHours ?? DEFAULT_DAILY_GOAL_HOURS) * 3600
@@ -23,7 +16,6 @@ export const GOAL_BANDS: { id: GoalBand; label: string; color: string }[] = [
   { id: 'acima', label: 'Acima da meta', color: '#7B61FF' },
 ]
 
-/** Sem registo (0) não tem faixa */
 export function bandOf(seconds: number, goal: number): GoalBand | null {
   if (seconds <= 0) return null
   if (seconds < goal - GOAL_MARGIN) return 'abaixo'
@@ -36,8 +28,6 @@ export function activeSeconds(segments: PresenceSegment[], from: number, to: num
   return ACTIVE_STATES.reduce((a, s) => a + (t[s] ?? 0), 0)
 }
 
-// ─── Períodos ───────────────────────────────────────────────────────────────
-
 export type RecordPeriod = 'dia' | 'semana' | 'mes' | 'ano'
 export const RECORD_PERIODS: { id: RecordPeriod; label: string }[] = [
   { id: 'dia', label: 'Diário' },
@@ -46,11 +36,10 @@ export const RECORD_PERIODS: { id: RecordPeriod; label: string }[] = [
   { id: 'ano', label: 'Anual' },
 ]
 
-/** Início e fim do período; offset 0 = o actual, -1 = o anterior, … */
 export function periodRange(p: RecordPeriod, offset: number, now: number) {
   const a = new Date(startOfDay(now))
   if (p === 'dia') a.setDate(a.getDate() + offset)
-  if (p === 'semana') a.setDate(a.getDate() - ((a.getDay() + 6) % 7) + offset * 7) // segunda-feira
+  if (p === 'semana') a.setDate(a.getDate() - ((a.getDay() + 6) % 7) + offset * 7)
   if (p === 'mes') { a.setDate(1); a.setMonth(a.getMonth() + offset) }
   if (p === 'ano') { a.setMonth(0, 1); a.setFullYear(a.getFullYear() + offset) }
   const b = new Date(a)
@@ -70,52 +59,38 @@ export function periodRange(p: RecordPeriod, offset: number, now: number) {
   return { from, to, label }
 }
 
-/** Inícios dos dias do intervalo, até hoje */
 export function daysIn(from: number, to: number, now: number) {
   const out: number[] = []
   for (let d = new Date(from); d.getTime() < to && d.getTime() <= now; d.setDate(d.getDate() + 1)) out.push(d.getTime())
   return out
 }
 
-// ─── Análise por funcionário ────────────────────────────────────────────────
-
 export type Factor = { id: 'meta' | 'prazos' | 'qualidade' | 'foco' | 'entregas'; label: string; hint: string; value: number | null }
 
 export type MemberAnalysis = {
   memberId: string
-  /** tempo activo por dia (só dias com registo) */
   perDay: { day: number; seconds: number; band: GoalBand }[]
   daysByBand: Record<GoalBand, number>
   activeSeconds: number
   avgPerDay: number
-  /** faixa da média por dia com registo */
   band: GoalBand | null
   bestDay: { day: number; seconds: number } | null
   focusSeconds: number
   done: number
-  /** concluídas com prazo, entregues até ao prazo */
   beforeDeadline: number
-  /** com prazo no período: entregues depois do prazo ou ainda em atraso */
   late: number
   reviewed: number
   firstTry: number
-  /** recordes batidos: antes do prazo + aprovadas à primeira + dias com a meta cumprida */
   records: number
   factors: Factor[]
-  /** 0–100, média dos factores que se aplicam; null sem dados */
   score: number | null
 }
 
 type Input = { memberId: string; segments: PresenceSegment[]; sessions: Session[]; tasks: Task[] }
 
-/** Tarefas concluídas no intervalo */
 export const doneIn = (tasks: Task[], from: number, to: number) =>
   tasks.filter(t => { const at = completedTime(t); return at !== undefined && at >= from && at < to }).length
 
-/**
- * Analisa cada funcionário no intervalo [from, to). As entregas comparam-se com quem mais concluiu:
- * por omissão, entre as pessoas analisadas; maxDone dá outra referência (null = não comparar).
- */
 export function analyse(people: Input[], from: number, to: number, now: number, goal: number, maxDone?: number | null): MemberAnalysis[] {
   const days = daysIn(from, to, now)
   const end = Math.min(to, now + 1)

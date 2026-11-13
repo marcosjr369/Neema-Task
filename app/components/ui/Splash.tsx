@@ -1,6 +1,5 @@
 import Mascot from './Mascot'
 
-/** Ecrã de arranque enquanto a sessão carrega */
 export default function Splash() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-5 bg-white">

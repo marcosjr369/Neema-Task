@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { CalendarEvent, DeletedUser, Department, Member, Org, PresenceSegment, Session, Task, User } from '../../types'
+import type { Board, CalendarEvent, DeletedUser, Department, Member, Org, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
 import * as fileStore from './store-file'
 import * as pgStore from './store-pg'
 
@@ -10,7 +10,6 @@ import * as pgStore from './store-pg'
  * - sem DATABASE_URL: ficheiro JSON local em .data/ (desenvolvimento sem internet).
  */
 
-/** Dispositivo que aceitou notificações push */
 export type PushRecord = {
   endpoint: string
   keys: { p256dh: string; auth: string }
@@ -24,35 +23,31 @@ export type DB = {
   orgs: Org[]
   departments: Department[]
   members: Member[]
-  /** tarefas pessoais (ownerId) e de empresa (orgId) */
   tasks: Task[]
-  /** sessões pessoais (userId) e de empresa (memberId) */
   sessions: Session[]
   presence: PresenceSegment[]
   push: PushRecord[]
-  /** eventos do calendário (empresa ou pessoais) */
   events: CalendarEvent[]
-  /** registo de utilizadores eliminados no painel */
   deleted: DeletedUser[]
+  boards: Board[]
+  grants: ShareGrant[]
+  sheets: Sheet[]
 }
 
 export type Table = keyof DB
-export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted']
+export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets']
 
 export const emptyDB = (): DB => ({
-  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [],
+  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [],
 })
 
-/** Condição sobre uma coluna: valor (=), lista (IN), null (IS NULL) ou intervalo { gte, lte } (>=, <=) */
 export type Condition = string | number | null | (string | number)[] | { gte?: number; lte?: number }
 
 export type Loader = {
   db: DB
-  /** junta ao "db" as linhas da tabela que cumprem todas as condições (colunas em snake_case) */
   load: (table: Table, where?: Record<string, Condition>) => Promise<void>
 }
 
-/** O que carregar: 'all' (tudo) ou uma função que pede só o necessário */
 export type Scope = 'all' | ((l: Loader) => Promise<void>)
 
 export const usingPostgres = () => !!process.env.DATABASE_URL
@@ -61,7 +56,6 @@ export function read(scope: Scope = 'all'): Promise<DB> {
   return usingPostgres() ? pgStore.read(scope) : fileStore.read()
 }
 
-/** Executa alterações em série (transacção com bloqueio no Postgres) e grava no fim */
 export function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
   return usingPostgres() ? pgStore.mutate(scope, fn) : fileStore.mutate(fn)
 }

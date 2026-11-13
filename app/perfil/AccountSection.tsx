@@ -41,7 +41,6 @@ export default function AccountSection() {
     setBusy(true)
     try {
       await api(`${org.base}/members/${org.me.id}`, { method: 'DELETE' })
-      // sem outra empresa, a conta volta à entrada para criar ou entrar numa
       await account.refresh()
       showToast('Saíste da empresa', 'info')
     } catch (err) {
@@ -119,9 +118,8 @@ export default function AccountSection() {
               <Link href={`/empresa/membro/${org.me.id}`} className="btn btn-ghost flex-1 text-sm">
                 <ChartBarIcon size={16} /> O meu tempo
               </Link>
-              {/* só quem foi convidado ou adicionado pode sair; quem criou a empresa é o dono */}
               {org.org.createdBy !== user.id && (
-                <button onClick={leaveOrg} disabled={busy} className="btn btn-ghost flex-1 text-sm text-danger">
+                <button onClick={leaveOrg} disabled={busy} aria-busy={busy} className="btn btn-ghost flex-1 text-sm text-danger">
                   Sair da empresa
                 </button>
               )}

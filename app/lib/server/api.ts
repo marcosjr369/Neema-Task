@@ -17,7 +17,6 @@ export const fail = (status: number, message: string): never => {
 
 type Ctx<P> = { params: Promise<P> }
 
-/** Envolve um route handler: converte HttpError em respostas JSON */
 export function handle<P = Record<string, string>>(fn: (req: Request, params: P) => Promise<unknown>) {
   return async (req: Request, ctx: Ctx<P>) => {
     try {
@@ -47,7 +46,6 @@ export async function requireUser(): Promise<User> {
   return user
 }
 
-/** Utilizador de conta pessoal (as contas de empresa não têm espaço pessoal) */
 export async function requirePersonal(): Promise<User> {
   const user = await requireUser()
   if (user.accountType === 'business') fail(403, BUSINESS_ONLY)
@@ -56,10 +54,9 @@ export async function requirePersonal(): Promise<User> {
 
 export type OrgAccess = { db: DB; user: User; org: Org; me: Member }
 
-/** Membro activo da empresa; "opts" diz que dados extra carregar (tarefas, sessões, presença) */
 export async function requireMember(orgId: string, opts: OrgOpts = {}): Promise<OrgAccess> {
-  const user = await requireUser()
-  const db = await read(orgScope(orgId, opts))
+  // a conta e os dados da empresa chegam em paralelo (cada leitura é uma viagem à base de dados)
+  const [user, db] = await Promise.all([requireUser(), read(orgScope(orgId, opts))])
   const org = db.orgs.find(o => o.id === orgId) ?? fail(404, 'Empresa não encontrada')
   const me =
     db.members.find(m => m.orgId === orgId && m.userId === user.id && m.status === 'activo') ??
@@ -67,7 +64,6 @@ export async function requireMember(orgId: string, opts: OrgOpts = {}): Promise<
   return { db, user, org, me }
 }
 
-/** Pessoa da equipa: a conta da empresa não regista tempo nem estado */
 export async function requirePerson(orgId: string, opts: OrgOpts = {}) {
   const access = await requireMember(orgId, opts)
   if (isCompanyAccount(access.me, access.org)) fail(403, 'A conta da empresa não regista tempo nem estado')
@@ -80,7 +76,6 @@ export async function requireAdmin(orgId: string, opts: OrgOpts = {}) {
   return access
 }
 
-/** Departamentos que o membro gere ('all' para administradores) */
 export function managedDepartments(db: DB, me: Member): Set<string> | 'all' {
   return managedDepartmentIds(db.departments.filter(d => d.orgId === me.orgId), me)
 }
@@ -94,7 +89,6 @@ export function canManage(db: DB, me: Member, target: Member | undefined) {
 
 export const isManager = (me: Member) => me.role === 'admin' || me.role === 'supervisor'
 
-/** O membro pode ver/editar a tarefa? */
 export function taskAccess(db: DB, me: Member, task: Task) {
   const assignee = db.members.find(m => m.id === task.assigneeId)
   const owner = task.assigneeId === me.id

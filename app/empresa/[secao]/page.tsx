@@ -5,7 +5,6 @@ import { useEffect } from 'react'
 import { SECTIONS } from '../../lib/nav'
 import CompanyPage from '../_components/CompanyPage'
 
-/** /empresa/tarefas, /empresa/pessoas, … (a visão geral é /empresa) */
 export default function CompanySectionPage() {
   const { secao } = useParams<{ secao: string }>()
   const router = useRouter()

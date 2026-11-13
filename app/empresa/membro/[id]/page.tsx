@@ -16,6 +16,7 @@ import { DayTimeline, PresenceLegend, presenceTotals, RANGES, rangeFrom, useTeam
 import { PresenceDonut, TaskStatusDonut, TrendCharts } from '../../_components/ActivityCharts'
 import { MemberRecordsCard } from '../../_components/Records'
 import { PresenceGlyph } from '../../../components/ui/icons'
+import { Sk } from '../../../components/ui/Skeleton'
 
 function Report({ memberId }: { memberId: string }) {
   const org = useOrg()!
@@ -39,7 +40,6 @@ function Report({ memberId }: { memberId: string }) {
   const open = tasks.filter(t => t.status !== 'done')
   const periodText = range === 'hoje' ? 'Hoje' : `Últimos ${RANGES.find(r => r.id === range)!.label}`
 
-  // dias do mais recente para o mais antigo (no máximo 7 linhas do tempo)
   const days: number[] = []
   for (let d = new Date(startOfDay(now)); d.getTime() >= from && days.length < 7; d.setDate(d.getDate() - 1)) days.push(d.getTime())
 
@@ -103,7 +103,7 @@ function Report({ memberId }: { memberId: string }) {
         <h2 className="mb-1 text-lg font-black text-ink">Linha do tempo</h2>
         <div className="mb-4"><PresenceLegend /></div>
         {!loaded ? (
-          <p className="text-sm font-semibold text-muted">A carregar…</p>
+          <div role="status" aria-busy aria-label="A carregar" className="space-y-4">{[0, 1, 2].map(i => <div key={i} className="space-y-2"><Sk className="h-4 w-32" /><Sk className="h-6 rounded-full" /></div>)}</div>
         ) : (
           <ul className="space-y-4">
             {days.map(day => {

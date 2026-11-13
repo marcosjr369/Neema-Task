@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth, useClerk } from '@clerk/nextjs'
-import { api, setTokenSource } from '../lib/api'
+import { api, ApiError, errorText, setTokenSource, throttled } from '../lib/api'
 import { clearBrowserStorage } from '../lib/browserStorage'
 import { accountTypeOf, businessRoleOf } from '../lib/account'
 import { DEFAULT_SETTINGS, type AccountType, type BusinessRole, type Member, type Membership, type Org, type RankingVisibility, type Settings, type User, type Workspace } from '../types'
@@ -12,37 +12,28 @@ type MeResponse = {
   user: User | null
   memberships: Membership[]
   suggestions: Suggestion[]
-  /** convites de empresas à espera de resposta */
   invites: Membership[]
-  /** conta desactivada pelo administrador da plataforma */
   disabled?: boolean
 }
-/** resposta do servidor e a sessão do Clerk a que corresponde */
-type MeState = MeResponse & { clerkId: string | null }
+type MeState = MeResponse & { clerkId: string | null; failed?: string }
 const SIGNED_OUT: MeResponse = { user: null, memberships: [], invites: [], suggestions: [] }
 
 export type OrgInput = { name: string; sector: string; size?: string; domain?: string; departments?: string[] }
 
 type AccountValue = {
-  /** à espera do Clerk e da primeira resposta do servidor */
   loading: boolean
-  /** a sessão do Clerk mudou (entrou ou saiu) e a conta ainda não chegou */
   switching: boolean
   disabled: boolean
+  failed: string | null
   user: User | null
-  /** pessoal ou empresa; undefined enquanto a conta nova não escolher */
   accountType: AccountType | undefined
-  /** contas de empresa: conta da própria empresa ou de funcionário (undefined se ainda não se sabe) */
   businessRole: BusinessRole | undefined
-  /** conta sem tipo, ou de empresa sem nenhuma empresa: tem de passar pela entrada */
   needsSetup: boolean
   memberships: Membership[]
   suggestions: Suggestion[]
   invites: Membership[]
-  /** aceitar ou recusar o convite de uma empresa (convert: conta pessoal que passa a conta de empresa) */
   answerInvite: (memberId: string, accept: boolean, convert?: boolean) => Promise<void>
   workspace: Workspace
-  /** empresa activa (se o espaço for de empresa) */
   current: Membership | null
   settings: Settings
   updateSettings: (patch: Partial<Settings>) => void
@@ -50,10 +41,8 @@ type AccountValue = {
   setWorkspace: (ws: Workspace) => void
   logout: () => Promise<void>
   updateMe: (patch: { name?: string; rankingVisibility?: RankingVisibility }) => Promise<void>
-  /** fixa a conta como pessoal (passo final da entrada) */
   choosePersonal: () => Promise<void>
   createOrg: (input: OrgInput) => Promise<Membership>
-  /** convert: conta pessoal que aceita passar a conta de empresa */
   joinOrg: (by: { code?: string; orgId?: string; convert?: boolean }) => Promise<Membership>
 }
 
@@ -76,7 +65,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const settingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingSettings = useRef<Partial<Settings>>({})
 
-  // todos os pedidos levam o token actual do Clerk (renovado por ele quando expira)
   useEffect(() => {
     clerkRef.current = clerkUserId
     setTokenSource(isLoaded && clerkUserId ? () => getToken() : null)
@@ -87,30 +75,48 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // não pode apagar a conta que entretanto chegou
     const n = ++seq.current
     const clerkId = clerkRef.current
-    try {
-      let res = await api<MeResponse>('/api/me')
-      if (!res.user && !res.disabled && clerkId) {
-        // o Clerk tem sessão mas o servidor não a viu (token a meio da renovação): tenta outra vez
+    let lastError: unknown = null
+    // com sessão no Clerk, o servidor tem de devolver a conta: o token pode estar a meio da
+    // renovação (logo a seguir ao login ou ao voltar de segundo plano) ou a rede falhar por instantes
+    for (let attempt = 0; attempt < (clerkId ? 4 : 1); attempt++) {
+      if (attempt > 0) {
+        await new Promise(r => setTimeout(r, 400 * 2 ** (attempt - 1)))
+        if (n !== seq.current) return
         await getToken({ skipCache: true }).catch(() => null)
-        res = await api<MeResponse>('/api/me')
       }
-      if (n === seq.current) setMe({ ...SIGNED_OUT, ...res, clerkId })
-    } catch {
-      // sem ligação: mantém o que houver; no primeiro arranque mostra o ecrã de entrada
-      if (n === seq.current) setMe(m => m ?? { ...SIGNED_OUT, clerkId })
+      try {
+        const res = await api<MeResponse>('/api/me')
+        if (res.user || res.disabled || !clerkId) {
+          if (n === seq.current) setMe({ ...SIGNED_OUT, ...res, clerkId })
+          return
+        }
+        lastError = null
+      } catch (err) {
+        lastError = err
+        // erros definitivos (ex.: conta sem email) não melhoram a tentar outra vez
+        if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 401 && err.status !== 429) break
+      }
     }
+    if (n !== seq.current) return
+    if (!clerkId) {
+      setMe(m => m ?? { ...SIGNED_OUT, clerkId })
+      return
+    }
+    // o Clerk tem sessão mas a conta não chegou: mantém a que houver; senão mostra o erro
+    // (mostrar o login aqui fazia o Clerk, já com sessão, redireccionar em ciclo)
+    const failed = lastError ? errorText(lastError) : 'Não foi possível carregar a tua conta.'
+    setMe(m => (m?.user && m.clerkId === clerkId ? m : { ...SIGNED_OUT, clerkId, failed }))
   }, [getToken])
 
   useEffect(() => {
     clearBrowserStorage()
-    const onFocus = () => refresh()
+    // voltar à janela várias vezes seguidas não repete o pedido
+    const onFocus = throttled(() => refresh())
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [refresh])
 
-  // Sempre que alguém entra ou sai no Clerk, volta a pedir a conta ao servidor
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- sincronização com o servidor
     if (isLoaded) refresh()
   }, [isLoaded, clerkUserId, refresh])
 
@@ -153,7 +159,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     await refresh()
   }, [refresh])
 
-  // o servidor já deixa a empresa nova como espaço activo
   const enter = useCallback(async (res: { org: Org; member: Member }) => {
     await refresh()
     return res
@@ -177,7 +182,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       ? businessRoleOf(user, memberships.some(m => m.org.createdBy === user.id), memberships.length > 0)
       : undefined
   const saved = user?.workspace
-  // contas de empresa: a empresa guardada ou, se deixou de existir, a primeira; contas pessoais: o espaço pessoal
   const current =
     accountType === 'business'
       ? (saved?.kind === 'org' ? memberships.find(m => m.org.id === saved.orgId) : undefined) ?? memberships[0] ?? null
@@ -190,10 +194,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   )
 
   const value: AccountValue = {
-    // enquanto a resposta for de outra sessão (acabou de entrar ou sair), continua a carregar
     loading: !isLoaded || me === null || me.clerkId !== clerkUserId,
     switching: isLoaded && me !== null && me.clerkId !== clerkUserId,
     disabled: !!me?.disabled,
+    failed: me && !me.user && me.clerkId === clerkUserId ? me.failed ?? null : null,
     user,
     accountType,
     businessRole,

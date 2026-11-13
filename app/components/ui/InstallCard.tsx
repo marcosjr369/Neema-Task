@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { DownloadSimpleIcon, ExportIcon, PlusSquareIcon } from '@phosphor-icons/react'
 import { useInstallPrompt } from '../../lib/pwa'
 
-/** Convite para instalar a app (some quando já está instalada) */
 export default function InstallCard({ compact = false }: { compact?: boolean }) {
   const { status, install } = useInstallPrompt()
   const [showIosHelp, setShowIosHelp] = useState(false)

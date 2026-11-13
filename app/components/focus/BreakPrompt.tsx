@@ -4,7 +4,6 @@ import { useApp } from '../../context/AppContext'
 import { formatDuration, phaseElapsed } from '../../lib/stats'
 import Mascot from '../ui/Mascot'
 
-/** Painel inferior (estilo "feedback" de lição) que pede para pausar / voltar */
 export default function BreakPrompt() {
   const { prompt, timer, activeTask, now, settings, startBreak, extendFocus, backToFocus, stopTimer, setStatus } = useApp()
   if (!prompt || !timer || !activeTask) return null

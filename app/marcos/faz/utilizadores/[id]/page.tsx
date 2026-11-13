@@ -13,7 +13,6 @@ import { ago, date, dateTime, TYPE } from '../../_components/format'
 
 const VISIBILITY = { nome: 'Nome completo', iniciais: 'Só iniciais', oculto: 'Escondido' } as const
 
-/** Ficha de um utilizador: dados, estatísticas, empresas, tarefas e actividade recente */
 export default function PanelUserPage() {
   const { id } = useParams<{ id: string }>()
   const { days, ask } = usePanel()
@@ -29,7 +28,6 @@ export default function PanelUserPage() {
     <div className={`space-y-4 transition-opacity ${loading ? 'opacity-60' : ''}`}>
       <BackLink href="/marcos/faz/utilizadores" label="Utilizadores" />
 
-      {/* cabeçalho */}
       <section className={`card flex flex-wrap items-center gap-4 p-5 ${u.disabled ? 'border-danger/40 bg-danger-light/40' : ''}`}>
         <Avatar name={u.name} picture={u.picture} size={72} />
         <div className="min-w-0 flex-1">
@@ -54,7 +52,6 @@ export default function PanelUserPage() {
         </div>
       </section>
 
-      {/* números de sempre e do período */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Nível" value={String(d.allTime.level)} hint={`${d.allTime.xp} XP no total`} />
         <Stat label={`XP (${days}d)`} value={String(d.period.points)} />

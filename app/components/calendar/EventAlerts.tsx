@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BellRingingIcon, LinkIcon, MapPinIcon, XIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
-import { eventsBase, hhmm, isLink, useEvents, whenText } from '../../lib/calendar'
+import { eventsBase, hhmm, involves, isLink, useEvents, whenText } from '../../lib/calendar'
 import { pushNotification, sounds } from '../../lib/sounds'
 import { EVENT_KINDS, EVENT_LEAD_MINUTES, type CalendarEvent } from '../../types'
 import { KIND_ICON } from './EventCard'
@@ -25,19 +25,13 @@ const readSet = (k: string) => {
     return null
   }
 }
-// guarda só os mais recentes
 const writeSet = (k: string, s: Set<string>) => localStorage.setItem(k, JSON.stringify([...s].slice(-300)))
 
-/** Janela vigiada: dos últimos minutos até amanhã (muda a cada 10 min para não recarregar sempre) */
 const windowNow = () => {
   const t = Math.floor(Date.now() / (10 * 60 * 1000)) * 10 * 60 * 1000
   return { from: t - 30 * 60 * 1000, to: t + 26 * 3600 * 1000 }
 }
 
-/**
- * Avisos do calendário com a app aberta: 5 min antes e à hora (som, notificação e cartão no ecrã).
- * Com a app fechada, o servidor envia os mesmos avisos por push (com a mesma etiqueta, não duplicam).
- */
 export default function EventAlerts() {
   const { now, showToast } = useApp()
   const org = useOrg()
@@ -53,13 +47,12 @@ export default function EventAlerts() {
     return () => clearInterval(id)
   }, [])
 
-  // avisos devidos
   useEffect(() => {
     if (!loaded) return
     fired.current ??= readSet(FIRED) ?? new Set()
     const due: Alert[] = []
     for (const e of events) {
-      if (meId && e.responses?.[meId] === 'nao') continue
+      if (!involves(e, meId) || (meId && e.responses?.[meId] === 'nao')) continue
       const stage: Stage | null = now >= e.start && now < e.start + LEAD ? 'start' : now >= e.start - LEAD && now < e.start ? 'pre' : null
       if (!stage) continue
       const key = `${e.id}:${e.start}:${stage}`
@@ -84,7 +77,6 @@ export default function EventAlerts() {
     setAlerts(list => [...list.filter(x => !due.some(d => d.event.id === x.event.id)), ...due])
   }, [events, loaded, now, meId])
 
-  // convites novos (para quem não agendou)
   useEffect(() => {
     if (!loaded || !meId) return
     const invites = events.filter(e => e.attendeeIds.includes(meId) && e.createdBy !== meId && e.end > Date.now())

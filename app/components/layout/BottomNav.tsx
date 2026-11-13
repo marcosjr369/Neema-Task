@@ -11,7 +11,6 @@ export default function BottomNav() {
   const { timer } = useApp()
   const org = useOrg()
   const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done').length ?? 0
-  // a conta da empresa tem as tarefas da equipa na barra; os supervisores só têm "Empresa"
   const reviewsHref = org?.isCompany ? '/empresa/tarefas' : '/empresa'
 
   return (

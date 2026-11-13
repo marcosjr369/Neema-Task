@@ -8,7 +8,6 @@ import { useAccount } from '../../context/AccountContext'
 import Avatar from '../ui/Avatar'
 import LogoutButton from './LogoutButton'
 
-/** Conta activa: nas contas de empresa troca entre as empresas; nas pessoais só mostra a conta e sair */
 export default function WorkspaceSwitcher() {
   const { user, accountType, businessRole, memberships, workspace, current, setWorkspace } = useAccount()
   const router = useRouter()
@@ -79,7 +78,6 @@ export default function WorkspaceSwitcher() {
               </button>
             )
           })}
-          {/* só a conta de uma empresa cria outra (funcionários, mesmo administradores, não) */}
           {businessRole === 'company' && (
             <Link
               href="/entrar?passo=criar"

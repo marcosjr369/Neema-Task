@@ -9,6 +9,7 @@ import { canSuperviseTask, groupSiblings } from '../../lib/org'
 import { useTaskActions } from '../../context/useTaskActions'
 import MemberPicker from '../ui/MemberPicker'
 import { CategoryGlyph } from '../ui/icons'
+import { Busy } from '../ui/Spinner'
 
 const RECURRENCES: { id: Recurrence; label: string }[] = [
   { id: 'diaria', label: 'Diária' },
@@ -18,7 +19,6 @@ const RECURRENCES: { id: Recurrence; label: string }[] = [
 
 const itemId = () => Math.random().toString(36).slice(2, 10)
 
-/** Converte ISO → valor aceite por <input type="datetime-local"> */
 function toLocalInput(iso?: string) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -32,11 +32,9 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const org = useOrg()
   const actions = useTaskActions()
   const canAssign = !!org?.isManager
-  // tarefa de grupo: os responsáveis são os das cópias (a lista da equipa tem-nas todas)
   const [assigneeIds, setAssigneeIds] = useState<string[]>(() => {
     if (task?.groupId && org) return [...new Set(groupSiblings(org.teamTasks, task).map(t => t.assigneeId!).filter(Boolean))]
     if (task?.assigneeId) return [task.assigneeId]
-    // a conta da empresa não faz tarefas: tem de escolher o responsável
     return org && !org.isCompany ? [org.me.id] : []
   })
   const assigneeId = assigneeIds[0] ?? ''
@@ -47,11 +45,9 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
   const [recurrence, setRecurrence] = useState<Recurrence | undefined>(task?.recurrence)
   const [checklist, setChecklist] = useState<ChecklistItem[]>(task?.checklist ?? [])
   const [checkInput, setCheckInput] = useState('')
-  // por omissão, tarefas atribuídas a outra pessoa precisam de aprovação
   const approval = requiresApproval ?? (!!org && assigneeIds.some(id => id !== org.me.id))
   const assignee = org?.memberById(assigneeId)
   const assigningOther = !!org && assigneeIds.some(id => id !== org.me.id)
-  // quem pode aprovar: supervisores, administradores e a conta da empresa (nunca um dos responsáveis)
   const supervisors = org
     ? [...(org.isCompany ? [org.me] : []), ...org.members].filter(m => canSuperviseTask(m, org.org) && !assigneeIds.includes(m.id))
     : []
@@ -90,7 +86,6 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
       showToast('Escolhe o funcionário responsável', 'danger')
       return
     }
-    // tarefa de grupo: vai directa ao servidor (uma cópia por pessoa) e recarrega as listas
     if (org && canAssign && isGroup) {
       const shared = {
         title: title.trim(),
@@ -284,7 +279,6 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
             <ul className="mb-2 space-y-1">
               {checklist.map(c => (
                 <li key={c.id} className="flex items-center gap-2 rounded-xl bg-snow px-3 py-2">
-                  {/* em grupo, cada pessoa marca os seus passos */}
                   {!isGroup && (
                     <input
                       type="checkbox"
@@ -408,11 +402,11 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
 
       <div className="border-t-2 border-line px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4">
         <button type="submit" disabled={!title.trim() || actions.busy} className={`btn w-full ${title.trim() ? 'btn-primary' : 'btn-disabled'}`}>
-          {actions.busy
-            ? 'A guardar…'
-            : task
+          <Busy busy={actions.busy} text="A guardar…">
+            {task
               ? isGroup ? 'Guardar para todos' : 'Guardar alterações'
               : assigneeIds.length > 1 ? `Atribuir a ${assigneeIds.length} pessoas` : assigningOther ? 'Atribuir tarefa' : 'Criar tarefa'}
+          </Busy>
         </button>
       </div>
     </form>

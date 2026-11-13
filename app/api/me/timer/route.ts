@@ -3,7 +3,6 @@ import { userScope } from '../../../lib/server/scopes'
 import { mutate } from '../../../lib/server/store'
 import type { ActiveTimer } from '../../../types'
 
-/** Guarda o cronómetro activo de um espaço ('personal' ou id da empresa); null apaga */
 export const PUT = handle(async req => {
   const me = await requireUser()
   const { key, timer } = await body<{ key: string; timer: ActiveTimer | null }>(req)

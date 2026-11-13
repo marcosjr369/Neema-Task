@@ -61,8 +61,6 @@ export async function requirePanel() {
   if (!(await hasPanelSession())) fail(401, 'Sessão do painel expirada')
 }
 
-// ─── Limite de tentativas (por IP, em memória da instância) ─────────────────
-
 const MAX_ATTEMPTS = 5
 const WINDOW = 15 * 60 * 1000
 const attempts = new Map<string, { count: number; since: number }>()
@@ -71,7 +69,6 @@ export function clientIp(req: Request) {
   return req.headers.get('x-forwarded-for')?.split(',')[0].trim() || req.headers.get('x-real-ip') || 'local'
 }
 
-/** Minutos que faltam para poder tentar outra vez (0 = pode tentar) */
 export function lockedFor(ip: string, now = Date.now()) {
   const a = attempts.get(ip)
   if (!a || now - a.since > WINDOW) return 0
@@ -86,7 +83,6 @@ export function recordFailure(ip: string, now = Date.now()) {
 
 export const clearFailures = (ip: string) => attempts.delete(ip)
 
-/** Verifica com limite de tentativas por IP e uma pequena espera a cada falha */
 async function guarded(req: Request, ok: boolean, message: string) {
   const ip = clientIp(req)
   const wait = lockedFor(ip)
@@ -100,10 +96,8 @@ async function guarded(req: Request, ok: boolean, message: string) {
   clearFailures(ip)
 }
 
-/** Login do painel: email + palavra-passe */
 export const confirmLogin = (req: Request, email: string | undefined, password: string | undefined) =>
   guarded(req, !!email && !!password && checkCredentials(email, password), 'Email ou palavra-passe errados')
 
-/** Confirmação de acções sensíveis: volta a pedir a palavra-passe (com o mesmo limite de tentativas) */
 export const confirmPassword = (req: Request, password: string | undefined) =>
   guarded(req, !!password && checkPassword(password), 'Palavra-passe errada')

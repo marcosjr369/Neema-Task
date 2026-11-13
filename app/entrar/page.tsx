@@ -11,23 +11,14 @@ import { useAccount } from '../context/AccountContext'
 import { api, errorText } from '../lib/api'
 import { ORG_SIZES, SECTORS } from '../lib/org'
 import Mascot from '../components/ui/Mascot'
+import Splash from '../components/ui/Splash'
 import Confetti from '../components/ui/Confetti'
 import { SignIn } from '@clerk/nextjs'
 import { CLERK_APPEARANCE } from '../components/account/clerkAppearance'
-
-/*
- * Entrada e criação de conta, em passos curtos:
- *   pessoal: olá → como funciona → tipo → login → meta diária → pronto
- *   empresa: … → tipo → dados da empresa (nome, área, departamentos) → login → cria a empresa → pronto
- *   convite: … → tipo → código (valida se existe) → empresa encontrada → login → entra na equipa → pronto
- * O tipo de conta escolhe-se antes do login e fica fixo: contas pessoais e de empresa não se misturam.
- * A conta que cria a empresa passa a ser a conta da empresa; os funcionários entram por convite (código, link ou email).
- * Quem já tem a conta configurada vai directo para a app.
- */
+import Spinner from '../components/ui/Spinner'
 
 type Step = 'ola' | 'como' | 'tipo' | 'codigo' | 'convite' | 'criar' | 'login' | 'meta' | 'empresa' | 'pronto'
 
-/** Tipo escolhido antes do login (vai no URL de regresso do Clerk) */
 type Use = 'personal' | 'org' | 'invite'
 const USE_PARAM: Record<Use, string> = { personal: 'pessoal', org: 'empresa', invite: 'convite' }
 const parseUse = (v: string | null): Use | null => (Object.keys(USE_PARAM) as Use[]).find(k => USE_PARAM[k] === v) ?? null
@@ -44,9 +35,6 @@ const GOALS = [
   { minutes: 120, label: 'Intenso', desc: '2 horas por dia', icon: LightningIcon, color: '#7B61FF' },
 ]
 
-// ─── Peças visuais ─────────────────────────────────────────────────────────
-
-/** Escreve o texto letra a letra; devolve o texto visível e se já acabou */
 function useTypewriter(text: string, speed = 24) {
   const [count, setCount] = useState(0)
   const [prev, setPrev] = useState(text)
@@ -63,7 +51,6 @@ function useTypewriter(text: string, speed = 24) {
   return { shown: text.slice(0, count), done: count >= text.length }
 }
 
-/** Mascote com balão de fala: mexe a boca enquanto escreve e salta ao mudar de passo */
 function Speaker({
   text, mood = 'happy', size = 110, hopKey, wave = false, bounce = false,
 }: { text: string; mood?: 'happy' | 'excited' | 'sad' | 'thinking'; size?: number; hopKey: string; wave?: boolean; bounce?: boolean }) {
@@ -75,7 +62,6 @@ function Speaker({
       </div>
       <div key={`b-${hopKey}`} className="relative mb-8 min-h-12 max-w-sm flex-1 rounded-2xl border-2 border-line bg-white px-4 py-3 text-[17px] font-bold leading-snug text-ink animate-bubble">
         <span className={done ? '' : 'typing-caret'}>{shown}</span>
-        {/* reserva o espaço do texto completo para o balão não "saltar" */}
         <span className="invisible block h-0 overflow-hidden" aria-hidden>{text}</span>
         <span className="absolute -left-2 bottom-4 h-3.5 w-3.5 rotate-45 border-b-2 border-l-2 border-line bg-white" />
         <span className="sr-only" aria-live="polite">{text}</span>
@@ -84,7 +70,6 @@ function Speaker({
   )
 }
 
-/** Opção grande, seleccionável (cartão 3D que afunda ao carregar) */
 function Choice({
   icon: IconCmp, color, title, desc, selected, onClick, delay = 0,
 }: { icon: Icon; color: string; title: string; desc: string; selected?: boolean; onClick: () => void; delay?: number }) {
@@ -114,7 +99,6 @@ function Choice({
   )
 }
 
-/** Ícones a flutuar à volta da mascote no ecrã de boas-vindas */
 function FloatingIcons() {
   const items: { icon: Icon; color: string; pos: string; delay: number; r: number }[] = [
     { icon: ListChecksIcon, color: '#12B5A6', pos: 'left-[6%] top-[8%]', delay: 0, r: -10 },
@@ -139,7 +123,6 @@ function FloatingIcons() {
   )
 }
 
-/** Formas suaves a flutuar no fundo */
 function Backdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 -z-0 overflow-hidden" aria-hidden>
@@ -152,14 +135,12 @@ function Backdrop() {
 
 const TITLE = 'udacha'
 
-/** Primeiro ecrã: a Udacha a saltar e a acenar, ícones à volta e o título a entrar letra a letra */
 function Welcome({ className }: { className: string }) {
   const { shown, done } = useTypewriter('Olá! Eu sou a Udacha!', 45)
   return (
     <div className={`my-auto flex flex-col items-center text-center ${className}`}>
       <div className="relative flex h-80 w-full max-w-sm items-end justify-center pb-4">
         <FloatingIcons />
-        {/* balão por cima da mascote */}
         <div className="absolute left-1/2 top-2 z-10 -translate-x-1/2">
           <div className="relative whitespace-nowrap rounded-2xl border-2 border-line bg-white px-4 py-2.5 text-lg font-black text-ink shadow-[0_4px_0_#E9E7F2] animate-bubble" style={{ animationDelay: '300ms', transformOrigin: 'bottom center' }}>
             <span className={done ? '' : 'typing-caret'}>{shown || '\u00a0'}</span>
@@ -194,7 +175,6 @@ function Field({ label, hint, delay, children }: { label: string; hint?: string;
   )
 }
 
-/** Lista "o que fazer a seguir" do último passo */
 function NextSteps({ done, goal }: { done: Done; goal: number | null }) {
   const items: { icon: Icon; color: string; text: ReactNode }[] =
     done.kind === 'created'
@@ -228,14 +208,10 @@ function NextSteps({ done, goal }: { done: Done; goal: number | null }) {
   )
 }
 
-// ─── Página ────────────────────────────────────────────────────────────────
-
 export default function EnterPage() {
   const router = useRouter()
   const account = useAccount()
   const { user, suggestions, accountType, businessRole, needsSetup } = account
-  // conta de empresa sem empresa: a conta da empresa volta a criá-la; um funcionário só entra
-  // com convite; se ainda não se sabe qual é, pergunta
   const businessStart: Step =
     businessRole === 'company' ? 'criar' : businessRole === 'employee' && !suggestions.length ? 'codigo' : 'empresa'
   const [params] = useState(() => new URLSearchParams(window.location.search))
@@ -246,22 +222,19 @@ export default function EnterPage() {
     use: params.get('codigo') ? ('invite' as Use) : parseUse(params.get('tipo')),
     orgName: params.get('nome') ?? '',
   }
-  // há um passo a concluir logo a seguir ao login (criar a empresa ou entrar com o código)
   const pending = (fromUrl.use === 'org' && !!fromUrl.orgName) || (fromUrl.use === 'invite' && !!fromUrl.code)
 
   const [stack, setStack] = useState<Step[]>(() => {
     if (!user) {
-      // de volta do Clerk a meio do registo ("#/…" no URL) ou "Já tenho conta" na landing
       if (window.location.hash.startsWith('#/') || params.get('passo') === 'login') return ['login']
-      if (fromUrl.code) return ['codigo'] // link de convite: valida o código primeiro
+      if (fromUrl.code) return ['codigo']
       if (fromUrl.use === 'org' && fromUrl.orgName) return ['login']
       if (params.get('passo') === 'como') return ['como']
       return ['ola']
     }
-    if (pending) return ['login'] // acabou de fazer login: o efeito abaixo continua
+    if (pending) return ['login']
     if (params.get('passo') === 'criar') return ['criar']
     if (params.get('passo') === 'codigo') return ['codigo']
-    // conta de empresa que ficou sem empresa
     if (accountType === 'business') return [businessStart]
     return ['tipo']
   })
@@ -272,7 +245,6 @@ export default function EnterPage() {
   const [errorKey, setErrorKey] = useState(0)
   const [done, setDone] = useState<Done | null>(null)
 
-  // escolhas (guardadas no URL de regresso do login)
   const [use, setUse] = useState<Use | null>(fromUrl.use)
   const [goal, setGoal] = useState<number | null>(null)
   const [orgPath, setOrgPath] = useState<'criar' | 'codigo' | null>(null)
@@ -281,9 +253,7 @@ export default function EnterPage() {
   const [size, setSize] = useState(params.get('tam') ?? '')
   const [departments, setDepartments] = useState(params.get('deps') ?? '')
   const [code, setCode] = useState(fromUrl.code)
-  /** empresa do código, depois de validado */
   const [found, setFound] = useState<{ name: string; sector: string } | null>(null)
-  // conta pessoal que entra numa empresa: tem de aceitar passar a conta de empresa
   const [convert, setConvert] = useState(false)
   const converting = accountType === 'personal'
 
@@ -293,7 +263,6 @@ export default function EnterPage() {
     setStack(st => [...st, s])
   }
   const back = () => {
-    // primeiro passo: sem sessão volta à apresentação; com a conta já configurada volta à app
     if (stack.length <= 1) {
       if (!user || !needsSetup) router.push('/')
       return
@@ -320,7 +289,6 @@ export default function EnterPage() {
 
   const emailDomain = user?.email.split('@')[1] ?? ''
 
-  /** Confirma que o código existe e é de uma empresa registada */
   const validate = async (value: string) => {
     const org = await api<{ name: string; sector: string }>(`/api/orgs/convite?codigo=${encodeURIComponent(value)}`)
     setFound(org)
@@ -343,7 +311,6 @@ export default function EnterPage() {
     go('pronto')
   }
 
-  // Link de convite (/convite/ABC123): valida o código mal a página abre
   const checked = useRef(false)
   useEffect(() => {
     if (checked.current || step !== 'codigo' || !fromUrl.code || found) return
@@ -352,14 +319,16 @@ export default function EnterPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só uma vez, ao abrir
   }, [step])
 
-  // Quem abre /entrar já com a conta configurada segue directo para dentro
-  // (também se a conta só chegar depois de a página abrir no passo de boas-vindas)
+  // Conta já configurada (ex.: de volta do login com a página recarregada): não há nada a fazer aqui.
+  // Antes só olhava para ola/como/tipo e uma conta de empresa com empresa via o passo "código"
+  // ("Já não estás em nenhuma empresa"), porque é esse o passo inicial das contas de empresa.
+  const alreadySetUp = !!user && !needsSetup && !forced && !pending && stack.length === 1 && step !== 'login'
   const routed = useRef(false)
   useEffect(() => {
-    if (routed.current || !user || needsSetup || forced || pending || stack.length !== 1 || !['ola', 'como', 'tipo'].includes(step)) return
+    if (routed.current || !alreadySetUp) return
     routed.current = true
     router.replace('/')
-  }, [user, needsSetup, step, stack.length, pending, forced, router])
+  }, [alreadySetUp, router])
 
   // Depois do login (a conta chega pelo AccountContext) conclui o que foi escolhido antes:
   // empresa → cria-a com os dados já preenchidos; convite → entra na empresa; pessoal → meta diária
@@ -368,7 +337,6 @@ export default function EnterPage() {
     if (step !== 'login' || !user || continued.current) return
     continued.current = true
     if (use === 'invite' && code) {
-      // conta pessoal que já existia: mostra a empresa e pede para confirmar a conversão
       if (accountType === 'personal') run(() => validate(code))
       else run(joinOrg)
       return
@@ -380,18 +348,16 @@ export default function EnterPage() {
     if (use === 'org' && orgName) {
       setBusy(true)
       createOrg()
-        .catch(err => { go('criar'); fail(err) }) // ex.: conta pessoal já existente
+        .catch(err => { go('criar'); fail(err) })
         .finally(() => setBusy(false))
       return
     }
-    // avança quando o login no Clerk termina
     go(accountType === 'business' ? businessStart : use === 'personal' ? 'meta' : 'tipo')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- corre uma vez, quando a conta chega
   }, [step, user])
 
   const first = user?.name.split(' ')[0] ?? ''
 
-  // ─── O que a Udacha diz em cada passo ──────────────────────────────────────
   const speech: Record<Step, string> = {
     ola: 'Olá! Eu sou a Udacha.',
     como: 'É simples. Vê como funciona:',
@@ -417,7 +383,9 @@ export default function EnterPage() {
   }
   const mood = error ? 'sad' : step === 'pronto' || step === 'convite' ? 'excited' : step === 'criar' || step === 'codigo' ? 'thinking' : 'happy'
 
-  // ─── Botão principal de cada passo ──────────────────────────────────────
+  // a caminho do início: nada de mostrar um passo que não se aplica
+  if (alreadySetUp) return <Splash />
+
   let primary: { label: string; onClick?: () => void; form?: string; disabled?: boolean } | null = null
   let secondary: { label: string; onClick: () => void } | null = null
   if (step === 'ola') {
@@ -425,7 +393,6 @@ export default function EnterPage() {
     secondary = { label: 'Já tenho conta', onClick: () => { setUse(null); go('login') } }
   } else if (step === 'como') primary = { label: 'Continuar', onClick: () => go('tipo') }
   else if (step === 'tipo') {
-    // pessoal → login (ou meta, se já tem sessão); empresa → dados da empresa; convite → código
     primary = {
       label: 'Continuar',
       disabled: !use,
@@ -456,7 +423,6 @@ export default function EnterPage() {
     primary = { label: 'Vamos lá!', onClick: () => router.replace(done?.kind === 'created' ? '/empresa/pessoas' : '/') }
   }
 
-  // de volta do Clerk: o tipo de conta e o que já foi preenchido (código ou dados da empresa)
   const returnUrl = (() => {
     const q = new URLSearchParams()
     if (use) q.set('tipo', USE_PARAM[use])
@@ -478,7 +444,6 @@ export default function EnterPage() {
       <Backdrop />
       {step === 'pronto' && <Confetti />}
 
-      {/* Topo: voltar + barra de progresso */}
       <header className="relative mx-auto flex w-full max-w-xl items-center gap-4 px-5 pt-[calc(1.25rem+env(safe-area-inset-top))]">
         <button
           onClick={back}
@@ -497,7 +462,6 @@ export default function EnterPage() {
 
       <main className={`relative mx-auto flex w-full max-w-xl flex-1 flex-col px-5 pt-6 ${secondary ? 'pb-48' : 'pb-36'}`}>
         {step === 'ola' ? (
-          // ─── Boas-vindas ──────────────────────────────────────────────────
           <Welcome key="ola" className={animation} />
         ) : (
           <div key={step} className={`my-auto ${animation}`}>
@@ -530,7 +494,6 @@ export default function EnterPage() {
                   </div>
                 ))}
 
-              {/* já com sessão (a concluir a empresa ou o convite): a Udacha em vez do formulário */}
               {step === 'login' && user && (
                 <div className="flex justify-center py-6"><Mascot size={80} className="animate-bounce-soft" /></div>
               )}
@@ -605,7 +568,6 @@ export default function EnterPage() {
                       delay={150 + i * 100}
                     />
                   ))}
-                  {/* só aparece o que esta conta pode fazer: a empresa cria, o funcionário entra com convite */}
                   {businessRole !== 'employee' && (
                     <Choice icon={BuildingsIcon} color="#12B5A6" title="Esta conta é a empresa" desc="Criar a empresa e convidar a equipa" selected={orgPath === 'criar'} onClick={() => setOrgPath('criar')} delay={200 + suggestions.length * 100} />
                   )}
@@ -620,7 +582,6 @@ export default function EnterPage() {
                   id="f-criar"
                   onSubmit={e => {
                     e.preventDefault()
-                    // sem sessão: guarda os dados (vão no URL de regresso) e vai ao login; com sessão: cria já
                     if (user) run(createOrg)
                     else go('login')
                   }}
@@ -668,7 +629,6 @@ export default function EnterPage() {
                     value={code}
                     onChange={e => {
                       setCode(e.target.value.toUpperCase().replace(/\s/g, ''))
-                      // ao corrigir o código, sai do vermelho
                       if (error) setError('')
                     }}
                     maxLength={12}
@@ -711,7 +671,6 @@ export default function EnterPage() {
         )}
       </main>
 
-      {/* Botão principal fixo em baixo */}
       {primary && (
         <footer className="fixed inset-x-0 bottom-0 z-20 border-t-2 border-line bg-white/95 px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 backdrop-blur">
           <div className="mx-auto max-w-xl">
@@ -722,6 +681,7 @@ export default function EnterPage() {
               disabled={primary.disabled}
               className={`btn w-full py-4 text-base ${primary.disabled ? 'btn-disabled' : step === 'pronto' ? 'btn-accent animate-pulse-ring' : 'btn-primary'}`}
             >
+              {busy && step !== 'pronto' && <Spinner />}
               {primary.label}
             </button>
             {secondary && (

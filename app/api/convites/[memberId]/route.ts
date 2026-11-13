@@ -3,10 +3,6 @@ import { mutate } from '../../../lib/server/store'
 import { activateMember, loadHistory } from '../../../lib/server/history'
 import { accountTypeOf, businessRoleOf, COMPANY_ONLY } from '../../../lib/account'
 
-/**
- * Resposta ao convite de uma empresa (conta que já existia quando foi adicionada).
- * Aceitar: entra na equipa com os pontos e conquistas que já tinha. Recusar: o convite é apagado.
- */
 export const POST = handle<{ memberId: string }>(async (req, { memberId }) => {
   const user = await requireUser()
   const { accept, convert } = await body<{ accept?: boolean; convert?: boolean }>(req)

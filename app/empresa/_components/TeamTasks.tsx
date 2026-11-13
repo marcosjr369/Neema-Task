@@ -24,7 +24,6 @@ const FILTERS: { id: Filter; label: string; test: (t: Task) => boolean }[] = [
   { id: 'todas', label: 'Todas', test: () => true },
 ]
 
-/** Uma tarefa de grupo: quem a tem, quantos concluíram e quantas entregas esperam revisão */
 function GroupRow({ copies, now }: { copies: Task[]; now: number }) {
   const org = useOrgRequired()
   const t = copies[0]
@@ -32,7 +31,6 @@ function GroupRow({ copies, now }: { copies: Task[]; now: number }) {
   const done = copies.filter(isCompleted).length
   const deadline = t.deadline ? formatDeadline(t.deadline, now) : null
   const open = copies.some(c => c.status !== 'done')
-  // abre a primeira entrega por rever (ou a primeira cópia)
   const target = pending[0] ?? t
   const shown = copies.slice(0, 5)
 
@@ -172,7 +170,7 @@ export default function TeamTasks() {
                 {pending && (
                   <button
                     onClick={() => actions.approve(t.id)}
-                    disabled={actions.busy}
+                    disabled={actions.busy} aria-busy={actions.busy}
                     className="btn btn-accent h-10 shrink-0 px-3 text-xs"
                     aria-label={`Aprovar ${t.title}`}
                   >

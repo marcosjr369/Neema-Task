@@ -9,7 +9,6 @@ export const PATCH = handle<{ eventId: string }>(async (req, { eventId }) => {
   const event = await mutate(async l => l.load('events', { id: eventId }), d => {
     const e = d.events.find(x => x.id === eventId && x.ownerId === user.id) ?? fail(404, 'Evento não encontrado')
     const fields = cleanEvent(input.patch ?? {}, e)
-    // nova hora: os avisos voltam a ser enviados
     if (fields.start !== e.start) {
       e.sentPre = false
       e.sentStart = false

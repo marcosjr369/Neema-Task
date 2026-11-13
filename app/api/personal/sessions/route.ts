@@ -4,7 +4,6 @@ import { mutate, read } from '../../../lib/server/store'
 import { cleanSessions } from '../../../lib/server/tasks'
 import type { Session } from '../../../types'
 
-/** Blocos de tempo do espaço pessoal. ?from=<ms> */
 export const GET = handle(async req => {
   const user = await requirePersonal()
   const from = Number(new URL(req.url).searchParams.get('from')) || 0

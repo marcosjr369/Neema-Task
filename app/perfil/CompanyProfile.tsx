@@ -34,7 +34,6 @@ function useTeamProgress() {
   return { people, error }
 }
 
-/** Avatares sobrepostos (no máximo "max", com "+n") */
 function Faces({ people, max = 5 }: { people: TeamProgress[]; max?: number }) {
   if (people.length === 0) return <span className="text-xs font-bold text-muted">Ninguém ainda</span>
   return (
@@ -172,7 +171,6 @@ function Team() {
   )
 }
 
-/** Perfil da conta da empresa: a equipa no centro, em vez de estatísticas pessoais */
 export default function CompanyProfile() {
   const { user } = useAccount()
   const org = useOrgRequired()

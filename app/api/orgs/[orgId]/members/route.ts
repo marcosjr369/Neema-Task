@@ -9,7 +9,6 @@ type Row = { name?: string; email?: string; jobTitle?: string; phone?: string; d
 
 const ROLES: Role[] = ['admin', 'supervisor', 'membro']
 
-/** Adicionar funcionários: um (formulário) ou vários (importação CSV) */
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   await requireAdmin(orgId)
   const { members } = await body<{ members: Row[] }>(req)
@@ -19,7 +18,6 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   const emails = members.map(r => r.email?.trim().toLowerCase()).filter((e): e is string => !!e)
   const res = await mutate(scopes(orgScope(orgId), async l => l.load('users', { email: emails })), db => {
     const added: Member[] = []
-    /** contas que já existiam: recebem o convite para aceitar ou recusar */
     const invited: string[] = []
     const skipped: { email: string; reason: string }[] = []
     const deptByName = new Map(
@@ -49,7 +47,6 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
         departmentId = dept.id
       }
 
-      // quem já tem conta recebe o convite (aceita ou recusa); quem não tem entra pelo link de convite
       const user = db.users.find(u => u.email === email && u.emailVerified !== false)
       if (user?.businessRole === 'company') {
         skipped.push({ email, reason: 'É a conta de uma empresa' })

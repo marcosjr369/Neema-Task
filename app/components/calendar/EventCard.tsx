@@ -11,11 +11,12 @@ import Avatar from '../ui/Avatar'
 
 export const KIND_ICON = { reuniao: UsersThreeIcon, compromisso: CalendarCheckIcon, lembrete: BellIcon }
 
-/** Um evento: hora, tipo, local, participantes e respostas; quem agendou edita ou cancela */
 export default function EventCard({ event: e, now, onEdit, compact = false }: { event: CalendarEvent; now: number; onEdit?: (e: CalendarEvent) => void; compact?: boolean }) {
   const org = useOrg()
   const { showToast } = useApp()
   const [busy, setBusy] = useState(false)
+  // a resposta a ser enviada (para o spinner aparecer só no botão carregado)
+  const [answering, setAnswering] = useState<EventResponse | null>(null)
   const base = eventsBase(org?.base)
   const cfg = EVENT_KINDS[e.kind]
   const Icon = KIND_ICON[e.kind]
@@ -37,7 +38,11 @@ export default function EventCard({ event: e, now, onEdit, compact = false }: { 
     }
     setBusy(false)
   }
-  const respond = (r: EventResponse) => act(() => respondEvent(base, e.id, r), r === 'sim' ? 'Presença confirmada' : 'Convite recusado')
+  const respond = async (r: EventResponse) => {
+    setAnswering(r)
+    await act(() => respondEvent(base, e.id, r), r === 'sim' ? 'Presença confirmada' : 'Convite recusado')
+    setAnswering(null)
+  }
 
   return (
     <article className={`card overflow-hidden border-l-4 p-3 ${past ? 'opacity-60' : ''}`} style={{ borderLeftColor: cfg.color }}>
@@ -104,10 +109,10 @@ export default function EventCard({ event: e, now, onEdit, compact = false }: { 
       {invited && !past && !compact && (
         <div className="mt-3 flex items-center gap-2 border-t-2 border-line pt-2.5">
           <span className="flex-1 text-xs font-bold text-muted">{myResponse === 'sim' ? 'Vais participar' : myResponse === 'nao' ? 'Recusaste' : 'Vais participar?'}</span>
-          <button onClick={() => respond('nao')} disabled={busy} className={`chip text-xs ${myResponse === 'nao' ? 'border-danger! bg-danger-light! text-danger!' : ''}`}>
+          <button onClick={() => respond('nao')} disabled={busy} aria-busy={answering === 'nao'} className={`chip text-xs ${myResponse === 'nao' ? 'border-danger! bg-danger-light! text-danger!' : ''}`}>
             <XIcon size={14} /> Não
           </button>
-          <button onClick={() => respond('sim')} disabled={busy} className={`chip text-xs ${myResponse === 'sim' ? 'border-accent! bg-accent-light! text-accent-dark!' : ''}`}>
+          <button onClick={() => respond('sim')} disabled={busy} aria-busy={answering === 'sim'} className={`chip text-xs ${myResponse === 'sim' ? 'border-accent! bg-accent-light! text-accent-dark!' : ''}`}>
             <CheckIcon size={14} /> Sim
           </button>
         </div>

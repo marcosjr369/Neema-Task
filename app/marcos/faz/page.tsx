@@ -10,8 +10,6 @@ import { ChartCard, ColumnChart, LineChart, compact, type Point, type Series } f
 import { usePanel } from './_components/PanelShell'
 import { dayLabel } from './_components/format'
 
-/* Visão geral: indicadores, gráficos por dia e resumos (registos recentes, empresas mais activas) */
-
 const BRAND = '#7B61FF'
 const TEAL = '#0D9488'
 
@@ -38,7 +36,6 @@ function Stat({ label, value, hint, icon: I, tint }: { label: string; value: str
   )
 }
 
-/** Número principal: total de utilizadores e a composição por tipo de conta */
 function UsersHero({ t }: { t: PanelOverview['totals'] }) {
   const parts = [
     { label: 'Pessoais', value: t.personal, color: BRAND },
@@ -54,7 +51,6 @@ function UsersHero({ t }: { t: PanelOverview['totals'] }) {
         </span>
       </div>
       <p className="mt-2 text-3xl font-black tabular-nums text-ink">{compact(t.users)}</p>
-      {/* composição por tipo de conta: 2px de intervalo entre segmentos */}
       <div className="mt-auto flex h-2 gap-0.5 overflow-hidden rounded-full bg-snow" title={parts.map(p => `${p.label}: ${p.value}`).join(' · ')}>
         {parts.map(p => <span key={p.label} className="h-full" style={{ width: `${(p.value / Math.max(1, t.users)) * 100}%`, background: p.color }} />)}
       </div>

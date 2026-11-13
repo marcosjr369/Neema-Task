@@ -3,7 +3,6 @@ import { inviteCode, mutate } from '../../../lib/server/store'
 import { effectivePresence } from '../../../lib/server/org'
 import { orgScope } from '../../../lib/server/scopes'
 
-/** Dados da empresa: departamentos e lista de funcionários */
 export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
   const { db, org, me } = await requireMember(orgId)
   const manager = isManager(me)
@@ -13,7 +12,6 @@ export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
     .map(m => ({
       ...m,
       presence: effectivePresence(m, now),
-      // contactos só para quem gere
       phone: manager || m.id === me.id ? m.phone : undefined,
       email: manager || m.id === me.id ? m.email : '',
     }))
@@ -37,7 +35,6 @@ export const PATCH = handle<{ orgId: string }>(async (req, { orgId }) => {
     if (patch.size !== undefined) org.size = patch.size
     if (patch.domain !== undefined) org.domain = patch.domain.trim().toLowerCase().replace(/^@/, '') || undefined
     if (patch.hideFromRanking !== undefined) org.hideFromRanking = !!patch.hideFromRanking || undefined
-    // em meias horas
     if (goal !== undefined) org.dailyGoalHours = Math.round(goal * 2) / 2
     if (patch.regenerateCode) {
       let code = inviteCode()

@@ -3,7 +3,6 @@ import { visibleMembers } from '../../../../lib/server/org'
 import { achievementProgress, levelInfo, sumSeconds, totalXp } from '../../../../lib/stats'
 import type { TeamProgress } from '../../../../types'
 
-/** Nível, XP e conquistas de cada pessoa da equipa (perfil da empresa e supervisores) */
 export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
   const { db, me } = await requireMember(orgId, { tasks: true, sessions: true })
   if (!isManager(me)) fail(403, 'Só supervisores e administradores')

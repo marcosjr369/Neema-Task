@@ -15,7 +15,6 @@ const COPY: Record<UserAction, { title: string; button: string; busy: string; ic
   delete: { title: 'Eliminar utilizador', button: 'Eliminar de vez', busy: 'A eliminar…', icon: WarningIcon, tone: 'danger' },
 }
 
-/** Confirmação das acções sobre um utilizador: explica o efeito e pede a palavra-passe do painel outra vez */
 export default function ConfirmUserModal({
   user, action, onClose, onDone,
 }: { user: Pick<PanelUser, 'id' | 'name' | 'email' | 'disabled' | 'orgs'>; action: UserAction; onClose: () => void; onDone: (r: ActionResult) => void }) {

@@ -7,19 +7,15 @@ import { formatDuration, formatShort, startOfDay } from '../../lib/stats'
 import { PRESENCE_CONFIG, type PresenceSegment, type PresenceStatus, type Session, type Task } from '../../types'
 import { presenceTotals, type RangeId } from './shared'
 
-/* Gráficos de actividade (equipa ou um funcionário): anéis de tempo e tarefas, e evolução por dia ou por hora */
-
 const STATES: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao', 'pausa', 'almoco', 'ausente']
 const PRESENCE_SERIES: Series[] = STATES.map(s => ({ key: s, name: PRESENCE_CONFIG[s].label, color: PRESENCE_CONFIG[s].color }))
 const FOCUS: Series = { key: 'focus', name: 'Horas focadas', color: '#7B61FF' }
 const DONE: Series[] = [{ key: 'done', name: 'Concluídas', color: '#4C7DFF' }]
 
-/** Valores em horas; o texto sai em "45m" / "2,5h" */
 const hours = (h: number) => formatShort(h * 3600)
 
 type Bucket = { start: number; end: number; label: string; title: string }
 
-/** Intervalos do gráfico: por hora no "Hoje", por dia nos outros períodos */
 export function buckets(range: RangeId, from: number, now: number): Bucket[] {
   const out: Bucket[] = []
   if (range === 'hoje') {
@@ -56,7 +52,6 @@ function DonutCard({ title, subtitle, children, footer }: { title: string; subti
   )
 }
 
-/** Anel com o tempo por estado (a trabalhar, reunião, almoço, ausente…) */
 export function PresenceDonut({ totals, title, subtitle, footer }: { totals: Partial<Record<PresenceStatus, number>>; title: string; subtitle?: string; footer?: ReactNode }) {
   const slices: Slice[] = STATES.map(s => ({ key: s, label: PRESENCE_CONFIG[s].label, color: PRESENCE_CONFIG[s].color, value: totals[s] ?? 0 }))
   return (
@@ -66,7 +61,6 @@ export function PresenceDonut({ totals, title, subtitle, footer }: { totals: Par
   )
 }
 
-/** Anel com o estado das tarefas: em aberto, por rever e concluídas no período */
 export function TaskStatusDonut({ tasks, from, now, title = 'Estado das tarefas', periodLabel }: { tasks: Task[]; from: number; now: number; title?: string; periodLabel: string }) {
   const review = tasks.filter(t => t.status === 'done' && t.review?.status === 'pending').length
   const done = tasks.filter(t => isCompleted(t) && (completedTime(t) ?? 0) >= from).length
@@ -88,7 +82,6 @@ export function TaskStatusDonut({ tasks, from, now, title = 'Estado das tarefas'
   )
 }
 
-/** Evolução: estados empilhados, horas focadas em tarefas e tarefas concluídas */
 export function TrendCharts({
   range, from, now, sessions, segments, tasks,
 }: { range: RangeId; from: number; now: number; sessions: Session[]; segments: PresenceSegment[]; tasks: Task[] }) {

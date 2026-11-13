@@ -7,7 +7,6 @@ import { CATEGORY_CONFIG } from '../../types'
 import { formatClock, phaseElapsed } from '../../lib/stats'
 import { CategoryGlyph } from '../ui/icons'
 
-/** Barra flutuante com o temporizador activo, visível em todas as páginas */
 export default function MiniTimer() {
   const { timer, activeTask, now, pauseTimer, resumeTimer } = useApp()
   if (!timer || !activeTask) return null

@@ -15,22 +15,29 @@ export const GET = handle(async req => {
   const url = new URL(req.url)
   const from = Number(url.searchParams.get('from')) || 0
   const metric = (url.searchParams.get('metric') as RankMetric) || 'points'
+  // duas fases em paralelo: empresas e membros; depois as tarefas e as sessões deles
   const db = await read(async l => {
-    await l.load('orgs')
-    await l.load('members', { org_id: l.db.orgs.map(o => o.id) })
-    await l.load('tasks', { org_id: l.db.orgs.map(o => o.id) })
+    await Promise.all([l.load('orgs'), l.load('members')])
     const ids = l.db.members.filter(m => m.status === 'activo').map(m => m.id)
-    await l.load('sessions', { member_id: ids, ...(from ? { start_at: { gte: from } } : {}) })
+    await Promise.all([
+      l.load('tasks', { org_id: l.db.orgs.map(o => o.id) }),
+      l.load('sessions', { member_id: ids, ...(from ? { start_at: { gte: from } } : {}) }),
+    ])
   })
+
+  // agrupar uma vez, em vez de filtrar todas as sessões e tarefas para cada pessoa
+  const sessionsBy = new Map<string, typeof db.sessions>()
+  for (const s of db.sessions) { if (s.memberId) { const l = sessionsBy.get(s.memberId); if (l) l.push(s); else sessionsBy.set(s.memberId, [s]) } }
+  const tasksBy = new Map<string, typeof db.tasks>()
+  for (const t of db.tasks) { if (t.orgId && t.assigneeId) { const k = `${t.orgId}:${t.assigneeId}`; const l = tasksBy.get(k); if (l) l.push(t); else tasksBy.set(k, [t]) } }
 
   const entries: OrgRankEntry[] = db.orgs.map(org => {
     const all = db.members.filter(m => m.orgId === org.id && m.status === 'activo')
-    // a média é por pessoa: a conta da empresa não conta
     const members = teamMembers(all, org)
     const total = { seconds: 0, tasks: 0, points: 0 }
     for (const m of members) {
       const s = withHistory(
-        rangeStats(db.sessions.filter(x => x.memberId === m.id), db.tasks.filter(t => t.orgId === org.id && t.assigneeId === m.id), from),
+        rangeStats(sessionsBy.get(m.id) ?? [], tasksBy.get(`${org.id}:${m.id}`) ?? [], from),
         m.history,
         from,
       )

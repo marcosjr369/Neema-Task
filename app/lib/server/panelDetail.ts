@@ -9,8 +9,6 @@ import { effectivePresence } from './org'
 import { dayKeyFn, dayKeys } from './panelStats'
 import type { DB } from './store'
 
-/** Fichas de detalhe do painel: um utilizador ou uma empresa, com tudo o que lhes diz respeito */
-
 const DAY = 24 * 60 * 60 * 1000
 
 export type DayWork = { day: string; focusSeconds: number; tasksDone: number }
@@ -106,7 +104,6 @@ export type OrgDetail = {
   tasks: PanelTask[]
 }
 
-/** Trabalho por dia (foco e tarefas concluídas) nas últimas `days` datas */
 function workSeries(sessions: Session[], tasks: Task[], days: number, tz: string, now: number): DayWork[] {
   const key = dayKeyFn(tz)
   const keys = dayKeys(now, days, key)
@@ -121,7 +118,6 @@ function workSeries(sessions: Session[], tasks: Task[], days: number, tz: string
   return keys.map(k => map.get(k)!)
 }
 
-/** Ordem das listas de tarefas: por fazer primeiro, depois as mais recentes */
 const taskOrder = (a: PanelTask, b: PanelTask) =>
   (a.status === 'done' ? 1 : 0) - (b.status === 'done' ? 1 : 0) || (b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt)
 

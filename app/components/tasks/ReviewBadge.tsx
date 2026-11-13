@@ -1,6 +1,5 @@
 import type { Task } from '../../types'
 
-/** Estado da aprovação de uma tarefa de empresa */
 export function ReviewBadge({ task }: { task: Task }) {
   const r = task.review
   if (task.status === 'done' && r?.status === 'pending') {

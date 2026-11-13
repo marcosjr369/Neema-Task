@@ -14,7 +14,6 @@ const HINT: Record<PushState, string> = {
   on: 'Activo neste dispositivo. Os lembretes chegam mesmo com a app fechada.',
 }
 
-/** Activar lembretes por notificação push neste dispositivo */
 export default function PushCard() {
   const { showToast } = useApp()
   const [state, setState] = useState<PushState | null>(null)

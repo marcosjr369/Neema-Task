@@ -1,12 +1,10 @@
-/** Cliente HTTP da API interna (/api/...) */
-
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message)
   }
 }
 
-type Options = { method?: string; body?: unknown; form?: FormData }
+type Options = { method?: string; body?: unknown; form?: FormData; headers?: Record<string, string> }
 
 /**
  * Token da sessão do Clerk (definido pelo AccountProvider). Vai em cada pedido para o servidor
@@ -16,8 +14,15 @@ type Options = { method?: string; body?: unknown; form?: FormData }
 let getToken: (() => Promise<string | null>) | null = null
 export const setTokenSource = (fn: typeof getToken) => { getToken = fn }
 
-export async function api<T = { ok: true }>(url: string, opts: Options = {}): Promise<T> {
-  const headers: Record<string, string> = {}
+/**
+ * Todos os pedidos à API passam pelo proxy (/api/proxy/...): é a única porta pública.
+ * O resto do código continua a escrever os endereços como "/api/...".
+ */
+export const apiUrl = (url: string) => (url.startsWith('/api/') && !url.startsWith('/api/proxy/') ? `/api/proxy/${url.slice(5)}` : url)
+
+export async function api<T = { ok: true }>(path: string, opts: Options = {}): Promise<T> {
+  const url = apiUrl(path)
+  const headers: Record<string, string> = { ...opts.headers }
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
   const token = await getToken?.().catch(() => null)
   if (token) headers.Authorization = `Bearer ${token}`
@@ -40,6 +45,21 @@ export async function api<T = { ok: true }>(url: string, opts: Options = {}): Pr
 
 export const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Algo correu mal')
 
-/** Endereço de um anexo de tarefa de empresa ("view" abre no browser em vez de descarregar) */
 export const fileUrl = (orgBase: string, taskId: string, id: string, view = false) =>
-  `${orgBase}/tasks/${taskId}/attachments?id=${encodeURIComponent(id)}${view ? '&ver=1' : ''}`
+  apiUrl(`${orgBase}/tasks/${taskId}/attachments?id=${encodeURIComponent(id)}${view ? '&ver=1' : ''}`)
+
+/** Para temporizadores: só corre com o separador à vista (escondido não vale a pena ir ao servidor) */
+export const whenVisible = (fn: () => unknown) => () => {
+  if (typeof document === 'undefined' || document.visibilityState === 'visible') fn()
+}
+
+/** Para recarregar ao voltar à janela: ignora se já correu há menos de "ms" (Alt+Tab seguidos) */
+export function throttled(fn: () => unknown, ms = 15 * 1000) {
+  let last = 0
+  return () => {
+    const n = Date.now()
+    if (n - last < ms) return
+    last = n
+    fn()
+  }
+}

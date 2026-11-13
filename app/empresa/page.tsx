@@ -7,7 +7,6 @@ import CompanyPage from './_components/CompanyPage'
 
 export default function CompanyOverviewPage() {
   const router = useRouter()
-  // links antigos (/empresa?tab=pessoas) passam para o endereço da secção
   const [legacy] = useState(() => SECTIONS.find(s => s.id === new URLSearchParams(window.location.search).get('tab')))
 
   useEffect(() => {

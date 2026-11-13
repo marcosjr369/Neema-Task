@@ -3,11 +3,6 @@ import { mutate, newId } from '../../../lib/server/store'
 import { accountTypeOf, businessRoleOf, COMPANY_ONLY } from '../../../lib/account'
 import { activateMember, loadHistory } from '../../../lib/server/history'
 
-/**
- * Entrar numa empresa com código de convite ou pelo domínio do email.
- * Uma conta pessoal só entra se confirmar a conversão (convert): passa a conta de empresa
- * e o espaço pessoal deixa de aparecer; os pontos e conquistas que já tinha passam para a empresa.
- */
 export const POST = handle(async req => {
   const user = await requireUser()
   const { code, orgId, convert } = await body<{ code?: string; orgId?: string; convert?: boolean }>(req)
@@ -15,7 +10,6 @@ export const POST = handle(async req => {
   return mutate(async l => {
     await l.load('users', { id: user.id })
     await loadHistory(l, user.id)
-    // empresas onde já está (para saber se é a conta de alguma)
     await l.load('orgs', { id: l.db.members.map(m => m.orgId) })
     if (clean) await l.load('orgs', { invite_code: clean })
     else if (orgId) await l.load('orgs', { id: orgId })
@@ -26,7 +20,6 @@ export const POST = handle(async req => {
     if (accountTypeOf(me, hasMembership) === 'personal' && !convert) {
       fail(409, 'Esta conta é pessoal. Confirma que queres passar a conta de empresa.')
     }
-    // a conta de uma empresa é a empresa, não um funcionário
     if (businessRoleOf(me, db.orgs.some(o => o.createdBy === me.id), hasMembership) === 'company') fail(403, COMPANY_ONLY)
     const domain = user.email.split('@')[1]
     const org = clean

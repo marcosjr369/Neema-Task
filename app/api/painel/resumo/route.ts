@@ -4,7 +4,6 @@ import { panelOverview } from '../../../lib/server/panelStats'
 import { read } from '../../../lib/server/store'
 import { panelQuery } from '../../../lib/server/panelQuery'
 
-/** Métricas, gráficos, utilizadores e empresas do painel. ?dias=7|30|90&tz=Europe/Lisbon */
 export const GET = handle(async req => {
   await requirePanel()
   const { days, tz } = panelQuery(req)

@@ -5,7 +5,6 @@ import { CarriedHistory, Priority, Session, Task } from '../types'
  * não pode depender de nada do browser.
  */
 export const POINTS = {
-  /** 1 ponto por cada 5 minutos de foco */
   secondsPerPoint: 5 * 60,
   task: { baixa: 8, media: 10, alta: 15 } as Record<Priority, number>,
   onTime: 5,
@@ -13,13 +12,11 @@ export const POINTS = {
   rejection: -5,
 }
 
-/** A tarefa conta como concluída (nas de aprovação, só depois de aprovada) */
 export function isCompleted(task: Task) {
   if (task.status !== 'done') return false
   return !task.requiresApproval || task.review?.status === 'approved'
 }
 
-/** Momento em que a tarefa passou a contar como concluída */
 export function completedTime(task: Task) {
   if (!isCompleted(task)) return undefined
   return task.requiresApproval ? task.review?.at ?? task.completedAt : task.completedAt
@@ -38,7 +35,6 @@ export const focusPoints = (seconds: number) => Math.floor(seconds / POINTS.seco
 
 export type RangeStats = { seconds: number; tasks: number; points: number }
 
-/** Horas, tarefas concluídas e pontos num intervalo [from, to) */
 export function rangeStats(sessions: Session[], tasks: Task[], from = 0, to = Infinity): RangeStats {
   const seconds = sessions.reduce((a, s) => (s.start >= from && s.start < to ? a + s.seconds : a), 0)
   let done = 0
@@ -52,7 +48,6 @@ export function rangeStats(sessions: Session[], tasks: Task[], from = 0, to = In
   return { seconds, tasks: done, points: pts }
 }
 
-/** Soma o que a pessoa trouxe ao entrar na empresa; não tem datas, por isso só conta no total de sempre */
 export function withHistory(stats: RangeStats, history: CarriedHistory | undefined, from = 0): RangeStats {
   if (!history || from > 0) return stats
   return { seconds: stats.seconds + history.seconds, tasks: stats.tasks + history.done, points: stats.points + history.xp }

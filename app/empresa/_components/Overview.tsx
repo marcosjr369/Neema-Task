@@ -35,7 +35,6 @@ export default function Overview({ goTo }: { goTo: (section: SectionId) => void 
   const org = useOrgRequired()
   const { now } = useApp()
   const dayStart = startOfDay(now)
-  // 7 dias para os gráficos de evolução; os números de hoje filtram-se daqui
   const weekStart = rangeFrom('7d', now)
   const { sessions, segments } = useTeamActivity(weekStart)
 

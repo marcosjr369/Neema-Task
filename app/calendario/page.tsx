@@ -11,6 +11,7 @@ import { EVENT_KINDS, type CalendarEvent } from '../types'
 import EventCard from '../components/calendar/EventCard'
 import EventForm from '../components/calendar/EventForm'
 import Mascot from '../components/ui/Mascot'
+import { ListSkeleton } from '../components/ui/Skeleton'
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
@@ -21,7 +22,6 @@ function Calendar() {
   const initial = startOfDay(Number(params.get('dia')) || now)
   const [day, setDay] = useState(initial)
   const [month, setMonth] = useState(initial)
-  // null: fechado; { event: null }: novo
   const [form, setForm] = useState<{ event: CalendarEvent | null } | null>(null)
 
   const grid = monthGrid(month)
@@ -48,7 +48,7 @@ function Calendar() {
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-black text-ink">Calendário</h1>
           <p className="text-sm font-bold text-muted">
-            {org?.isManager ? 'Agenda reuniões com a equipa ou compromissos teus' : 'Reuniões e compromissos, com aviso 5 minutos antes'}
+            {org?.isManager ? 'As tuas reuniões e as da tua equipa' : org ? 'Agenda reuniões com colegas ou compromissos teus' : 'Reuniões e compromissos, com aviso 5 minutos antes'}
           </p>
         </div>
         <button onClick={() => setForm({ event: null })} className="btn btn-primary shrink-0">
@@ -97,7 +97,6 @@ function Calendar() {
                   >
                     {new Date(d).getDate()}
                   </span>
-                  {/* telemóvel: pontos; desktop: os primeiros eventos */}
                   <span className="mt-1 flex justify-center gap-0.5 lg:hidden">
                     {list.slice(0, 3).map(e => <span key={e.id} className="h-1.5 w-1.5 rounded-full" style={{ background: EVENT_KINDS[e.kind].color }} />)}
                   </span>
@@ -131,7 +130,7 @@ function Calendar() {
               <button onClick={() => setForm({ event: null })} className="text-sm font-extrabold uppercase tracking-wide text-accent cursor-pointer">+ Agendar</button>
             </div>
             {!loaded ? (
-              <p className="card p-6 text-center font-semibold text-muted">A carregar…</p>
+              <ListSkeleton rows={3} />
             ) : dayEvents.length === 0 ? (
               <div className="card flex flex-col items-center p-6 text-center">
                 <Mascot size={64} mood="sleepy" />

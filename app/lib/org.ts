@@ -1,7 +1,5 @@
 import type { Department, Member, Org, PresenceSegment, PresenceStatus, Role, Task } from '../types'
 
-/** Utilitários de empresa partilhados entre cliente e servidor */
-
 export const DEPT_COLORS = ['#4C7DFF', '#EC5BA6', '#12B5A6', '#FF8A3D', '#7B61FF', '#FFC53D', '#4CC9F0', '#F2545B']
 
 export const SECTORS = [
@@ -29,23 +27,18 @@ export const canManageRole = (role?: Role) => role === 'admin' || role === 'supe
 export const isCompanyAccount = (m: Member | undefined, org: Pick<Org, 'createdBy'> | undefined) =>
   !!m?.userId && !!org && m.userId === org.createdBy
 
-/** Pessoas da equipa: todos os membros menos a conta da empresa */
 export const teamMembers = (members: Member[], org: Pick<Org, 'createdBy'> | undefined) =>
   members.filter(m => !isCompanyAccount(m, org))
 
-/** Pode ser escolhido como supervisor de uma tarefa (aprova o trabalho) */
 export const canSuperviseTask = (m: Member, org: Pick<Org, 'createdBy'> | undefined) =>
   m.status === 'activo' && (canManageRole(m.role) || isCompanyAccount(m, org))
 
-/** Quem aprova: o supervisor escolhido (ou um administrador); sem escolha, quem gere o responsável */
 export const canReviewTask = (task: Task, me: Member, managesAssignee: boolean) =>
   task.reviewerId ? task.reviewerId === me.id || me.role === 'admin' : managesAssignee
 
-/** Departamentos geridos pelo membro ('all' para administradores) */
 /** Um dia de trabalho aberto há mais do que isto (esqueceu-se de terminar) já não conta */
 export const WORKDAY_MS = 16 * 60 * 60 * 1000
 
-/** Começou o dia de trabalho e ainda não terminou */
 export const isWorking = (workStart: number | undefined | null, now = Date.now()) => !!workStart && now - workStart < WORKDAY_MS
 
 export function managedDepartmentIds(departments: Department[], me: Member): Set<string> | 'all' {
@@ -57,7 +50,6 @@ export function managedDepartmentIds(departments: Department[], me: Member): Set
   return ids
 }
 
-/** Funcionários a quem o membro pode atribuir tarefas */
 export function assignableMembers(members: Member[], departments: Department[], me: Member) {
   const scope = managedDepartmentIds(departments, me)
   return members.filter(
@@ -65,7 +57,6 @@ export function assignableMembers(members: Member[], departments: Department[], 
   )
 }
 
-/** Segundos por estado num intervalo, cortando os segmentos às pontas */
 export function presenceTotals(segments: PresenceSegment[], from: number, to: number, now = Date.now()) {
   const totals: Partial<Record<PresenceStatus, number>> = {}
   for (const s of segments) {
@@ -83,7 +74,6 @@ export function initials(name: string) {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
 }
 
-/** Lê CSV simples (vírgula ou ponto e vírgula, aspas opcionais) */
 export function parseCsv(text: string): string[][] {
   const firstLine = text.split(/\r?\n/, 1)[0] ?? ''
   const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ';' : ','
@@ -116,10 +106,6 @@ export function parseCsv(text: string): string[][] {
   return rows
 }
 
-// ─── Tarefas de grupo ───────────────────────────────────────────────────────
-
-/** Identifica as cópias da mesma tarefa de grupo, na mesma repetição (tarefa simples: o próprio id) */
 export const groupKey = (t: Pick<Task, 'id' | 'groupId' | 'occurrence'>) => (t.groupId ? `${t.groupId}:${t.occurrence ?? 0}` : t.id)
 
-/** Cópias da mesma tarefa de grupo (inclui a própria); tarefa simples: só ela */
 export const groupSiblings = (tasks: Task[], t: Task) => (t.groupId ? tasks.filter(x => groupKey(x) === groupKey(t)) : [t])

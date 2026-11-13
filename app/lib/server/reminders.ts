@@ -7,7 +7,6 @@ import { pushConfigured, sendToUser } from './push'
 import { mutate, read, type DB } from './store'
 import { userScope } from './scopes'
 
-/** Hora, minuto e segundo locais do utilizador (o servidor pode estar noutro fuso) */
 function localClock(now: number, timeZone?: string) {
   try {
     const parts = new Intl.DateTimeFormat('en-GB', { timeZone, hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' }).formatToParts(now)
@@ -19,7 +18,6 @@ function localClock(now: number, timeZone?: string) {
   }
 }
 
-/** Decide se o utilizador deve receber um lembrete agora; devolve a mensagem ou null */
 export function reminderFor(db: DB, user: User, now = Date.now()) {
   const settings = { ...DEFAULT_SETTINGS, ...user.settings }
   const interval = settings.idleReminderMinutes * 60 * 1000
@@ -30,10 +28,8 @@ export function reminderFor(db: DB, user: User, now = Date.now()) {
   const dayStart = now - ((h * 60 + m) * 60 + s) * 1000
   const workStart = dayStart + settings.reminderStartHour * 3600 * 1000
 
-  // a conta de uma empresa gere a equipa, não regista tempo
   if (db.members.some(mb => mb.userId === user.id && isCompanyAccount(mb, db.orgs.find(o => o.id === mb.orgId)))) return null
 
-  // cronómetro a correr em qualquer espaço → está a trabalhar
   if (Object.values(user.timers ?? {}).some(t => t.segmentStart)) return null
 
   const memberIds = new Set(db.members.filter(mb => mb.userId === user.id).map(mb => mb.id))
@@ -53,17 +49,13 @@ export function reminderFor(db: DB, user: User, now = Date.now()) {
   const since = Math.max(lastWork, workStart, user.lastNudgeAt ?? 0)
   if (now - since < interval) return null
 
-  // voltou a trabalhar depois do último lembrete → recomeça na primeira frase
   const count = lastWork > (user.lastNudgeAt ?? 0) ? 0 : user.nudgeCount ?? 0
   const idleFor = formatDuration((now - Math.max(lastWork, workStart)) / 1000)
   return { ...nudgeMessage(count, idleFor), count }
 }
 
-/** Passa por todos os utilizadores com push activo e envia os lembretes devidos */
 export async function runReminders(now = Date.now()) {
   if (!pushConfigured()) return { sent: 0 }
-  // só quem tem notificações activas, os seus membros e o trabalho das últimas 48h
-  // (o lembrete conta a partir do último trabalho ou do início do horário de hoje)
   const db = await read(async l => {
     await l.load('push')
     const userIds = [...new Set(l.db.push.map(p => p.userId))]
@@ -102,7 +94,6 @@ export async function runReminders(now = Date.now()) {
 const LOOP_MS = 5 * 60 * 1000
 const g = globalThis as unknown as { __neemaReminders?: ReturnType<typeof setInterval> }
 
-/** Arranca a verificação periódica no próprio servidor Node (ver instrumentation.ts) */
 export function startReminderLoop() {
   if (g.__neemaReminders || !pushConfigured()) return
   g.__neemaReminders = setInterval(() => {

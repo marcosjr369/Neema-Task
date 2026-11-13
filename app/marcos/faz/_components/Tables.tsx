@@ -160,7 +160,6 @@ export function OrgsTable({ orgs, days }: { orgs: PanelOrg[]; days: number }) {
   )
 }
 
-/** Registo de utilizadores eliminados (os dados já não existem; fica o resumo do momento) */
 export function DeletedTable({ list }: { list: DeletedUser[] }) {
   const [q, setQ] = useState('')
   const term = q.trim().toLowerCase()

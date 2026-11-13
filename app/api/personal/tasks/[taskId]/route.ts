@@ -1,7 +1,7 @@
 import { body, fail, handle, requirePersonal } from '../../../../lib/server/api'
 import { userScope } from '../../../../lib/server/scopes'
 import { mutate } from '../../../../lib/server/store'
-import { cleanTaskFields, deleteTask, type TaskPatch } from '../../../../lib/server/tasks'
+import { cleanTaskFields, deleteTask, spawnNext, type TaskPatch } from '../../../../lib/server/tasks'
 import type { TaskStatus } from '../../../../types'
 
 type Action = { action: 'update'; patch: TaskPatch } | { action: 'status'; status: TaskStatus }
@@ -18,6 +18,7 @@ export const PATCH = handle<{ taskId: string }>(async (req, { taskId }) => {
       Object.assign(task, fields)
     } else if (input.action === 'status') {
       if (!['todo', 'doing', 'done'].includes(input.status)) fail(400, 'Estado inválido')
+      if (input.status === 'done' && task.status !== 'done') spawnNext(db, task)
       task.status = input.status
       task.completedAt = input.status === 'done' ? Date.now() : undefined
     } else fail(400, 'Acção desconhecida')

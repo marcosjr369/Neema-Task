@@ -5,6 +5,7 @@ import { MagnifyingGlassIcon, PlusIcon, XIcon } from '@phosphor-icons/react'
 import { useApp } from '../context/AppContext'
 import TaskItem from '../components/tasks/TaskItem'
 import Mascot from '../components/ui/Mascot'
+import { PageSkeleton } from '../components/ui/Skeleton'
 import { CATEGORIES, CATEGORY_CONFIG, STATUS_LABEL, Task, TaskCategory, TaskStatus } from '../types'
 import { CategoryGlyph } from '../components/ui/icons'
 
@@ -19,7 +20,6 @@ function sortFor(status: TaskStatus) {
       : PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.createdAt - b.createdAt
 }
 
-/** Coluna do quadro Kanban (desktop) com arrastar-e-largar */
 function KanbanColumn({
   status, tasks, dragging, setDragging, onDrop,
 }: {
@@ -73,7 +73,6 @@ function KanbanColumn({
   )
 }
 
-
 function DraggableTask({ task, setDragging }: { task: Task; setDragging: (id: string | null) => void }) {
   return (
     <div
@@ -91,7 +90,7 @@ function DraggableTask({ task, setDragging }: { task: Task; setDragging: (id: st
 }
 
 export default function TasksPage() {
-  const { tasks, openTaskSheet, setStatus } = useApp()
+  const { tasks, openTaskSheet, setStatus, ready } = useApp()
   const [tab, setTab] = useState<TaskStatus>('todo')
   const [category, setCategory] = useState<TaskCategory | 'all'>('all')
   const [query, setQuery] = useState('')
@@ -116,6 +115,8 @@ export default function TasksPage() {
     setDragging(null)
   }
 
+  if (!ready) return <PageSkeleton rows={6} />
+
   return (
     <div>
       <header className="sticky top-0 z-20 space-y-3 border-b-2 border-line bg-white/95 px-4 pb-3 pt-4 backdrop-blur lg:px-0 lg:pt-6">
@@ -138,7 +139,6 @@ export default function TasksPage() {
           </div>
         </div>
 
-        {/* Segmentos de estado (mobile) */}
         <div className="grid grid-cols-3 gap-1 rounded-2xl bg-snow p-1 lg:hidden" role="tablist">
           {TABS.map(s => (
             <button
@@ -181,14 +181,12 @@ export default function TasksPage() {
         )}
       </header>
 
-      {/* Desktop: quadro Kanban */}
       <div className="hidden gap-4 pt-5 lg:grid lg:grid-cols-3">
         {TABS.map(s => (
           <KanbanColumn key={s} status={s} tasks={byStatus(s)} dragging={dragging} setDragging={setDragging} onDrop={handleDrop} />
         ))}
       </div>
 
-      {/* Mobile: lista por separador */}
       <div className="space-y-3 px-4 pt-4 lg:hidden">
         {list.length === 0 ? (
           <div className="flex flex-col items-center py-14 text-center">

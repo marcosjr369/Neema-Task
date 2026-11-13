@@ -4,28 +4,19 @@ import { rangeStats, withHistory } from '../points'
 import { teamMembers } from '../org'
 import type { DB } from './store'
 
-/**
- * Rankings vistos pelo painel: empresas, contas pessoais e funcionários de uma empresa.
- * O painel vê tudo com nomes reais, incluindo quem se escondeu (marcado como "hidden").
- */
-
 export type RankKind = 'empresas' | 'pessoais' | 'funcionarios'
 
 export type PanelRankEntry = {
   id: string
   name: string
-  /** email, sector ou cargo */
   sub: string
   picture?: string
-  /** empresas: pessoas activas */
   members?: number
   department?: string
   seconds: number
   tasks: number
   points: number
-  /** escondido do ranking público (empresa nas definições, pessoa no perfil) */
   hidden: boolean
-  /** ficha no painel */
   href?: string
 }
 
@@ -50,7 +41,6 @@ export function panelRanking(db: DB, kind: RankKind, metric: RankMetric, from: n
         return { id: org.id, name: org.name, sub: org.sector || 'Sem sector', members: members.length, ...total, hidden: !!org.hideFromRanking, href: `/marcos/faz/empresas/${org.id}` }
       })
       .filter(e => e.members > 0)
-      // como no ranking público: média por pessoa activa
       .sort((a, b) => avg(b) - avg(a) || b[key] - a[key] || a.name.localeCompare(b.name))
   }
 
@@ -70,7 +60,6 @@ export function panelRanking(db: DB, kind: RankKind, metric: RankMetric, from: n
       .sort(byKey)
   }
 
-  // funcionários de uma empresa
   const departments = db.departments.filter(d => d.orgId === orgId)
   return teamMembers(db.members, db.orgs.find(o => o.id === orgId))
     .filter(m => m.orgId === orgId && m.status === 'activo')

@@ -6,15 +6,15 @@ import { BuildingsIcon, CheckCircleIcon, ClockIcon, CrownIcon, InfoIcon, Lightni
 import { useAccount } from '../context/AccountContext'
 import { useApp } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
-import { api, errorText } from '../lib/api'
+import { api, errorText, whenVisible } from '../lib/api'
 import { POINTS_HELP } from '../lib/points'
 import { formatDuration, formatShort, startOfDay } from '../lib/stats'
 import Avatar from '../components/ui/Avatar'
 import Mascot from '../components/ui/Mascot'
 import type { OrgRankEntry, RankEntry, RankMetric } from '../types'
+import { ListSkeleton } from '../components/ui/Skeleton'
 
 type Period = 'hoje' | 'semana' | 'mes' | 'sempre'
-/** pessoas: colegas da empresa ou contas pessoais (nunca misturadas); empresas: ranking geral */
 type Scope = 'pessoas' | 'empresas'
 type DeptEntry = { id: string; name: string; color: string; members: number; seconds: number; tasks: number; points: number }
 
@@ -34,7 +34,7 @@ function periodStart(p: Period, now: number) {
   if (p === 'sempre') return 0
   const d = new Date(startOfDay(now))
   if (p === 'hoje') return d.getTime()
-  if (p === 'semana') d.setDate(d.getDate() - ((d.getDay() + 6) % 7)) // segunda-feira
+  if (p === 'semana') d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
   else d.setDate(1)
   return d.getTime()
 }
@@ -74,9 +74,8 @@ function Podium({ top, metric }: { top: RankEntry[]; metric: RankMetric }) {
   )
 }
 
-/** Ranking geral das empresas: ordenado pela média por pessoa */
 function OrgList({ list, metric }: { list: OrgRankEntry[] | null; metric: RankMetric }) {
-  if (list === null) return <div className="flex justify-center py-16"><Mascot size={80} className="animate-bounce-soft" /></div>
+  if (list === null) return <ListSkeleton rows={6} className="mt-4" />
   if (list.length === 0) {
     return (
       <div className="flex flex-col items-center py-14 text-center">
@@ -151,7 +150,7 @@ export default function RankingPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carregar do servidor
     load()
-    const id = setInterval(load, 30 * 1000)
+    const id = setInterval(whenVisible(load), 60 * 1000)
     return () => clearInterval(id)
   }, [load])
 
@@ -250,7 +249,7 @@ export default function RankingPage() {
         {scope === 'empresas' ? (
           <OrgList list={orgs} metric={metric} />
         ) : entries === null && !error ? (
-          <div className="flex justify-center py-16"><Mascot size={80} className="animate-bounce-soft" /></div>
+          <ListSkeleton rows={6} className="mt-4" />
         ) : view === 'departamentos' && org ? (
           <ol className="card mt-4 divide-y-2 divide-line">
             {sortedDepts.map((d, i) => (

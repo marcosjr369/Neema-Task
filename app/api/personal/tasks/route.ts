@@ -3,7 +3,6 @@ import { userScope } from '../../../lib/server/scopes'
 import { mutate, read } from '../../../lib/server/store'
 import { buildTask, cleanTaskFields, pickId, type TaskPatch } from '../../../lib/server/tasks'
 
-/** Tarefas do espaço pessoal */
 export const GET = handle(async () => {
   const user = await requirePersonal()
   const db = await read(userScope(user.id, { tasks: true }))

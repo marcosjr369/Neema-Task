@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from './api'
+import { api, throttled, whenVisible } from './api'
 import { startOfDay } from './stats'
 import type { CalendarEvent, EventResponse } from '../types'
 
-/* Calendário no cliente: datas, pedidos à API e lista de eventos de um intervalo */
-
 export const DAY_MS = 24 * 3600 * 1000
 
-/** Avisa todas as listas abertas (página, alertas, agenda de hoje) para recarregarem */
 const CHANGED = 'udacha:events'
 export const eventsChanged = () => window.dispatchEvent(new Event(CHANGED))
 
 export const eventsBase = (orgBase?: string) => orgBase ?? '/api/personal'
 
-/** Eventos que tocam o intervalo [from, to); recarrega a cada minuto e quando algo muda */
+/**
+ * Participo no evento (agendei ou fui convidado)? Supervisores e administradores também
+ * veem os eventos da equipa, mas os avisos são só para quem participa.
+ */
+export const involves = (e: CalendarEvent, meId?: string) => !meId || e.createdBy === meId || e.attendeeIds.includes(meId)
+
 export function useEvents(base: string, from: number, to: number) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -29,13 +31,14 @@ export function useEvents(base: string, from: number, to: number) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carregar do servidor
     reload()
-    const id = setInterval(reload, 60 * 1000)
+    const id = setInterval(whenVisible(reload), 60 * 1000)
+    const onFocus = throttled(reload)
     window.addEventListener(CHANGED, reload)
-    window.addEventListener('focus', reload)
+    window.addEventListener('focus', onFocus)
     return () => {
       clearInterval(id)
       window.removeEventListener(CHANGED, reload)
-      window.removeEventListener('focus', reload)
+      window.removeEventListener('focus', onFocus)
     }
   }, [reload])
 
@@ -62,20 +65,14 @@ export async function respondEvent(base: string, id: string, response: EventResp
   eventsChanged()
 }
 
-// ─── Datas ──────────────────────────────────────────────────────────────────
-
 const pad = (n: number) => String(n).padStart(2, '0')
-/** "AAAA-MM-DD" local (para <input type="date">) */
 export const dateInput = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
-/** "HH:MM" local (para <input type="time">) */
 export const timeInput = (ms: number) => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}` }
-/** Junta data e hora locais */
 export const fromInputs = (date: string, time: string) => new Date(`${date}T${time || '00:00'}`).getTime()
 
 export const hhmm = (ms: number) => new Date(ms).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
 export const dayTitle = (ms: number) => new Date(ms).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })
 
-/** 6 semanas (segunda a domingo) que mostram o mês de "month" */
 export function monthGrid(month: number) {
   const first = new Date(month)
   first.setDate(1)
@@ -90,14 +87,12 @@ export function monthGrid(month: number) {
   return days
 }
 
-/** Eventos que tocam o dia */
 export const eventsOn = (events: CalendarEvent[], day: number) => {
   const end = new Date(day)
   end.setDate(end.getDate() + 1)
   return events.filter(e => e.start < end.getTime() && e.end > day)
 }
 
-/** É um endereço (para abrir a chamada)? */
 export const isLink = (s?: string) => !!s && /^https?:\/\//i.test(s.trim())
 export const whenText = (ms: number) =>
   new Date(ms).toLocaleString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })

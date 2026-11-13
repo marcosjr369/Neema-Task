@@ -19,11 +19,9 @@ type Patch = {
   rankingVisibility?: RankingVisibility
   settings?: Partial<Settings>
   workspace?: Workspace
-  /** só na entrada: escolher conta pessoal (a de empresa nasce ao criar ou entrar numa empresa) */
   accountType?: 'personal'
 }
 
-/** limites [mín, máx] de cada definição numérica */
 const NUMERIC: Partial<Record<keyof Settings, [number, number]>> = {
   workMinutes: [1, 600],
   shortBreakMinutes: [1, 120],
@@ -67,7 +65,6 @@ export const PATCH = handle(async req => {
     }
     if (patch.workspace) {
       const ws = patch.workspace
-      // cada tipo de conta só tem os seus espaços
       const type = accountTypeOf(user, hasMembership)
       if (ws.kind === 'personal' && type === 'business') fail(409, BUSINESS_ONLY)
       if (ws.kind === 'org' && type === 'personal') fail(409, PERSONAL_ONLY)

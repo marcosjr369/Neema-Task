@@ -9,7 +9,6 @@ import Mascot from '../ui/Mascot'
 const IDLE_MS = 15 * 60 * 1000
 const ANSWER_MS = 2 * 60 * 1000
 
-/** Empresa: o cronómetro actualiza o estado e a inactividade passa a "ausente" */
 export function PresenceSync() {
   const org = useOrg()
   const { timer, settings } = useApp()
@@ -20,7 +19,6 @@ export function PresenceSync() {
   const setPresence = org?.setPresence
   const presence = org?.presence
 
-  // Cronómetro → estado (só quando o cronómetro muda; a escolha manual prevalece)
   const presenceRef = useRef(presence)
   useEffect(() => { presenceRef.current = presence }, [presence])
   useEffect(() => {
@@ -29,7 +27,6 @@ export function PresenceSync() {
     if (presenceRef.current !== want) setPresence(want)
   }, [running, phase, setPresence])
 
-  // Inactividade
   useEffect(() => {
     if (!setPresence) return
     lastActivity.current = Date.now()
@@ -48,7 +45,6 @@ export function PresenceSync() {
     }
   }, [setPresence, presence, running, settings.sound])
 
-  // Sem resposta → ausente
   useEffect(() => {
     if (!asking || !setPresence) return
     const id = setTimeout(() => {

@@ -14,6 +14,7 @@ import { BandDays, ScoreBadge } from './Records'
 import { teamMembers } from '../../lib/org'
 import { analyse, doneIn, GOAL_BANDS, goalSecondsOf, type GoalBand } from '../../lib/records'
 import { PresenceGlyph } from '../../components/ui/icons'
+import { StatsSkeleton } from '../../components/ui/Skeleton'
 
 const ACTIVE: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao']
 const COLUMNS: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao', 'pausa', 'almoco', 'ausente']
@@ -126,7 +127,7 @@ export default function Reports() {
       <PresenceLegend />
 
       {!loaded ? (
-        <p className="card p-6 text-center font-semibold text-muted">A carregar…</p>
+        <StatsSkeleton />
       ) : (
         <>
           <section className="card flex flex-wrap items-center gap-x-5 gap-y-2 p-3 text-sm font-bold text-muted">
@@ -143,7 +144,6 @@ export default function Reports() {
             <span className="lg:ml-auto"><b className="text-ink">{rows.reduce((a, r) => a + r.a.records, 0)}</b> recordes batidos</span>
           </section>
 
-          {/* Mobile: cartões */}
           <ul className="space-y-3 lg:hidden">
             {rows.map(r => (
               <li key={r.m.id}>
@@ -178,7 +178,6 @@ export default function Reports() {
             ))}
           </ul>
 
-          {/* Desktop: tabela */}
           <div className="card hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-sm">
               <thead className="border-b-2 border-line text-xs font-extrabold uppercase tracking-wide text-muted">

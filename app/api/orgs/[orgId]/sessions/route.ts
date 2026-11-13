@@ -4,7 +4,6 @@ import { visibleMembers } from '../../../../lib/server/org'
 import { cleanSessions } from '../../../../lib/server/tasks'
 import type { Session } from '../../../../types'
 
-/** ?scope=mine | team, ?from=<ms> */
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const url = new URL(req.url)
   const from = Number(url.searchParams.get('from')) || 0
@@ -18,7 +17,6 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   return { sessions }
 })
 
-/** Regista blocos de tempo trabalhado em tarefas atribuídas ao próprio */
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { me } = await requirePerson(orgId)
   const { sessions } = await body<{ sessions: Session[] }>(req)

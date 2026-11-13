@@ -23,7 +23,7 @@ import {
 import { pushNotification, sounds } from '../lib/sounds'
 import { formatDuration, liveSession, phaseElapsed, taskSeconds } from '../lib/stats'
 import { taskPoints } from '../lib/points'
-import { api, errorText } from '../lib/api'
+import { api, errorText, throttled, whenVisible } from '../lib/api'
 import { useAccount } from './AccountContext'
 import { useOrg } from './OrgContext'
 
@@ -33,7 +33,6 @@ export type Celebration = {
   subtitle: string
   xp: number
   seconds: number
-  /** enviada para revisão: XP só depois de aprovada */
   pending?: boolean
 }
 export type Toast = { id: number; text: string; tone: 'info' | 'danger' | 'success' }
@@ -47,15 +46,11 @@ const newId = () =>
 type AppContextValue = {
   now: number
   workspace: Workspace
-  /** espaço de empresa (tarefas atribuídas, aprovações, presença) */
   orgMode: boolean
-  /** já chegaram as tarefas do servidor */
   ready: boolean
   tasks: Task[]
   sessions: Session[]
-  /** sessões guardadas + o segmento a correr agora */
   allSessions: Session[]
-  /** empresa: pontos e conquistas que a pessoa trouxe ao entrar (somam aos de lá) */
   history?: CarriedHistory
   settings: Settings
   timer: ActiveTimer | null
@@ -69,7 +64,6 @@ type AppContextValue = {
   updateTask: (id: string, patch: Partial<Task>) => void
   deleteTask: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
-  /** substitui a tarefa local pela versão do servidor */
   replaceTask: (task: Task) => void
   refreshTasks: () => Promise<boolean>
 
@@ -99,7 +93,6 @@ export function useApp() {
   return ctx
 }
 
-/** Campos que o servidor aceita numa actualização */
 const REMOTE_FIELDS = [
   'title', 'description', 'category', 'priority', 'focusDuration', 'deadline', 'tags',
   'checklist', 'requiresApproval', 'requiresAttachment', 'recurrence', 'notified', 'assigneeId', 'reviewerId',
@@ -113,10 +106,6 @@ function remotePatch(patch: Partial<Task>) {
   return out
 }
 
-/**
- * Estado da app no espaço activo. Tudo vive no servidor:
- * pessoal → /api/personal, empresa → /api/orgs/:id. O provider é recriado ao mudar de espaço.
- */
 export function AppProvider({ workspace, children }: { workspace: Workspace; children: ReactNode }) {
   const account = useAccount()
   const org = workspace.kind === 'org' ? workspace : null
@@ -163,7 +152,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     }
   }, [])
 
-  // ─── Toast ──────────────────────────────────────────────────────────────
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showToast = useCallback((text: string, tone: Toast['tone'] = 'info') => {
     setToast({ id: Date.now(), text, tone })
@@ -175,7 +163,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     if (settingsRef.current.sound) fn()
   }, [])
 
-  // ─── Cronómetro guardado na conta (continua noutro dispositivo) ─────────
   const firstTimer = useRef(true)
   useEffect(() => {
     if (firstTimer.current) {
@@ -185,10 +172,8 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     api('/api/me/timer', { method: 'PUT', body: { key: timerKey, timer } }).catch(() => undefined)
   }, [timer, timerKey])
 
-  // ─── Sincronização com o servidor ───────────────────────────────────────
   /** pedidos em curso: enquanto houver, o polling não sobrepõe o estado local */
   const inflight = useRef(0)
-  /** sessões ainda não confirmadas (ex.: sem rede) */
   const pendingSessions = useRef<Session[]>([])
 
   const replaceTask = useCallback((task: Task) => {
@@ -257,20 +242,21 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
       if (t && s) setReady(true)
     }
     sync()
+    // o tempo por enviar sai sempre; as tarefas só se recarregam com o separador à vista
     const id = setInterval(() => {
       flushSessions()
-      refreshTasks()
-    }, 20 * 1000)
-    window.addEventListener('focus', sync)
+      whenVisible(refreshTasks)()
+    }, 30 * 1000)
+    const onFocus = throttled(sync)
+    window.addEventListener('focus', onFocus)
     window.addEventListener('online', sync)
     return () => {
       clearInterval(id)
-      window.removeEventListener('focus', sync)
+      window.removeEventListener('focus', onFocus)
       window.removeEventListener('online', sync)
     }
   }, [flushSessions, refreshTasks, refreshSessions])
 
-  /** Executa um pedido ao servidor; a resposta {task} substitui a cópia local */
   const remote = useCallback(
     async (fn: () => Promise<unknown>) => {
       inflight.current++
@@ -297,7 +283,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     [remote, base],
   )
 
-  // ─── Temporizador: verificação a cada tick ──────────────────────────────
   const checkTimer = useCallback((n: number) => {
     const t = timerRef.current
     if (!t || !t.segmentStart || t.alerted) return
@@ -341,7 +326,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     return () => clearInterval(id)
   }, [running, checkTimer])
 
-  // ─── Alertas de prazo ───────────────────────────────────────────────────
   const markNotified = useCallback((id: string) => {
     setTasks(ts => ts.map(x => (x.id === id ? { ...x, notified: true } : x)))
     remote(() => api(`${base}/tasks/${id}`, { method: 'PATCH', body: { action: 'update', patch: { notified: true } } }))
@@ -376,8 +360,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     }
   }, [playSound, showToast, markNotified])
 
-  // ─── Sessões ────────────────────────────────────────────────────────────
-  /** Grava o segmento de foco a correr como sessão */
   const logSegment = useCallback((t: ActiveTimer, end: number) => {
     if (t.phase !== 'focus' || !t.segmentStart) return
     const seconds = Math.round((end - t.segmentStart) / 1000)
@@ -485,7 +467,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     setPrompt(null)
   }, [blockFor])
 
-  // ─── Tarefas ────────────────────────────────────────────────────────────
   const addTask = useCallback((input: TaskInput) => {
     const task: Task = {
       ...input,
@@ -494,7 +475,6 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
       status: input.status ?? 'todo',
       ...(org ? { orgId: org.orgId, assigneeId: input.assigneeId ?? org.memberId, createdBy: org.memberId, attachments: [], comments: [] } : {}),
     }
-    // tarefas atribuídas a outra pessoa não entram na minha lista
     if (!org || task.assigneeId === org.memberId) setTasks(ts => [...ts, task])
     remote(() => api<{ task: Task }>(`${base}/tasks`, { body: { ...remotePatch(task), id: task.id } }))
     return task
@@ -505,13 +485,11 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
       ts.map(t => {
         if (t.id !== id) return t
         const next = { ...t, ...patch }
-        // novo prazo → volta a poder notificar
         if (patch.deadline !== undefined && patch.deadline !== t.deadline) next.notified = false
         return next
       }),
     )
     remote(() => api(`${base}/tasks/${id}`, { method: 'PATCH', body: { action: 'update', patch: remotePatch(patch) } }))
-    // reatribuída a outra pessoa: sai da minha lista
     if (patch.assigneeId && org && patch.assigneeId !== org.memberId) setTasks(ts => ts.filter(t => t.id !== id))
     const t = timerRef.current
     if (t?.taskId === id && patch.focusDuration && t.phase === 'focus') {
@@ -578,10 +556,10 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
           : x,
       ),
     )
-    remoteStatus(id, status)
-  }, [stopTimer, playSound, showToast, remoteStatus])
+    const sent = remoteStatus(id, status)
+    if (status === 'done' && task.recurrence) sent.then(() => refreshTasks())
+  }, [stopTimer, playSound, showToast, remoteStatus, refreshTasks])
 
-  // ─── Outros ─────────────────────────────────────────────────────────────
   const resetAll = useCallback(async () => {
     if (org) return
     await api('/api/personal', { method: 'DELETE' })

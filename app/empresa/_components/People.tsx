@@ -10,6 +10,7 @@ import { parseCsv } from '../../lib/org'
 import { ROLE_LABEL, type Member, type Role } from '../../types'
 import Avatar from '../../components/ui/Avatar'
 import Modal from '../../components/ui/Modal'
+import { Busy } from '../../components/ui/Spinner'
 
 type Row = { name: string; email: string; jobTitle?: string; department?: string; phone?: string; role?: Role }
 
@@ -28,7 +29,6 @@ const ROLE_ALIASES: Record<string, Role> = {
   membro: 'membro', funcionario: 'membro', funcionário: 'membro', colaborador: 'membro',
 }
 
-/** Converte o CSV em funcionários (com ou sem linha de cabeçalho) */
 function rowsFromCsv(text: string): Row[] {
   const rows = parseCsv(text)
   if (rows.length === 0) return []
@@ -98,7 +98,7 @@ function InviteCard() {
         )}
         {org.isAdmin && (
           <button
-            disabled={busy}
+            disabled={busy} aria-busy={busy}
             onClick={async () => {
               if (!confirm('Gerar um novo código? O código e o link actuais deixam de funcionar.')) return
               setBusy(true)
@@ -179,14 +179,13 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
       onClose={onClose}
       footer={
         <div className="flex gap-2">
-          {/* o dono (quem criou a empresa) não pode ser removido */}
           {member && !isSelf && member.userId !== org.org.createdBy && (
-            <button type="button" onClick={remove} disabled={busy} className="btn btn-ghost px-4 text-danger" aria-label="Remover">
+            <button type="button" onClick={remove} disabled={busy} aria-busy={busy} className="btn btn-ghost px-4 text-danger" aria-label="Remover">
               <TrashIcon size={18} />
             </button>
           )}
           <button type="submit" form="member-form" disabled={busy || !email.trim()} className="btn btn-primary flex-1">
-            {busy ? 'A guardar…' : member ? 'Guardar' : 'Adicionar'}
+            <Busy busy={busy} text="A guardar…">{member ? 'Guardar' : 'Adicionar'}</Busy>
           </button>
         </div>
       }
@@ -269,7 +268,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="btn btn-primary w-full">Fechar</button>
         ) : (
           <button onClick={submit} disabled={busy || rows.length === 0} className={`btn w-full ${rows.length ? 'btn-primary' : 'btn-disabled'}`}>
-            {busy ? 'A importar…' : `Importar ${rows.length || ''}`}
+            <Busy busy={busy} text="A importar…">{`Importar ${rows.length || ''}`}</Busy>
           </button>
         )
       }

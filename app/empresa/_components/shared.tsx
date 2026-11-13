@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useOrgRequired } from '../../context/OrgContext'
-import { api } from '../../lib/api'
+import { api, whenVisible } from '../../lib/api'
 import { presenceTotals } from '../../lib/org'
 import { startOfDay } from '../../lib/stats'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES, type PresenceSegment, type PresenceStatus, type Session } from '../../types'
 
-/** Sessões e presença da equipa visível, num intervalo */
 export function useTeamActivity(from: number, to?: number, memberId?: string) {
   const { base } = useOrgRequired()
   const [sessions, setSessions] = useState<Session[]>([])
@@ -32,7 +31,7 @@ export function useTeamActivity(from: number, to?: number, memberId?: string) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carregar do servidor
     reload()
-    const id = setInterval(reload, 60 * 1000)
+    const id = setInterval(whenVisible(reload), 60 * 1000)
     return () => clearInterval(id)
   }, [reload])
 
@@ -53,7 +52,6 @@ export function rangeFrom(id: RangeId, now: number) {
   return d.getTime()
 }
 
-/** Barra empilhada com o tempo por estado */
 export function PresenceBar({ totals, height = 12 }: { totals: Partial<Record<PresenceStatus, number>>; height?: number }) {
   const sum = Object.values(totals).reduce((a, b) => a + (b ?? 0), 0)
   if (!sum) return <div className="w-full rounded-full bg-line" style={{ height }} />
@@ -84,12 +82,10 @@ export function PresenceLegend() {
   )
 }
 
-/** Linha do tempo de um dia: blocos coloridos por estado */
 export function DayTimeline({ segments, day, now }: { segments: PresenceSegment[]; day: number; now: number }) {
   const end = new Date(day)
   end.setDate(end.getDate() + 1)
   const dayEnd = end.getTime()
-  // janela visível: das 6h às 22h, alargada se houver actividade fora
   const inDay = segments.filter(s => s.start < dayEnd && (s.end ?? now) > day)
   let startH = 6
   let endH = 22
@@ -135,7 +131,6 @@ export function DayTimeline({ segments, day, now }: { segments: PresenceSegment[
 
 export { presenceTotals }
 
-/** Alertas de excesso de trabalho: mais de 10h activo hoje ou 3h seguidas sem pausa */
 export function overworkAlerts(segments: PresenceSegment[], memberId: string, now: number) {
   const mine = segments.filter(s => s.memberId === memberId)
   const today = presenceTotals(mine, startOfDay(now), now + 1, now)

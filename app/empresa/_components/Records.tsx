@@ -17,6 +17,7 @@ import type { Member, PresenceSegment, Session, Task } from '../../types'
 import Avatar from '../../components/ui/Avatar'
 import { ChartCard, ColumnChart, DonutChart, type Point, type Series } from '../../components/ui/Charts'
 import { useTeamActivity } from './shared'
+import { StatsSkeleton } from '../../components/ui/Skeleton'
 
 const BAND_SERIES: Series[] = GOAL_BANDS.map(b => ({ key: b.id, name: b.label, color: b.color }))
 const NO_RECORD = '#D3D0E0'
@@ -35,7 +36,6 @@ const SORTS: { id: Sort; label: string }[] = [
 
 const scoreColor = (s: number | null) => (s === null ? '#A3A0B8' : s >= 75 ? '#12B5A6' : s >= 50 ? '#E0A419' : '#FF8A3D')
 
-/** Barrinhas com os factores da pontuação (0–100% cada) */
 export function FactorBars({ factors, size = 'sm' }: { factors: Factor[]; size?: 'sm' | 'lg' }) {
   if (size === 'lg') {
     return (
@@ -128,12 +128,10 @@ export default function Records() {
     return (y.score ?? -1) - (x.score ?? -1) || y.records - x.records
   })
 
-  // pessoas por faixa (num período longo, pela média por dia com registo)
   const counts = { abaixo: 0, meta: 0, acima: 0, none: 0 }
   list.forEach(a => counts[a.band ?? 'none']++)
   const days = daysIn(from, to, now)
 
-  // gráfico: pessoas por faixa em cada dia; no anual, dias-pessoa por mês
   let points: Point[] = []
   if (period === 'ano') {
     const months: Point[] = []
@@ -213,7 +211,7 @@ export default function Records() {
       </p>
 
       {!loaded ? (
-        <p className="card p-6 text-center font-semibold text-muted">A carregar…</p>
+        <StatsSkeleton />
       ) : (
         <>
           <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -295,7 +293,6 @@ export default function Records() {
               ))}
             </div>
 
-            {/* Mobile: cartões */}
             <ul className="space-y-3 lg:hidden">
               {rows.map((m, i) => {
                 const a = byId.get(m.id)!
@@ -324,7 +321,6 @@ export default function Records() {
               })}
             </ul>
 
-            {/* Desktop: tabela */}
             <div className="card hidden overflow-x-auto lg:block">
               <table className="w-full text-left text-sm">
                 <thead className="border-b-2 border-line text-xs font-extrabold uppercase tracking-wide text-muted">
@@ -390,7 +386,6 @@ export default function Records() {
   )
 }
 
-/** Recordes e factores de um funcionário (ficha do membro), no período escolhido */
 export function MemberRecordsCard({
   memberId, from, now, sessions, segments, tasks, periodText,
 }: { memberId: string; from: number; now: number; sessions: Session[]; segments: PresenceSegment[]; tasks: Task[]; periodText: string }) {
@@ -445,7 +440,6 @@ export function MemberRecordsCard({
   )
 }
 
-/** Dias abaixo · na meta · acima, em pastilhas coloridas */
 export function BandDays({ a }: { a: MemberAnalysis }) {
   if (!a.perDay.length) return <span className="text-xs font-bold text-muted">Sem registo</span>
   return (

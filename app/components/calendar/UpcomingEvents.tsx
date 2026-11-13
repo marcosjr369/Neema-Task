@@ -9,7 +9,6 @@ import { DAY_MS, eventsBase, hhmm, useEvents } from '../../lib/calendar'
 import { startOfDay } from '../../lib/stats'
 import { EVENT_KINDS } from '../../types'
 
-/** Agenda de hoje (o que ainda falta), com atalho para o calendário */
 export default function UpcomingEvents() {
   const { now } = useApp()
   const org = useOrg()

@@ -4,7 +4,6 @@ import { panelRanking, type RankKind } from '../../../lib/server/panelRanking'
 import { read } from '../../../lib/server/store'
 import type { RankMetric } from '../../../types'
 
-/** Rankings do painel. ?tipo=empresas|pessoais|funcionarios&org=<id>&from=<ms>&metric=points|hours|tasks */
 export const GET = handle(async req => {
   await requirePanel()
   const url = new URL(req.url)

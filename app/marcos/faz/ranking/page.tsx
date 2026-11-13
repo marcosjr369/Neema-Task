@@ -11,8 +11,6 @@ import type { RankMetric } from '../../../types'
 import type { PanelRankEntry, RankKind } from '../../../lib/server/panelRanking'
 import { usePanel } from '../_components/PanelShell'
 
-/* Rankings no painel: empresas, contas pessoais e funcionários de cada empresa (com nomes reais) */
-
 type Period = 'hoje' | 'semana' | 'mes' | 'sempre'
 
 const KINDS: { id: RankKind; label: string }[] = [
@@ -36,7 +34,7 @@ const MEDALS = ['#FFC53D', '#C0C0C0', '#CD7F32']
 function periodStart(p: Period) {
   if (p === 'sempre') return 0
   const d = new Date(startOfDay(Date.now()))
-  if (p === 'semana') d.setDate(d.getDate() - ((d.getDay() + 6) % 7)) // segunda-feira
+  if (p === 'semana') d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
   if (p === 'mes') d.setDate(1)
   return d.getTime()
 }
@@ -44,7 +42,6 @@ function periodStart(p: Period) {
 const value = (e: { seconds: number; tasks: number; points: number }, m: RankMetric) =>
   m === 'hours' ? formatShort(e.seconds) : m === 'tasks' ? String(e.tasks) : `${e.points} XP`
 
-/** Valor por pessoa (ranking de empresas) */
 const perPerson = (e: PanelRankEntry, m: RankMetric) =>
   e.members ? value({ seconds: e.seconds / e.members, tasks: Math.round((e.tasks / e.members) * 10) / 10, points: Math.round(e.points / e.members) }, m) : '—'
 
@@ -84,7 +81,6 @@ export default function PanelRankingPage() {
 
   return (
     <div className="space-y-4">
-      {/* filtros numa linha: tipo, critério, período (e empresa nos funcionários) */}
       <div className="card space-y-3 p-4">
         <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Ranking">
           {KINDS.map(k => (
@@ -139,7 +135,6 @@ export default function PanelRankingPage() {
         </div>
       ) : (
         <>
-          {/* pódio */}
           <div className="grid gap-3 sm:grid-cols-3">
             {top.map((e, i) => (
               <div key={e.id} className="card flex items-center gap-3 p-4" style={{ borderColor: MEDALS[i] }}>

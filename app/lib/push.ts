@@ -1,8 +1,6 @@
 import { api } from './api'
 import { isStandalone } from './pwa'
 
-/** Notificações push no browser (lembretes com a app fechada) */
-
 export type PushState = 'unsupported' | 'needs-install' | 'denied' | 'off' | 'on'
 
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent)
@@ -34,7 +32,6 @@ export async function pushState(): Promise<PushState> {
 
 const timezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
-/** Pede autorização (tem de vir de um clique) e regista o dispositivo no servidor */
 export async function enablePush() {
   const { publicKey, configured } = await api<{ publicKey: string | null; configured: boolean }>('/api/push')
   if (!configured || !publicKey) throw new Error('O servidor ainda não tem as notificações push configuradas')
@@ -54,7 +51,6 @@ export async function disablePush() {
   await sub.unsubscribe()
 }
 
-/** Ao abrir a app: se já há autorização, mantém a subscrição e o fuso horário em dia no servidor */
 export async function syncPush() {
   if (!pushSupported() || Notification.permission !== 'granted') return
   const sub = await (await registration()).pushManager.getSubscription()

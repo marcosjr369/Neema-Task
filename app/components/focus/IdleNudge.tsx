@@ -11,11 +11,6 @@ import { nudgeMessage } from '../../lib/nudges'
 import { api } from '../../lib/api'
 import Mascot from '../ui/Mascot'
 
-/**
- * Lembrete de inactividade com a app aberta: sem cronómetro a correr durante o intervalo
- * escolhido, a Udacha reclama (notificação + janela no ecrã). Com a app fechada, quem envia
- * é o servidor por push (lib/server/reminders.ts), com as mesmas regras.
- */
 export default function IdleNudge() {
   const { allSessions, timer, now, settings, tasks, startTimer } = useApp()
   const org = useOrg()
@@ -33,7 +28,6 @@ export default function IdleNudge() {
   const lastWork = allSessions.reduce((m, s) => Math.max(m, s.end), 0)
 
   useEffect(() => {
-    // a trabalhar outra vez: volta à primeira frase
     if (running) count.current = 0
   }, [running])
 
@@ -41,7 +35,6 @@ export default function IdleNudge() {
     if (!interval || running || goalReached || !startedAt.current) return
     const hour = new Date(now).getHours()
     if (hour < settings.reminderStartHour || hour >= settings.reminderEndHour) return
-    // na empresa só reclama de quem está marcado como "a trabalhar"
     if (org && org.presence !== 'trabalho') return
 
     const since = Math.max(lastWork, startedAt.current, lastNudge.current)
@@ -56,7 +49,6 @@ export default function IdleNudge() {
       if (settings.sound) sounds.gentle()
       setShown(message)
     }
-    // regista no servidor (para não repetir por push) e usa a contagem de lá
     api<{ count: number }>('/api/me/nudge', { method: 'POST' })
       .then(r => show(r.count))
       .catch(() => show(count.current))

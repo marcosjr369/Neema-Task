@@ -7,7 +7,6 @@ import Modal from '../ui/Modal'
 
 type Variant = 'button' | 'icon' | 'menu'
 
-/** Terminar sessão, com confirmação. Ao sair, a app volta ao ecrã de entrada. */
 export default function LogoutButton({ variant = 'button', className = '' }: { variant?: Variant; className?: string }) {
   const { logout, user } = useAccount()
   const [asking, setAsking] = useState(false)
@@ -46,7 +45,7 @@ export default function LogoutButton({ variant = 'button', className = '' }: { v
           footer={
             <div className="space-y-3">
               <button
-                disabled={busy}
+                disabled={busy} aria-busy={busy}
                 onClick={async () => {
                   setBusy(true)
                   await logout()

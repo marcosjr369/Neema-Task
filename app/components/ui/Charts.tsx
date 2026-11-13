@@ -2,12 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-/*
- * Gráficos do painel em SVG simples (sem bibliotecas):
- * colunas (com séries empilhadas) e linha com área. Barras finas (≤ 24px) com topo arredondado,
- * 2px de intervalo entre segmentos, grelha discreta, tooltip ao passar e vista em tabela.
- */
-
 export type Series = { key: string; name: string; color: string }
 export type Point = { label: string; title: string; values: Record<string, number> }
 
@@ -16,7 +10,6 @@ const PAD = { top: 12, right: 12, bottom: 24, left: 40 }
 const GRID = '#E9E7F2'
 const AXIS_TEXT = '#A3A0B8'
 
-/** Largura do contentor (o SVG desenha-se nessa largura, sem esticar texto) */
 function useWidth() {
   const ref = useRef<HTMLDivElement>(null)
   // começa pequeno: um SVG largo antes de medir esticaria o cartão (e a página no telemóvel)
@@ -31,7 +24,6 @@ function useWidth() {
   return { ref, width }
 }
 
-/** Máximo "redondo" para o eixo (1, 2, 5 × 10^n) */
 function niceMax(v: number) {
   if (v <= 0) return 1
   const p = 10 ** Math.floor(Math.log10(v))
@@ -42,7 +34,6 @@ function niceMax(v: number) {
 export const compact = (v: number) =>
   v >= 1_000_000 ? `${+(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${+(v / 1000).toFixed(1)}K` : `${+v.toFixed(1)}`
 
-/** Rótulos do eixo X sem se atropelarem: no máximo ~7 e pelo menos ~52px entre eles */
 const labelEvery = (n: number, width: number) => Math.max(1, Math.ceil(n / 7), Math.ceil(n / Math.max(1, (width - PAD.left - PAD.right) / 52)))
 
 type TipState = { x: number; i: number } | null
@@ -86,7 +77,6 @@ function Axis({ width, max, format }: { width: number; max: number; format: (v: 
 
 function XLabels({ points, x, width }: { points: Point[]; x: (i: number) => number; width: number }) {
   const every = labelEvery(points.length, width)
-  // perto das bordas o rótulo encosta para dentro, para não ser cortado
   const anchor = (px: number) => (px > width - 28 ? 'end' : px < PAD.left + 16 ? 'start' : 'middle')
   return (
     <g>
@@ -101,13 +91,11 @@ function XLabels({ points, x, width }: { points: Point[]; x: (i: number) => numb
   )
 }
 
-/** Retângulo com só os cantos de cima arredondados (base quadrada, presa ao eixo) */
 function topRounded(x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.min(r, h, w / 2)
   return `M${x} ${y + h} V${y + rr} Q${x} ${y} ${x + rr} ${y} H${x + w - rr} Q${x + w} ${y} ${x + w} ${y + rr} V${y + h} Z`
 }
 
-/** Colunas, empilhadas quando há mais de uma série */
 export function ColumnChart({ points, series, format = compact, axisFormat = compact }: { points: Point[]; series: Series[]; format?: (v: number) => string; axisFormat?: (v: number) => string }) {
   const { ref, width } = useWidth()
   const [rawTip, setTip] = useState<TipState>(null)
@@ -132,7 +120,6 @@ export function ColumnChart({ points, series, format = compact, axisFormat = com
             <g key={i} opacity={tip && tip.i !== i ? 0.55 : 1}>
               {segs.map(({ s, v }, k) => {
                 const h = (v / max) * plotH
-                // 2px de intervalo entre segmentos empilhados
                 const gap = k > 0 ? 2 : 0
                 const y = base - h
                 const d = k === segs.length - 1 ? topRounded(cx(i) - barW / 2, y, barW, Math.max(0, h - gap), 4) : undefined
@@ -144,7 +131,6 @@ export function ColumnChart({ points, series, format = compact, axisFormat = com
                 base = y
                 return el
               })}
-              {/* zona de toque maior que a barra */}
               <rect
                 x={PAD.left + band * i}
                 y={PAD.top}
@@ -168,7 +154,6 @@ export function ColumnChart({ points, series, format = compact, axisFormat = com
   )
 }
 
-/** Linha com área suave (uma série); a mira acompanha o ponteiro e prende-se ao dia mais próximo */
 export function LineChart({ points, series, format = compact, axisFormat = compact }: { points: Point[]; series: Series; format?: (v: number) => string; axisFormat?: (v: number) => string }) {
   const { ref, width } = useWidth()
   const [rawTip, setTip] = useState<TipState>(null)
@@ -198,7 +183,6 @@ export function LineChart({ points, series, format = compact, axisFormat = compa
         <path d={area} fill={series.color} opacity={0.1} />
         <path d={line} fill="none" stroke={series.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {tip && <line x1={tip.x} x2={tip.x} y1={PAD.top} y2={PAD.top + plotH} stroke={AXIS_TEXT} strokeWidth={1} />}
-        {/* ponto do dia em foco (ou o último), com anel da cor do fundo */}
         {vals.length > 0 && (
           <circle cx={x(tip ? tip.i : last)} cy={y(vals[tip ? tip.i : last])} r={4.5} fill={series.color} stroke="#fff" strokeWidth={2} />
         )}
@@ -225,7 +209,6 @@ export function LineChart({ points, series, format = compact, axisFormat = compa
 
 export type Slice = { key: string; label: string; color: string; value: number }
 
-/** Anel (donut) com legenda; ao passar numa fatia, o centro mostra o seu valor */
 export function DonutChart({
   slices, format = compact, centerLabel = 'Total', size = 148, empty = 'Sem dados',
 }: { slices: Slice[]; format?: (v: number) => string; centerLabel?: string; size?: number; empty?: string }) {
@@ -235,10 +218,8 @@ export function DonutChart({
   const stroke = 18
   const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  // 2px de intervalo entre fatias (só quando há mais de uma)
   const gap = shown.length > 1 ? 2 : 0
   const active = shown.find(s => s.key === focus)
-  // onde começa cada fatia, ao longo da circunferência
   const starts = shown.map((_, i) => shown.slice(0, i).reduce((a, s) => a + (s.value / total) * c, 0))
 
   return (
@@ -298,7 +279,6 @@ export function DonutChart({
   )
 }
 
-/** Cartão de gráfico: título, legenda (2+ séries) e alternância para tabela */
 export function ChartCard({
   title, subtitle, series, points, format = compact, firstCol = 'Dia', children,
 }: { title: string; subtitle?: string; series: Series[]; points: Point[]; format?: (v: number) => string; firstCol?: string; children: ReactNode }) {

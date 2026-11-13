@@ -17,7 +17,6 @@ import MiniTimer from '../focus/MiniTimer'
 import UpcomingEvents from '../calendar/UpcomingEvents'
 import { CategoryBadge } from '../ui/icons'
 
-/** Coluna lateral direita (desktop): resumo, temporizador, objetivo, prazos */
 export default function RightPanel() {
   const { allSessions, tasks, history, now, settings, timer } = useApp()
   const { streak, activeToday } = computeStreak(allSessions, tasks, now)
