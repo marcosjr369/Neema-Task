@@ -8,6 +8,12 @@ export const CLERK_LOCALIZATION = {
   formFieldInputPlaceholder__emailAddress_username: 'o.teu@email.com',
   formFieldLabel__password: 'Palavra-passe',
   formFieldInputPlaceholder__password: 'A tua palavra-passe',
+  formFieldInputPlaceholder__signUpPassword: 'Cria uma palavra-passe',
+  unstable__errors: {
+    ...ptPT.unstable__errors,
+    // ao criar conta com um email que já está registado (ver o passo de login em /entrar)
+    form_identifier_exists__email_address: 'Já existe uma conta com este email. Carrega em "Entrar", em baixo.',
+  },
   signIn: {
     ...ptPT.signIn,
     emailCode: {

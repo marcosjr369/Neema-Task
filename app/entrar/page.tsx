@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeftIcon, BuildingsIcon, CheckIcon, CoffeeIcon, FireIcon, KeyIcon, LightningIcon, ListChecksIcon,
   PlantIcon, PlusCircleIcon, ShieldCheckIcon, SparkleIcon, TimerIcon, TrophyIcon, UserIcon, UsersThreeIcon,
@@ -13,7 +13,7 @@ import { ORG_SIZES, SECTORS } from '../lib/org'
 import Mascot from '../components/ui/Mascot'
 import Splash from '../components/ui/Splash'
 import Confetti from '../components/ui/Confetti'
-import { SignIn } from '@clerk/nextjs'
+import { SignIn, SignUp } from '@clerk/nextjs'
 import { CLERK_APPEARANCE } from '../components/account/clerkAppearance'
 import Spinner from '../components/ui/Spinner'
 
@@ -208,13 +208,18 @@ function NextSteps({ done, goal }: { done: Done; goal: number | null }) {
   )
 }
 
-export default function EnterPage() {
+function EnterFlow() {
   const router = useRouter()
   const account = useAccount()
   const { user, suggestions, accountType, businessRole, needsSetup } = account
   const businessStart: Step =
     businessRole === 'company' ? 'criar' : businessRole === 'employee' && !suggestions.length ? 'codigo' : 'empresa'
-  const [params] = useState(() => new URLSearchParams(window.location.search))
+  // o endereço vem do Next e não de window.location: ao clicar num link dentro da app (ex.: o
+  // "Começar agora" da página inicial) a página nova é desenhada antes de o browser mudar o
+  // endereço, e window.location ainda não tinha o "?passo=" (caía sempre no ecrã de boas-vindas).
+  // Fica uma cópia fixa: os passos seguintes não mudam a meio do fluxo.
+  const search = useSearchParams()
+  const [params] = useState(() => new URLSearchParams(search.toString()))
   const forced = !!params.get('passo')
   // de volta do Clerk (ou de um link de convite), o URL traz o que já foi escolhido antes do login
   const fromUrl = {
@@ -233,6 +238,8 @@ export default function EnterPage() {
       return ['ola']
     }
     if (pending) return ['login']
+    // de volta do Clerk (ex.: Google) a meio de "criar conta", mas a conta já existia: mostra o aviso
+    if ((fromUrl.use === 'personal' || fromUrl.use === 'org') && !needsSetup) return ['login']
     if (params.get('passo') === 'criar') return ['criar']
     if (params.get('passo') === 'codigo') return ['codigo']
     if (accountType === 'business') return [businessStart]
@@ -246,6 +253,19 @@ export default function EnterPage() {
   const [done, setDone] = useState<Done | null>(null)
 
   const [use, setUse] = useState<Use | null>(fromUrl.use)
+  /**
+   * Criar conta (Pessoal ou Empresa) usa só o ecrã de registo do Clerk: um email que já existe
+   * dá "este email já está registado" em vez de entrar, sem aviso, numa conta antiga.
+   * "Já tenho conta" usa só o ecrã de entrar. Num convite aceita os dois (quem já tem conta
+   * também pode receber um código). A meio do registo (verificar o email) o endereço tem
+   * "#/verify…" ou "#/continue": ao recarregar continua no registo.
+   */
+  const [signUpHash] = useState(() => /^#\/(verify|continue)/.test(window.location.hash))
+  /** de volta do Google/LinkedIn/Microsoft: o Clerk ainda está a terminar a entrada */
+  const [ssoReturn] = useState(() => window.location.hash.startsWith('#/sso-callback'))
+  const creating = use === 'personal' || use === 'org'
+  const signUpOnly = creating || signUpHash
+
   const [goal, setGoal] = useState<number | null>(null)
   const [orgPath, setOrgPath] = useState<'criar' | 'codigo' | null>(null)
   const [orgName, setOrgName] = useState(fromUrl.orgName)
@@ -332,6 +352,13 @@ export default function EnterPage() {
 
   // Depois do login (a conta chega pelo AccountContext) conclui o que foi escolhido antes:
   // empresa → cria-a com os dados já preenchidos; convite → entra na empresa; pessoal → meta diária
+  const existing = step === 'login' && !!user && !needsSetup && creating
+  useEffect(() => {
+    if (!existing) return
+    const t = setTimeout(() => router.replace('/'), 3200)
+    return () => clearTimeout(t)
+  }, [existing, router])
+
   const continued = useRef(false)
   useEffect(() => {
     if (step !== 'login' || !user || continued.current) return
@@ -342,7 +369,8 @@ export default function EnterPage() {
       return
     }
     if (!needsSetup) {
-      router.replace('/')
+      // a criar conta mas o email já tinha uma: avisa (ver "existing") e só depois vai para o início
+      if (!creating) router.replace('/')
       return
     }
     if (use === 'org' && orgName) {
@@ -368,7 +396,11 @@ export default function EnterPage() {
         : 'Escreve o código que a tua empresa te deu. Vou confirmar se existe.',
     convite: found ? `Encontrei! É o convite da ${found.name}.` : 'Encontrei a empresa!',
     criar: businessRole === 'company' ? 'Esta conta é de empresa, mas a empresa ainda não existe. Fala-me dela.' : 'Primeiro, fala-me da tua empresa.',
-    login: busy
+    login: ssoReturn && !user
+      ? 'Um segundo, estou a entrar com a tua conta…'
+      : existing
+      ? `Já tinhas uma conta com este email, ${first}, por isso entrei nela. Vou levar-te para o início…`
+      : busy
       ? 'Um segundo, estou a preparar tudo…'
       : use === 'invite' ? `Agora entra ou cria a tua conta para te juntares à ${found?.name ?? 'equipa'}.`
         : use === 'org' ? `Agora cria a conta da ${orgName || 'empresa'}.`
@@ -382,6 +414,29 @@ export default function EnterPage() {
       done?.kind === 'created' ? `A ${done.name} está pronta!` : done?.kind === 'joined' ? `Entraste na ${done.name}!` : 'Tudo pronto! Vamos a isso?',
   }
   const mood = error ? 'sad' : step === 'pronto' || step === 'convite' ? 'excited' : step === 'criar' || step === 'codigo' ? 'thinking' : 'happy'
+
+  const returnUrl = (() => {
+    const q = new URLSearchParams()
+    if (use) q.set('tipo', USE_PARAM[use])
+    if (use === 'invite' && code) q.set('codigo', code)
+    if (use === 'org' && orgName.trim()) {
+      q.set('nome', orgName.trim())
+      if (sector) q.set('sector', sector)
+      if (size) q.set('tam', size)
+      if (departments.trim()) q.set('deps', departments.trim())
+    }
+    const s = q.toString()
+    return s ? `/entrar?${s}` : '/entrar'
+  })()
+
+  // No passo da conta, a escolha (pessoal, empresa, convite…) fica escrita no endereço. Com o
+  // Google o Clerk sai da app e volta com a página recarregada: sem isto a escolha perdia-se,
+  // aparecia por instantes o ecrã de "entrar" e era o componente errado a terminar o regresso.
+  useEffect(() => {
+    if (step !== 'login' || user) return
+    const want = returnUrl + window.location.hash
+    if (window.location.pathname + window.location.search + window.location.hash !== want) window.history.replaceState(window.history.state, '', want)
+  }, [step, user, returnUrl])
 
   // a caminho do início: nada de mostrar um passo que não se aplica
   if (alreadySetUp) return <Splash />
@@ -422,20 +477,6 @@ export default function EnterPage() {
   else if (step === 'pronto') {
     primary = { label: 'Vamos lá!', onClick: () => router.replace(done?.kind === 'created' ? '/empresa/pessoas' : '/') }
   }
-
-  const returnUrl = (() => {
-    const q = new URLSearchParams()
-    if (use) q.set('tipo', USE_PARAM[use])
-    if (use === 'invite' && code) q.set('codigo', code)
-    if (use === 'org' && orgName.trim()) {
-      q.set('nome', orgName.trim())
-      if (sector) q.set('sector', sector)
-      if (size) q.set('tam', size)
-      if (departments.trim()) q.set('deps', departments.trim())
-    }
-    const s = q.toString()
-    return s ? `/entrar?${s}` : '/entrar'
-  })()
 
   const animation = dir === 'right' ? 'animate-step-right' : 'animate-step-left'
 
@@ -499,19 +540,31 @@ export default function EnterPage() {
               )}
               {step === 'login' && !user && (
                 <div className="animate-rise" style={{ animationDelay: '150ms' }}>
-                  {use === 'org' && orgName && (
+                  {use === 'org' && orgName && !ssoReturn && (
                     <p className="mb-3 flex items-center justify-center gap-2 text-sm font-bold text-muted">
                       <BuildingsIcon size={18} className="text-accent" /> A empresa <b className="text-ink">{orgName}</b> é criada logo a seguir
                     </p>
                   )}
-                  <SignIn
-                    routing="hash"
-                    withSignUp
-                    oauthFlow="redirect"
-                    forceRedirectUrl={returnUrl}
-                    signUpForceRedirectUrl={returnUrl}
-                    appearance={CLERK_APPEARANCE}
-                  />
+                  {signUpOnly ? (
+                    <SignUp
+                      routing="hash"
+                      oauthFlow="redirect"
+                      forceRedirectUrl={returnUrl}
+                      signInForceRedirectUrl={returnUrl}
+                      signInUrl="/entrar?passo=login"
+                      appearance={CLERK_APPEARANCE}
+                    />
+                  ) : (
+                    <SignIn
+                      routing="hash"
+                      withSignUp={use === 'invite'}
+                      oauthFlow="redirect"
+                      forceRedirectUrl={returnUrl}
+                      signUpForceRedirectUrl={returnUrl}
+                      signUpUrl="/entrar?passo=como"
+                      appearance={CLERK_APPEARANCE}
+                    />
+                  )}
                 </div>
               )}
 
@@ -694,4 +747,9 @@ export default function EnterPage() {
       )}
     </div>
   )
+}
+
+export default function EnterPage() {
+  // useSearchParams precisa de Suspense para a página poder ser pré-gerada
+  return <Suspense><EnterFlow /></Suspense>
 }

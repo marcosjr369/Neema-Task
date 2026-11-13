@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers'
 import { body, handle } from '../../../lib/server/api'
-import { confirmLogin, createToken, hasPanelSession, PANEL_COOKIE, PANEL_TTL, panelEmail } from '../../../lib/server/panel'
+import { confirmLogin, createToken, hasPanelSession, PANEL_COOKIE, PANEL_COOKIE_PATH, PANEL_TTL, panelEmail } from '../../../lib/server/panel'
 
-const COOKIE = { httpOnly: true, sameSite: 'strict' as const, secure: process.env.NODE_ENV === 'production', path: '/api/painel' }
+const COOKIE = { httpOnly: true, sameSite: 'strict' as const, secure: process.env.NODE_ENV === 'production', path: PANEL_COOKIE_PATH }
 
 export const GET = handle(async () => {
   const ok = await hasPanelSession()

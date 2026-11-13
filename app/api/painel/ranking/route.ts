@@ -1,7 +1,6 @@
 import { fail, handle } from '../../../lib/server/api'
-import { requirePanel } from '../../../lib/server/panel'
+import { panelData, requirePanel } from '../../../lib/server/panel'
 import { panelRanking, type RankKind } from '../../../lib/server/panelRanking'
-import { read } from '../../../lib/server/store'
 import type { RankMetric } from '../../../types'
 
 export const GET = handle(async req => {
@@ -13,5 +12,5 @@ export const GET = handle(async req => {
   if (kind === 'funcionarios' && !orgId) fail(400, 'Escolhe a empresa')
   const metric = (url.searchParams.get('metric') as RankMetric) || 'points'
   const from = Number(url.searchParams.get('from')) || 0
-  return { entries: panelRanking(await read('all'), kind, metric, from, orgId) }
+  return { entries: panelRanking(await panelData(), kind, metric, from, orgId) }
 })

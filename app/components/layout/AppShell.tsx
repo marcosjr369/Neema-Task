@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, type ReactNode } from 'react'
+import dynamic from 'next/dynamic'
 import { usePathname, useRouter } from 'next/navigation'
 import { IconContext, PlusIcon } from '@phosphor-icons/react'
 import { AccountProvider, useAccount } from '../../context/AccountContext'
@@ -23,8 +24,10 @@ import WelcomeTour from '../tutorial/WelcomeTour'
 import InviteDialog from '../account/InviteDialog'
 import { PresenceSync } from '../account/PresenceSync'
 import Splash from '../ui/Splash'
+
+// a página de entrada só é para quem não tem sessão: não pesa em quem já entrou
+const Landing = dynamic(() => import('../landing/Landing'), { loading: () => <Splash /> })
 import Mascot from '../ui/Mascot'
-import Landing from '../landing/Landing'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 

@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  BookOpenIcon, BriefcaseIcon, BuildingsIcon, CheckCircleIcon, CheckIcon, CoffeeIcon, CrownIcon, FireIcon,
-  LightningIcon, PaperclipIcon, PlantIcon, TargetIcon, TimerIcon, TrophyIcon, UsersThreeIcon, type Icon,
+  BellRingingIcon, BookOpenIcon, BriefcaseIcon, BuildingsIcon, CalendarBlankIcon, CheckCircleIcon, CheckIcon, CoffeeIcon, CrownIcon, FireIcon,
+  FlowArrowIcon, FunctionIcon, KanbanIcon, LightningIcon, PaperclipIcon, PlantIcon, TableIcon, TargetIcon, TimerIcon, TrophyIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 import Mascot, { type MascotMood, type MascotPose } from '../ui/Mascot'
 import ProgressRing from '../ui/ProgressRing'
@@ -68,7 +68,7 @@ function Header() {
           <Link href={LOGIN} className="hidden rounded-xl px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-muted hover:text-body sm:block">
             Entrar
           </Link>
-          <Link href={START} className={`btn btn-primary px-4 py-2.5 text-sm transition-all duration-300 ${scrolled ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}>
+          <Link href={START} className="btn btn-primary px-4 py-2.5 text-sm">
             Começar agora
           </Link>
         </div>
@@ -86,7 +86,7 @@ function Hero() {
           A forma mais divertida de <span className="text-brand">focar</span>, fazer pausas e <span className="text-accent">acabar tarefas</span>!
         </h1>
         <p className="mx-auto mt-3 max-w-md text-base font-semibold text-muted sm:mt-4 sm:text-lg lg:mx-0 animate-rise" style={{ animationDelay: '120ms' }}>
-          Cronómetro de foco, XP, sequências e ranking. Sozinho ou com a tua equipa.
+          Tarefas, foco, calendário, quadros, planilhas e diagramas, com XP e ranking. Sozinho ou com a tua equipa.
         </p>
         <div className="mx-auto mt-6 flex max-w-sm flex-col gap-3 sm:mt-8 lg:mx-0 animate-rise" style={{ animationDelay: '240ms' }}>
           <Link href={START} className="btn btn-primary w-full py-3.5 text-base sm:py-4">Começar agora</Link>
@@ -153,6 +153,10 @@ const STRIP: { icon: Icon; label: string; color: string }[] = [
   { icon: BookOpenIcon, label: 'Estudo', color: '#EC5BA6' },
   { icon: PlantIcon, label: 'Pessoal', color: '#12B5A6' },
   { icon: TimerIcon, label: 'Foco', color: '#F2545B' },
+  { icon: KanbanIcon, label: 'Quadros', color: '#7B61FF' },
+  { icon: TableIcon, label: 'Planilhas', color: '#12B5A6' },
+  { icon: FlowArrowIcon, label: 'Diagramas', color: '#FF8A3D' },
+  { icon: CalendarBlankIcon, label: 'Calendário', color: '#22A6CF' },
   { icon: CoffeeIcon, label: 'Pausas', color: '#FF8A3D' },
   { icon: TargetIcon, label: 'Metas diárias', color: '#7B61FF' },
   { icon: FireIcon, label: 'Sequências', color: '#FF8A3D' },
@@ -306,8 +310,113 @@ function TeamArt() {
   )
 }
 
-function flyFromLogo(target: HTMLElement) {
-  const show = () => { target.style.opacity = '1' }
+function BoardArt() {
+  const cols = [
+    { title: 'A fazer', color: '#7B61FF', cards: ['Textos', 'Fotos'] },
+    { title: 'Em curso', color: '#FF8A3D', cards: ['Logótipo'] },
+    { title: 'Feito', color: '#12B5A6', cards: ['Domínio', 'Cores'] },
+  ]
+  return (
+    <>
+      <div className="absolute right-0 top-0 flex gap-2 rounded-3xl border-2 border-line bg-white p-3 shadow-[0_6px_0_#E9E7F2]">
+        {cols.map((c, i) => (
+          <div key={c.title} className="w-24 rounded-2xl bg-snow p-2">
+            <p className="flex items-center gap-1 text-[11px] font-black uppercase text-muted">
+              <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />{c.title}
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {c.cards.map((t, j) => (
+                <div key={t} className={`rounded-lg border-2 border-line bg-white px-2 py-1.5 text-xs font-bold text-ink ${i === 1 && j === 0 ? 'animate-float' : ''}`}
+                  style={i === 1 && j === 0 ? { ['--r' as string]: '-4deg' } : undefined}>
+                  {i === 1 && j === 0 && <span className="mb-1 block h-1.5 w-8 rounded-full bg-warm" />}
+                  {t}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <Floating icon={UsersThreeIcon} color="#7B61FF" className="left-2 top-10" delay={0.6} rotate={-8} size={48} />
+      <div className="relative -ml-40">
+        <Mascot size={230} pose="thumbs" />
+      </div>
+    </>
+  )
+}
+
+function SheetDiagramArt() {
+  const rows = [['Rendas', '120 €'], ['Material', '80 €'], ['Total', '200 €']]
+  return (
+    <>
+      <div className="absolute left-0 top-0 w-52 overflow-hidden rounded-2xl border-2 border-line bg-white shadow-[0_6px_0_#E9E7F2] animate-float" style={{ ['--r' as string]: '-3deg' }}>
+        <div className="flex items-center gap-1.5 border-b-2 border-line px-3 py-2 font-mono text-xs font-bold text-ink">
+          <FunctionIcon size={14} className="text-muted" /> =SOMA(B1:B2)
+        </div>
+        {rows.map(([a, b], i) => (
+          <div key={a} className={`grid grid-cols-2 border-b border-line text-xs font-bold last:border-0 ${i === 2 ? 'bg-accent-light text-accent-dark' : 'text-ink'}`}>
+            <span className="border-r border-line px-3 py-2">{a}</span>
+            <span className="px-3 py-2 text-right">{b}</span>
+          </div>
+        ))}
+      </div>
+      <div className="absolute right-0 top-4 rounded-2xl border-2 border-line bg-white p-3 shadow-[0_6px_0_#E9E7F2] animate-float" style={{ animationDelay: '1s', ['--r' as string]: '3deg' }}>
+        <svg width="190" height="70" viewBox="0 0 190 70" aria-hidden>
+          <rect x="2" y="22" width="48" height="26" rx="13" fill="#12B5A6" />
+          <rect x="72" y="20" width="48" height="30" rx="8" fill="#EEEAFF" stroke="#7B61FF" strokeWidth="2.5" />
+          <path d="M163 10 L186 35 L163 60 L140 35 Z" fill="#FFEDE0" stroke="#FF8A3D" strokeWidth="2.5" />
+          <path d="M50 35 H70" stroke="#7B61FF" strokeWidth="3" className="dg-flow" />
+          <path d="M120 35 H138" stroke="#7B61FF" strokeWidth="3" className="dg-flow" />
+        </svg>
+      </div>
+      <div className="relative">
+        <Mascot size={190} pose="think" />
+      </div>
+    </>
+  )
+}
+
+function CalendarArt() {
+  const days = Array.from({ length: 14 }, (_, i) => i + 8)
+  return (
+    <>
+      <div className="absolute left-0 top-0 w-56 rounded-2xl border-2 border-line bg-white p-3 shadow-[0_6px_0_#E9E7F2]">
+        <p className="text-sm font-black text-ink">Novembro</p>
+        <div className="mt-2 grid grid-cols-7 gap-1">
+          {days.map(d => (
+            <span key={d} className={`flex h-6 items-center justify-center rounded-md text-[11px] font-bold ${d === 14 ? 'bg-brand text-white' : d === 11 || d === 18 ? 'bg-accent-light text-accent-dark' : 'text-body'}`}>{d}</span>
+          ))}
+        </div>
+      </div>
+      <div className="absolute bottom-10 left-0 z-10 flex items-center gap-3 rounded-2xl border-2 border-line bg-white py-3 pl-3 pr-5 shadow-[0_6px_0_#E9E7F2] animate-float" style={{ ['--r' as string]: '-2deg' }}>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold text-white" style={{ boxShadow: 'inset 0 -4px 0 #0002' }}>
+          <BellRingingIcon size={24} weight="fill" />
+        </span>
+        <span>
+          <span className="block font-black leading-tight text-ink">Reunião daqui a 5 min</span>
+          <span className="mt-0.5 block text-sm font-bold text-muted">Equipa de vendas · 10:00</span>
+        </span>
+      </div>
+      <div className="relative ml-52">
+        <Mascot size={230} pose="wave" />
+      </div>
+    </>
+  )
+}
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2)
+
+type FlightParts = { shadow?: HTMLElement | null; dust?: (HTMLElement | null)[] }
+
+/**
+ * A mascote salta do logótipo e cai no fim da página, como num desenho animado:
+ * um pequeno impulso para cima, queda com "gravidade" (lenta no início, rápida no fim),
+ * uma só pirueta a meio do voo, alongada quando cai depressa, a sombra a crescer no chão,
+ * e uma aterragem com mola (achata, ressalta e assenta) com pó a sair dos pés.
+ */
+function flyFromLogo(target: HTMLElement, { shadow, dust = [] }: FlightParts = {}) {
+  const show = () => { target.style.opacity = '1'; if (shadow) shadow.style.opacity = '0.3' }
   const logo = document.querySelector<HTMLElement>('[data-mascot-logo]')
   if (!logo || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return show()
 
@@ -316,32 +425,74 @@ function flyFromLogo(target: HTMLElement) {
   const dx = a.left + a.width / 2 - (b.left + b.width / 2)
   const dy = a.top + a.height / 2 - (b.top + b.height / 2)
   const s0 = Math.max(0.12, (a.height * 2.2) / b.height)
-  const cx = dx * 0.1
-  const cy = dy + 60
-  const steps = 16
-  const frames = Array.from({ length: steps + 1 }, (_, i) => {
-    const t = i / steps
-    const x = (1 - t) ** 2 * dx + 2 * (1 - t) * t * cx
-    const y = (1 - t) ** 2 * dy + 2 * (1 - t) * t * cy
-    const s = s0 + (1 - s0) * t
-    return { transform: `translate(${x}px, ${y}px) scale(${s}) rotate(${360 * t}deg)`, opacity: 1, offset: t }
+  // impulso inicial para cima, proporcional à distância (mas sem exageros)
+  const hop = Math.min(160, Math.abs(dy) * 0.15 + 70)
+  const side = dx > 0 ? -1 : 1
+  const DURATION = 1500
+  const N = 90
+
+  const frames = Array.from({ length: N + 1 }, (_, i) => {
+    const t = i / N
+    // na horizontal sai depressa e abranda; na vertical cai com gravidade (t²)
+    const x = dx * (1 - easeOutCubic(t))
+    const up = clamp01(t / 0.55)
+    const y = dy * (1 - t * t) - hop * 4 * up * (1 - up)
+    const sc = s0 + (1 - s0) * easeOutCubic(t)
+    // uma pirueta a meio do voo, com aceleração e travagem, e uma leve inclinação na direcção do movimento
+    const spin = 360 * side * easeInOutCubic(clamp01((t - 0.12) / 0.58))
+    const lean = 10 * side * Math.sin(Math.PI * t)
+    // alonga quando cai mais depressa (último terço)
+    const fall = clamp01((t - 0.68) / 0.32)
+    const sx = 1 - 0.1 * fall
+    const sy = 1 + 0.14 * fall
+    return { transform: `translate(${x}px, ${y}px) rotate(${spin + lean}deg) scale(${sc * sx}, ${sc * sy})`, opacity: 1, offset: t }
   })
 
   logo.style.opacity = '0'
-  const flight = target.animate(frames, { duration: 1300, easing: 'cubic-bezier(0.45, 0, 0.3, 1)' })
+  target.style.transformOrigin = '50% 50%'
+  const flight = target.animate(frames, { duration: DURATION, easing: 'linear' })
+  // a sombra aparece e cresce à medida que a mascote se aproxima do chão
+  shadow?.animate(
+    [{ opacity: 0, transform: 'scaleX(0.15)' }, { opacity: 0.08, transform: 'scaleX(0.4)', offset: 0.6 }, { opacity: 0.3, transform: 'scaleX(1)' }],
+    { duration: DURATION, easing: 'ease-in', fill: 'forwards' },
+  )
+
   flight.onfinish = () => {
     show()
+    // aterragem: achata, ressalta um pouco, achata de leve e assenta
+    target.style.transformOrigin = '50% 100%'
     target.animate(
-      [{ transform: 'scale(1.15, 0.85)' }, { transform: 'scale(0.95, 1.06)' }, { transform: 'scale(1)' }],
-      { duration: 380, easing: 'ease-out' },
+      [
+        { transform: 'translateY(0) scale(1.22, 0.78)', offset: 0 },
+        { transform: 'translateY(-26px) scale(0.92, 1.1)', offset: 0.32 },
+        { transform: 'translateY(0) scale(1.08, 0.93)', offset: 0.6 },
+        { transform: 'translateY(-5px) scale(0.98, 1.02)', offset: 0.8 },
+        { transform: 'translateY(0) scale(1, 1)', offset: 1 },
+      ],
+      { duration: 820, easing: 'cubic-bezier(0.33, 0.8, 0.4, 1)' },
     )
+    shadow?.animate(
+      [{ transform: 'scaleX(1.25)', opacity: 0.38 }, { transform: 'scaleX(0.8)', opacity: 0.2, offset: 0.32 }, { transform: 'scaleX(1.06)', opacity: 0.32, offset: 0.6 }, { transform: 'scaleX(1)', opacity: 0.3 }],
+      { duration: 820, easing: 'ease-out', fill: 'forwards' },
+    )
+    // pó a sair dos pés, para cada lado
+    dust.forEach((d, i) => d?.animate(
+      [
+        { opacity: 0.85, transform: 'translate(0, 0) scale(0.4)' },
+        { opacity: 0, transform: `translate(${i === 0 ? -46 : 46}px, -16px) scale(1.5)` },
+      ],
+      { duration: 650, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)', delay: i * 40 },
+    ))
     logo.style.opacity = ''
-    logo.animate([{ transform: 'scale(0)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 420, easing: 'ease-out' })
+    logo.animate([{ transform: 'scale(0)' }, { transform: 'scale(1.2)', offset: 0.6 }, { transform: 'scale(1)' }], { duration: 480, easing: 'cubic-bezier(0.3, 1.4, 0.5, 1)' })
   }
 }
 
 function FinalCta() {
   const landing = useRef<HTMLDivElement>(null)
+  const shadow = useRef<HTMLSpanElement>(null)
+  const dustL = useRef<HTMLSpanElement>(null)
+  const dustR = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     const el = landing.current
     if (!el) return
@@ -349,7 +500,7 @@ function FinalCta() {
       ([entry]) => {
         if (!entry.isIntersecting) return
         io.disconnect()
-        flyFromLogo(el)
+        flyFromLogo(el, { shadow: shadow.current, dust: [dustL.current, dustR.current] })
       },
       { threshold: 0.6 },
     )
@@ -373,7 +524,11 @@ function FinalCta() {
         <Floating icon={TrophyIcon} color="#E0A419" className="right-[14%] top-8" delay={0.5} rotate={10} />
         <Floating icon={CheckCircleIcon} color="#12B5A6" className="right-[28%] top-28" delay={1.2} rotate={-6} size={48} />
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-          <div ref={landing} className="opacity-0">
+          {/* sombra no chão e pó da aterragem (animados em flyFromLogo) */}
+          <span ref={shadow} aria-hidden className="absolute -bottom-1 left-[calc(50%-70px)] h-4 w-[140px] rounded-[50%] bg-ink opacity-0 blur-[3px]" />
+          <span ref={dustL} aria-hidden className="absolute bottom-0 left-[calc(50%-58px)] h-7 w-7 rounded-full bg-white opacity-0" />
+          <span ref={dustR} aria-hidden className="absolute bottom-0 left-[calc(50%+30px)] h-7 w-7 rounded-full bg-white opacity-0" />
+          <div ref={landing} className="relative opacity-0">
             <Mascot size={240} pose="jump" mood="excited" />
           </div>
         </div>
@@ -384,7 +539,7 @@ function FinalCta() {
 
 function Footer() {
   const cols: { title: string; links: { label: string; href: string }[] }[] = [
-    { title: 'Produto', links: [{ label: 'Foco e pausas', href: '#foco' }, { label: 'XP e ranking', href: '#ranking' }, { label: 'Para equipas', href: '#equipas' }] },
+    { title: 'Produto', links: [{ label: 'Foco e pausas', href: '#foco' }, { label: 'Quadros', href: '#quadros' }, { label: 'Planilhas e diagramas', href: '#planilhas' }, { label: 'Calendário', href: '#calendario' }, { label: 'XP e ranking', href: '#ranking' }, { label: 'Para equipas', href: '#equipas' }] },
     { title: 'Conta', links: [{ label: 'Começar agora', href: START }, { label: 'Entrar', href: LOGIN }] },
   ]
   return (
@@ -433,15 +588,35 @@ export default function Landing() {
         art={<FocusArt />}
       />
       <Feature
+        id="quadros"
+        title="quadros para tudo"
+        text="Listas e cartões para acompanhar qualquer projecto. Arrasta os cartões à medida que avançam, junta etiquetas, prazos e pessoas, e partilha com quem precisa."
+        art={<BoardArt />}
+      />
+      <Feature
+        id="planilhas"
+        tint
+        flip
+        title="planilhas e diagramas"
+        text="Folhas de cálculo com fórmulas que abrem no Excel, e fluxogramas, organogramas e mapas de ideias desenhados em equipa. Tudo grava sozinho."
+        art={<SheetDiagramArt />}
+      />
+      <Feature
+        id="calendario"
+        title="calendário e reuniões"
+        text="Agenda reuniões, convida colegas e recebe um aviso antes de começar. Nada de compromissos esquecidos."
+        art={<CalendarArt />}
+      />
+      <Feature
         id="ranking"
+        tint
+        flip
         title="xp, sequências e ranking"
         text="Cada minuto de foco e cada tarefa contam. Mantém a sequência, sobe de nível e compara-te com amigos e colegas."
         art={<RankingArt />}
       />
       <Feature
         id="equipas"
-        tint
-        flip
         title="feito para equipas"
         text="Atribui tarefas, recebe o trabalho com anexos, aprova com um clique e acompanha o tempo e a presença de cada pessoa."
         art={<TeamArt />}

@@ -1,8 +1,8 @@
 import { clerkClient } from '@clerk/nextjs/server'
 import { body, fail, handle } from '../../../../lib/server/api'
-import { confirmPassword, requirePanel } from '../../../../lib/server/panel'
+import { confirmPassword, panelData, requirePanel } from '../../../../lib/server/panel'
 import { removeFiles } from '../../../../lib/server/files'
-import { mutate, read } from '../../../../lib/server/store'
+import { mutate } from '../../../../lib/server/store'
 import { userDetail } from '../../../../lib/server/panelDetail'
 import { panelQuery } from '../../../../lib/server/panelQuery'
 import { accountTypeOf } from '../../../../lib/account'
@@ -12,7 +12,7 @@ import { ROLE_LABEL, type DeletedUser } from '../../../../types'
 export const GET = handle<{ userId: string }>(async (req, { userId }) => {
   await requirePanel()
   const { days, tz } = panelQuery(req)
-  return userDetail(await read('all'), userId, days, tz) ?? fail(404, 'Utilizador não encontrado')
+  return userDetail(await panelData(), userId, days, tz) ?? fail(404, 'Utilizador não encontrado')
 })
 
 export const PATCH = handle<{ userId: string }>(async (req, { userId }) => {

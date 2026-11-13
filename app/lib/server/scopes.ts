@@ -86,6 +86,6 @@ export const orgScope = (orgId: string, opts: OrgOpts = {}): Scope => async l =>
 export const scopes = (...list: Scope[]): Scope => {
   if (list.includes('all')) return 'all'
   return async l => {
-    await Promise.all(list.map(s => (s === 'all' ? undefined : s(l))))
+    await Promise.all(list.map(s => (s === 'all' ? undefined : Array.isArray(s) ? Promise.all(s.map(t => l.load(t))) : s(l))))
   }
 }

@@ -112,7 +112,34 @@ alter table diagrams enable row level security;
 `
 
 // "__neemaSchema6": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema6?: Promise<void> }
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema6?: Promise<void>; __neemaSlots?: Slots }
+
+const POOL_MAX = Number(process.env.DATABASE_POOL_MAX) || 5
+
+/**
+ * Nunca mais pedidos em curso do que ligações.
+ * Quando há mais pedidos do que ligações, o postgres.js envia vários na mesma ligação
+ * (pipelining). O "transaction pooler" do Supabase (porta 6543) não lida com isso fora de uma
+ * transacção e o pedido fica pendurado para sempre (ex.: 6 leituras em paralelo com 5 ligações).
+ * Por isso cada leitura fora de transacção, e cada transacção inteira, ocupa uma vaga; os
+ * restantes esperam pela sua vez. Dentro de uma transacção a ligação é exclusiva e pode-se
+ * mandar vários pedidos seguidos sem problema.
+ */
+type Slots = { active: number; waiting: (() => void)[] }
+const slots = (g.__neemaSlots ??= { active: 0, waiting: [] })
+
+export async function withSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (slots.active >= POOL_MAX) await new Promise<void>(resolve => slots.waiting.push(resolve))
+  else slots.active++
+  try {
+    return await fn()
+  } finally {
+    // passa a vaga directamente ao próximo da fila (sem a libertar), ou liberta-a
+    const next = slots.waiting.shift()
+    if (next) next()
+    else slots.active--
+  }
+}
 
 function client(): Sql {
   if (!g.__neemaSql) {
@@ -121,7 +148,7 @@ function client(): Sql {
     g.__neemaSql = postgres(url, {
       // o "transaction pooler" do Supabase (porta 6543) não suporta prepared statements
       prepare: false,
-      max: Number(process.env.DATABASE_POOL_MAX) || 5,
+      max: POOL_MAX,
       // em produção (funções serverless) as ligações paradas fecham depressa; em desenvolvimento
       // reabrir uma ligação a uma base distante custa ~2 s, por isso ficam abertas mais tempo
       idle_timeout: process.env.NODE_ENV === 'production' ? 20 : 300,
@@ -133,7 +160,7 @@ function client(): Sql {
 }
 
 function ready(): Promise<void> {
-  g.__neemaSchema6 ??= client().unsafe(SCHEMA).then(() => undefined).catch(err => {
+  g.__neemaSchema6 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
     g.__neemaSchema6 = undefined
     throw err
   })
@@ -153,7 +180,8 @@ function condition(sql: Sql, col: string, value: Condition) {
 
 type Snapshot = Map<string, string>
 
-async function loadScope(sql: Sql, scope: Scope): Promise<{ db: DB; snap: Snapshot }> {
+/** inTx: dentro de uma transacção (ligação exclusiva, não precisa de vaga) */
+async function loadScope(sql: Sql, scope: Scope, inTx = false): Promise<{ db: DB; snap: Snapshot }> {
   const db = emptyDB()
   const snap: Snapshot = new Map()
   const load: Loader['load'] = async (table, where) => {
@@ -162,21 +190,32 @@ async function loadScope(sql: Sql, scope: Scope): Promise<{ db: DB; snap: Snapsh
     if (entries.some(([, v]) => Array.isArray(v) && v.length === 0)) return
     const conds = entries.map(([col, v]) => condition(sql, col, v))
     const filter = conds.length ? conds.reduce((acc, c) => sql`${acc} and ${c}`) : null
-    const rows = filter
-      ? await sql<{ data: Row }[]>`select data from ${sql(table)} where ${filter}`
-      : await sql<{ data: Row }[]>`select data from ${sql(table)}`
-    const list = db[table] as unknown as Row[]
-    for (const { data } of rows) {
-      const k = `${table}:${keyOf(table, data)}`
-      if (snap.has(k)) continue
-      snap.set(k, JSON.stringify(data))
-      list.push(data)
-    }
+    const query = () => filter
+      ? sql<{ data: Row }[]>`select data from ${sql(table)} where ${filter}`.execute()
+      : sql<{ data: Row }[]>`select data from ${sql(table)}`.execute()
+    const rows = inTx ? await query() : await withSlot(query)
+    for (const { data } of rows) add(table, data)
   }
-  if (scope === 'all') {
-    await Promise.all(TABLES.map(t => load(t)))
-  } else {
+  const add = (table: Table, data: Row) => {
+    const k = `${table}:${keyOf(table, data)}`
+    if (snap.has(k)) return
+    snap.set(k, JSON.stringify(data))
+    ;(db[table] as unknown as Row[]).push(data)
+  }
+  if (typeof scope === 'function') {
     await scope({ db, load })
+  } else {
+    // tabelas inteiras: um só pedido ("union all") em vez de um por tabela, o que poupa
+    // várias viagens à base de dados (com 5 ligações, 14 tabelas eram 3 viagens)
+    const tables = scope === 'all' ? TABLES : [...new Set(scope)]
+    if (tables.length) {
+      const query = () => tables
+        .map(t => sql`select ${t}::text as t, data from ${sql(t)}`)
+        .reduce((a, b) => sql`${a} union all ${b}`)
+        .execute() as unknown as Promise<{ t: Table; data: Row }[]>
+      const rows = inTx ? await query() : await withSlot(query)
+      for (const { t, data } of rows) add(t, data)
+    }
   }
   return { db, snap }
 }
@@ -226,14 +265,14 @@ export async function read(scope: Scope): Promise<DB> {
 
 export async function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
   await ready()
-  return client().begin(async tx => {
+  return withSlot(() => client().begin(async tx => {
     // uma escrita de cada vez em todo o sistema (simples e seguro para equipas pequenas/médias).
     // O bloqueio segue logo, seguido das leituras na mesma ligação: o servidor trata-os por ordem,
     // por isso as leituras só correm com o bloqueio já obtido, sem esperar uma viagem de rede a mais.
     const lock = tx`select pg_advisory_xact_lock(7301)`.execute()
-    const [, { db, snap }] = await Promise.all([lock, loadScope(tx as unknown as Sql, scope)])
+    const [, { db, snap }] = await Promise.all([lock, loadScope(tx as unknown as Sql, scope, true)])
     const result = await fn(db)
     await save(tx as unknown as Sql, db, snap)
     return result
-  }) as Promise<T>
+  })) as Promise<T>
 }

@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { cookies } from 'next/headers'
 import { fail } from './api'
+import { read, type DB, type Table } from './store'
 
 /**
  * Acesso ao painel de administração (/marcos/faz). As credenciais vivem só no servidor
@@ -10,6 +11,12 @@ import { fail } from './api'
  */
 
 export const PANEL_COOKIE = 'mt_panel'
+/**
+ * O browser só envia o cookie para pedidos dentro deste caminho. As rotas do painel são
+ * chamadas através do proxy (/api/proxy/painel/..., ver lib/api.ts): com outro caminho o cookie
+ * nunca chegava ao servidor e o painel saía logo a seguir ao login.
+ */
+export const PANEL_COOKIE_PATH = '/api/proxy/painel'
 export const PANEL_TTL = 12 * 60 * 60 * 1000
 
 export const panelEmail = () => process.env.ADMIN_PANEL_EMAIL?.trim().toLowerCase() ?? ''
@@ -59,6 +66,28 @@ export async function hasPanelSession() {
 
 export async function requirePanel() {
   if (!(await hasPanelSession())) fail(401, 'Sessão do painel expirada')
+}
+
+/* ─── Dados do painel ─────────────────────────────────────────────────── */
+
+/** As tabelas que o painel usa (sem presença, quadros, planilhas, diagramas, …) */
+export const PANEL_TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'deleted', 'push']
+
+const DATA_TTL = 10 * 1000
+const gp = globalThis as unknown as { __neemaPanelDb?: { at: number; db: Promise<DB> } }
+
+/**
+ * Os dados do painel, lidos num só pedido e guardados 10 s: mudar de ecrã (resumo, utilizador,
+ * empresa, ranking) não volta à base de dados. Qualquer escrita limpa a memória (store.ts), por
+ * isso depois de desactivar ou apagar alguém os números já vêm certos. Só leitura: não alterar.
+ */
+export function panelData(): Promise<DB> {
+  const hit = gp.__neemaPanelDb
+  if (hit && Date.now() - hit.at < DATA_TTL) return hit.db
+  const db = read(PANEL_TABLES)
+  gp.__neemaPanelDb = { at: Date.now(), db }
+  db.catch(() => { if (gp.__neemaPanelDb?.db === db) gp.__neemaPanelDb = undefined })
+  return db
 }
 
 const MAX_ATTEMPTS = 5

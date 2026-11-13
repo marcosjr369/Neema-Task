@@ -411,7 +411,6 @@ export type ShareGrant = {
 
 export type Access = 'owner' | 'edit' | 'view'
 
-export const ACCESS_LABEL: Record<Access, string> = { owner: 'Dono', edit: 'Pode editar', view: 'Só ver' }
 
 /* ─── Quadros ─────────────────────────────────────────────────────────── */
 

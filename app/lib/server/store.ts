@@ -49,7 +49,8 @@ export type Loader = {
   load: (table: Table, where?: Record<string, Condition>) => Promise<void>
 }
 
-export type Scope = 'all' | ((l: Loader) => Promise<void>)
+/** 'all': todas as tabelas; lista: essas tabelas inteiras (num só pedido); função: carregamento à medida */
+export type Scope = 'all' | Table[] | ((l: Loader) => Promise<void>)
 
 export const usingPostgres = () => !!process.env.DATABASE_URL
 
@@ -57,7 +58,7 @@ export function read(scope: Scope = 'all'): Promise<DB> {
   return usingPostgres() ? pgStore.read(scope) : fileStore.read()
 }
 
-const g = globalThis as unknown as { __neemaUsers?: Map<string, unknown> }
+const g = globalThis as unknown as { __neemaUsers?: Map<string, unknown>; __neemaPanelDb?: unknown }
 
 export async function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
   try {
@@ -65,6 +66,8 @@ export async function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): P
   } finally {
     // a conta em cache (só em desenvolvimento, ver auth.ts) pode ter mudado
     g.__neemaUsers?.clear()
+    // os dados em memória do painel de administração (ver panel.ts)
+    g.__neemaPanelDb = undefined
   }
 }
 

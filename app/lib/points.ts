@@ -23,7 +23,8 @@ export function completedTime(task: Task) {
 }
 
 export function taskPoints(task: Task) {
-  const penalty = (task.review?.rejections ?? 0) * POINTS.rejection
+  // "|| 0": sem rejeições dava -0 (aparece "-0" ao formatar)
+  const penalty = (task.review?.rejections ?? 0) * POINTS.rejection || 0
   if (!isCompleted(task)) return penalty
   let pts = POINTS.task[task.priority] ?? POINTS.task.media
   if (task.deadline && task.completedAt && task.completedAt <= new Date(task.deadline).getTime()) pts += POINTS.onTime

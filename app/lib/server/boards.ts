@@ -1,10 +1,9 @@
 import type { Access, Board, BoardView, User } from '../../types'
-import { accessOf, findResource, peopleOf, resourceByToken, resourceScope } from './shared'
+import { accessOf, findResource, peopleOf, resourceScope } from './shared'
 import { sharingInfo } from './sharing'
 import type { DB } from './store'
 
 export const boardScope = (boardId: string) => resourceScope('boards', boardId)
-export const boardByToken = (token: string) => resourceByToken('boards', token)
 export const boardAccess = (db: DB, board: Board, user: User | null) => accessOf(db, board, user)
 export const boardPeople = (db: DB, board: Board) => peopleOf(db, board)
 export const findBoard = (db: DB, boardId: string) => findResource(db, 'boards', boardId) as Board

@@ -194,7 +194,6 @@ export const LESSONS: Lesson[] = [
 
 export const lessonsFor = (mode: NavMode) => LESSONS.filter(l => l.modes.includes(mode))
 
-export const lessonById = (id: string | null | undefined) => LESSONS.find(l => l.id === id)
 
 /** As lições mostradas nas boas-vindas (as essenciais de cada tipo de conta) */
 export function welcomeLessons(mode: NavMode): Lesson[] {

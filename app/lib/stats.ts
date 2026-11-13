@@ -23,8 +23,9 @@ export function formatDuration(totalSeconds: number) {
 }
 
 export function formatShort(totalSeconds: number) {
-  const m = totalSeconds / 60
-  if (m < 60) return `${Math.round(m)}m`
+  // arredonda primeiro: 59 min 50 s é "1h", não "60m"
+  const m = Math.round(totalSeconds / 60)
+  if (m < 60) return `${m}m`
   return `${(m / 60).toFixed(1).replace('.', ',').replace(',0', '')}h`
 }
 
