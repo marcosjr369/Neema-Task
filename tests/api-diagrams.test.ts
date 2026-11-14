@@ -2,6 +2,8 @@ import { rmSync } from 'fs'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import type { User } from '../app/types'
 
+process.env.NEEMA_DATA_DIR = '.data-test/api-diagrams'
+
 /*
  * Rotas de verdade (app/api/...), com a store em ficheiro numa pasta dos testes (.data-test).
  * Só o login é simulado: currentUser() devolve quem estiver em "as".
@@ -25,7 +27,7 @@ async function call(handler: (r: Request, c: { params: Promise<Record<string, st
 }
 
 beforeAll(async () => {
-  rmSync('.data-test', { recursive: true, force: true })
+  rmSync('.data-test/api-diagrams', { recursive: true, force: true })
   const { mutate } = await import('../app/lib/server/store')
   await mutate('all', db => { db.users.push(users.ana, users.rui) })
 })

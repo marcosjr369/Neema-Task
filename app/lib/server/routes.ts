@@ -12,6 +12,8 @@ export type RouteModule = Partial<Record<'GET' | 'POST' | 'PUT' | 'PATCH' | 'DEL
 /* eslint-disable @typescript-eslint/no-explicit-any -- cada módulo tem os seus tipos de parâmetros */
 const ROUTES: [string, () => Promise<any>][] = [
   ['convites/:memberId', () => import('../../api/convites/[memberId]/route')],
+  ['jogos', () => import('../../api/jogos/route')],
+  ['jogos/tempo', () => import('../../api/jogos/tempo/route')],
   ['me', () => import('../../api/me/route')],
   ['me/novidades', () => import('../../api/me/novidades/route')],
   ['me/nudge', () => import('../../api/me/nudge/route')],
@@ -26,6 +28,7 @@ const ROUTES: [string, () => Promise<any>][] = [
   ['orgs/:orgId/equipa', () => import('../../api/orgs/[orgId]/equipa/route')],
   ['orgs/:orgId/events', () => import('../../api/orgs/[orgId]/events/route')],
   ['orgs/:orgId/events/:eventId', () => import('../../api/orgs/[orgId]/events/[eventId]/route')],
+  ['orgs/:orgId/jogos', () => import('../../api/orgs/[orgId]/jogos/route')],
   ['orgs/:orgId/members', () => import('../../api/orgs/[orgId]/members/route')],
   ['orgs/:orgId/members/:memberId', () => import('../../api/orgs/[orgId]/members/[memberId]/route')],
   ['orgs/:orgId/presence', () => import('../../api/orgs/[orgId]/presence/route')],

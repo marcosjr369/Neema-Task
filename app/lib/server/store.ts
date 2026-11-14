@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { Board, CalendarEvent, DeletedUser, Department, Diagram, Member, Org, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
+import type { Board, CalendarEvent, DeletedUser, Department, Diagram, GamePlay, Member, Org, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
 import * as fileStore from './store-file'
 import * as pgStore from './store-pg'
 
@@ -33,13 +33,14 @@ export type DB = {
   grants: ShareGrant[]
   sheets: Sheet[]
   diagrams: Diagram[]
+  plays: GamePlay[]
 }
 
 export type Table = keyof DB
-export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets', 'diagrams']
+export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets', 'diagrams', 'plays']
 
 export const emptyDB = (): DB => ({
-  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [], diagrams: [],
+  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [], diagrams: [], plays: [],
 })
 
 export type Condition = string | number | null | (string | number)[] | { gte?: number; lte?: number }
@@ -55,14 +56,14 @@ export type Scope = 'all' | Table[] | ((l: Loader) => Promise<void>)
 export const usingPostgres = () => !!process.env.DATABASE_URL
 
 export function read(scope: Scope = 'all'): Promise<DB> {
-  return usingPostgres() ? pgStore.read(scope) : fileStore.read()
+  return usingPostgres() ? pgStore.read(scope) : fileStore.read(scope)
 }
 
 const g = globalThis as unknown as { __neemaUsers?: Map<string, unknown>; __neemaPanelDb?: unknown }
 
 export async function mutate<T>(scope: Scope, fn: (db: DB) => T | Promise<T>): Promise<T> {
   try {
-    return await (usingPostgres() ? pgStore.mutate(scope, fn) : fileStore.mutate(fn))
+    return await (usingPostgres() ? pgStore.mutate(scope, fn) : fileStore.mutate(scope, fn))
   } finally {
     // a conta em cache (só em desenvolvimento, ver auth.ts) pode ter mudado
     g.__neemaUsers?.clear()

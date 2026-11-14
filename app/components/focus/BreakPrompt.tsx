@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { PuzzlePieceIcon } from '@phosphor-icons/react'
 import { useApp, useClock } from '../../context/AppContext'
 import { formatDuration, phaseElapsed } from '../../lib/stats'
 import Mascot from '../ui/Mascot'
@@ -7,6 +9,7 @@ import Mascot from '../ui/Mascot'
 export default function BreakPrompt() {
   const { prompt, timer, activeTask, settings, startBreak, extendFocus, backToFocus, stopTimer, setStatus } = useApp()
   const { now } = useClock()
+  const router = useRouter()
   if (!prompt || !timer || !activeTask) return null
 
   const elapsed = phaseElapsed(timer, now)
@@ -61,6 +64,14 @@ export default function BreakPrompt() {
         <button onClick={content.primary.action} className={`btn w-full ${content.primary.className}`}>
           {content.primary.label}
         </button>
+        {prompt === 'break' && (
+          <button
+            onClick={() => { startBreak(); router.push('/jogos') }}
+            className="btn mt-3 w-full border-[#DB6A1F]/30 bg-white/70 text-[#DB6A1F] hover:bg-white"
+          >
+            <PuzzlePieceIcon size={18} weight="duotone" /> Pausa com um minijogo
+          </button>
+        )}
         <button
           onClick={content.secondary.action}
           className="mt-3 w-full py-2 text-[15px] font-extrabold uppercase tracking-wide cursor-pointer"

@@ -8,6 +8,7 @@ import { AccountProvider, useAccount } from '../../context/AccountContext'
 import { AppProvider, useApp } from '../../context/AppContext'
 import { OrgProvider, useOrg } from '../../context/OrgContext'
 import { PERSONAL_ONLY_PATHS } from '../../lib/nav'
+import { loginUrl } from '../../lib/account'
 import BottomNav from './BottomNav'
 import SideNav from './SideNav'
 import RightPanel from './RightPanel'
@@ -31,7 +32,7 @@ import Mascot from '../ui/Mascot'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
-const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/tutorial']
+const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/tutorial', '/jogos']
 /** páginas que ocupam a largura toda (o quadro desloca-se na horizontal) */
 const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/') || p.startsWith('/diagramas/')
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
@@ -137,7 +138,8 @@ function Workspace({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading || isPublic || disabled || failed) return
     if (!user) {
-      if (!isLanding) router.replace('/entrar')
+      // ex.: o link de uma notificação aberto sem sessão: entra e volta a essa página
+      if (!isLanding) router.replace(loginUrl(window.location.pathname + window.location.search))
       return
     }
     if (needsSetup) router.replace('/entrar')

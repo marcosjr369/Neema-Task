@@ -5,7 +5,8 @@ import { useAuth, useClerk } from '@clerk/nextjs'
 import { api, ApiError, errorText, setTokenSource, throttled } from '../lib/api'
 import { clearBrowserStorage } from '../lib/browserStorage'
 import { accountTypeOf, businessRoleOf } from '../lib/account'
-import { DEFAULT_SETTINGS, type AccountType, type BusinessRole, type Member, type Membership, type Org, type RankingVisibility, type Settings, type User, type Workspace } from '../types'
+import { isBetter, recordScore } from '../lib/games'
+import { DEFAULT_SETTINGS, type AccountType, type BusinessRole, type Member, type Membership, type Org, type RankingVisibility, type Settings, type User, type Workspace, type GameId } from '../types'
 
 type Suggestion = { id: string; name: string; sector: string }
 type MeResponse = {
@@ -39,6 +40,8 @@ type AccountValue = {
   updateSettings: (patch: Partial<Settings>) => void
   /** progresso do tutorial (aplica-se logo no ecrã e grava na conta) */
   updateTutorial: (patch: { seen?: boolean; done?: string; reset?: boolean }) => void
+  /** guarda o resultado de um minijogo; devolve se foi recorde */
+  recordGame: (game: GameId, score: number) => boolean
   refresh: () => Promise<void>
   setWorkspace: (ws: Workspace) => void
   logout: () => Promise<void>
@@ -155,6 +158,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     api('/api/me', { method: 'PATCH', body: { tutorial: patch } }).catch(() => undefined)
   }, [])
 
+  const recordGame = useCallback((game: GameId, score: number) => {
+    const prev = me?.user?.games?.[game]
+    const record = isBetter(game, score, prev?.best)
+    setMe(m => (m?.user ? { ...m, user: { ...m.user, games: { ...m.user.games, [game]: recordScore(m.user.games?.[game], game, score) } } } : m))
+    api('/api/jogos', { body: { game, score } }).catch(() => undefined)
+    return record
+  }, [me])
+
   const logout = useCallback(async () => {
     seq.current++ // ignora pedidos ainda em curso da sessão que terminou
     await clerk.signOut().catch(() => undefined)
@@ -224,6 +235,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     settings,
     updateSettings,
     updateTutorial,
+    recordGame,
     refresh,
     setWorkspace,
     logout,

@@ -15,6 +15,7 @@ import { teamMembers } from '../../lib/org'
 import { analyse, doneIn, GOAL_BANDS, goalSecondsOf, type GoalBand } from '../../lib/records'
 import { PresenceGlyph } from '../../components/ui/icons'
 import { StatsSkeleton } from '../../components/ui/Skeleton'
+import GamesReport from './GamesReport'
 
 const ACTIVE: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao']
 const COLUMNS: PresenceStatus[] = ['trabalho', 'reuniao', 'formacao', 'pausa', 'almoco', 'ausente']
@@ -231,6 +232,7 @@ export default function Reports() {
           <p className="text-xs font-semibold text-muted">
             Total do período: {formatDuration(rows.reduce((a, r) => a + r.active, 0))} activo.
           </p>
+          {org.isAdmin && <GamesReport from={from} people={people} />}
         </>
       )}
     </div>

@@ -14,6 +14,8 @@ const hits = new Map<string, { count: number; since: number }>()
 export const GET = handle(async req => {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'local'
   const now = Date.now()
+  // as entradas antigas saem de vez em quando (sem isto o mapa crescia com cada IP novo)
+  if (hits.size > 5000) for (const [k, v] of hits) if (now - v.since > WINDOW) hits.delete(k)
   const h = hits.get(ip)
   if (!h || now - h.since > WINDOW) hits.set(ip, { count: 1, since: now })
   else if (++h.count > MAX) fail(429, 'Demasiadas tentativas. Tenta daqui a alguns minutos.')

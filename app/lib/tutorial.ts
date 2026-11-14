@@ -1,5 +1,5 @@
 import {
-  CalendarBlankIcon, ChartBarIcon, FlowArrowIcon, KanbanIcon, ListChecksIcon, RocketLaunchIcon, TableIcon, TimerIcon, TrophyIcon,
+  CalendarBlankIcon, ChartBarIcon, FlowArrowIcon, KanbanIcon, ListChecksIcon, PuzzlePieceIcon, RocketLaunchIcon, TableIcon, TimerIcon, TrophyIcon,
   UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 import type { NavMode } from './nav'
@@ -9,7 +9,7 @@ import type { NavMode } from './nav'
  * e as mesmas fases em texto. As fases e as cenas andam a par: a fase N é o passo N da cena.
  */
 
-export type LessonId = 'inicio' | 'tarefas' | 'foco' | 'calendario' | 'quadros' | 'planilhas' | 'diagramas' | 'estatisticas' | 'ranking' | 'equipa'
+export type LessonId = 'inicio' | 'tarefas' | 'foco' | 'calendario' | 'quadros' | 'planilhas' | 'diagramas' | 'estatisticas' | 'ranking' | 'jogos' | 'equipa'
 
 export type Lesson = {
   id: LessonId
@@ -172,6 +172,22 @@ export const LESSONS: Lesson[] = [
       { title: 'Como se ganham pontos', text: '1 ponto por cada 5 minutos de foco, 8 a 15 por tarefa concluída, +5 dentro do prazo e +15 se for aprovada à primeira.' },
       { title: 'Subir', text: 'Cada tarefa e cada minuto contam: vês a tua posição subir.' },
       { title: 'Privacidade', text: 'No Perfil escolhes aparecer com o nome, só com as iniciais ou ficar oculto.' },
+    ],
+  },
+  {
+    id: 'jogos',
+    title: 'Jogos para descontrair',
+    summary: 'Pausas curtas para relaxar ou acordar o cérebro',
+    icon: PuzzlePieceIcon,
+    color: '#EC5BA6',
+    light: '#FCE6F2',
+    href: '/jogos',
+    modes: PEOPLE,
+    steps: [
+      { title: 'Na hora da pausa', text: 'Quando a app disser "Hora de pausar!", escolhe "Pausa com um minijogo". Também os encontras no menu, em Jogos.' },
+      { title: 'Respirar', text: 'Um a três minutos de respiração guiada: inspira quando o círculo cresce, expira quando encolhe.' },
+      { title: 'Clássicos e treino rápido', text: 'Jogo do Galo, Forca, Sudoku e Deslizar, sem pressa. Ou Pares, Contas rápidas e Cores, em um ou dois minutos.' },
+      { title: 'Como cada jogo ajuda', text: 'Antes de começar, cada jogo explica por etapas como te ajuda a descontrair. O teu recorde fica guardado; os jogos não dão XP.' },
     ],
   },
   {

@@ -11,6 +11,7 @@ import PublicDiagram from '../../components/diagrams/PublicDiagram'
 import Mascot from '../../components/ui/Mascot'
 import { api, ApiError, errorText } from '../../lib/api'
 import { boardBackground } from '../../lib/boards'
+import { loginUrl } from '../../lib/account'
 import type { BoardPerson, BoardView, DiagramView, ShareKind, SheetView } from '../../types'
 import { Busy } from '../../components/ui/Spinner'
 
@@ -128,8 +129,8 @@ export default function SharedPage() {
             </>
           ) : (
             <>
-              <p className="mb-3 text-sm font-semibold text-muted">Foste convidado ou queres pedir acesso? Entra na tua conta e volta a abrir este link.</p>
-              <Link href="/entrar?passo=login" className="btn btn-ghost w-full">Entrar</Link>
+              <p className="mb-3 text-sm font-semibold text-muted">Foste convidado ou queres pedir acesso? Entra na tua conta e voltas logo a este link.</p>
+              <Link href={loginUrl(`/p/${token}`)} className="btn btn-ghost w-full">Entrar</Link>
             </>
           )}
         </div>

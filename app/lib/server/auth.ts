@@ -25,6 +25,13 @@ export async function currentUser(): Promise<User | null> {
   return existing ?? provisionUser(clerkId)
 }
 
+/** Sem nome no login: "joao.silva@x.pt" → "Joao Silva" (em vez de "joao.silva") */
+export function nameFromEmail(email: string) {
+  const words = email.split('@')[0].split(/[._\-+]+/).filter(w => w && !/^\d+$/.test(w))
+  const name = words.map(w => w[0].toUpperCase() + w.slice(1)).join(' ').slice(0, 60)
+  return name || email.split('@')[0] || 'Utilizador'
+}
+
 async function provisionUser(clerkId: string): Promise<User | null> {
   const profile = await clerkCurrentUser()
   if (!profile) return null
@@ -34,7 +41,7 @@ async function provisionUser(clerkId: string): Promise<User | null> {
   if (!email) fail(409, 'A tua conta não tem email. Entra com um método que partilhe o email (Google, Microsoft ou email e código).')
   // só um email confirmado pelo Clerk se liga a contas ou convites que já existam
   const verified = primary?.verification?.status === 'verified'
-  const name = profile.fullName || [profile.firstName, profile.lastName].filter(Boolean).join(' ') || email.split('@')[0]
+  const name = profile.fullName || [profile.firstName, profile.lastName].filter(Boolean).join(' ') || nameFromEmail(email)
   const picture = profile.hasImage ? profile.imageUrl : undefined
 
   return mutate(

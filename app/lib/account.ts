@@ -27,3 +27,22 @@ export const EMPLOYEE_ONLY = 'Esta é uma conta de funcionário: não pode criar
 
 export const BUSINESS_ONLY = 'Esta conta é de empresa e não tem espaço pessoal.'
 export const PERSONAL_ONLY = 'Esta conta é pessoal. Para criar ou gerir uma empresa, usa outra conta (ou aceita o convite de uma empresa).'
+
+/**
+ * Para onde voltar depois do login (?volta=): só caminhos desta app. Recusa endereços de outros
+ * sites ("//site.com", "/\site.com", "https://…") e a própria entrada (dava voltas em ciclo).
+ */
+export function safeReturnPath(value: string | null | undefined): string | null {
+  if (!value || value.length > 500) return null
+  if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return null
+  if (/[\u0000-\u001f\\]/.test(value)) return null
+  const path = value.split(/[?#]/)[0]
+  if (path === '/' || path === '/entrar' || path.startsWith('/entrar/')) return null
+  return value
+}
+
+/** Endereço do login que, depois de entrar, volta a `path` */
+export const loginUrl = (path?: string | null) => {
+  const back = safeReturnPath(path)
+  return back ? `/entrar?passo=login&volta=${encodeURIComponent(back)}` : '/entrar?passo=login'
+}

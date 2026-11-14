@@ -201,9 +201,27 @@ export type User = {
   nudgeCount?: number
   /** tutorial: quando viu as boas-vindas e que lições já fez */
   tutorial?: TutorialProgress
+  /** minijogos: melhor resultado e quantas vezes jogou */
+  games?: Partial<Record<GameId, GameStats>>
 }
 
 export type TutorialProgress = { seenAt?: number; done?: string[] }
+
+export type GameId = 'respirar' | 'pares' | 'contas' | 'cores' | 'galo' | 'forca' | 'sudoku' | 'deslizar'
+export type GameStats = { best: number; plays: number; lastAt: number }
+
+/** Tempo passado num jogo (uma visita à página do jogo, contada só com o separador à vista) */
+export type GamePlay = {
+  id: string
+  userId: string
+  game: GameId
+  start: number
+  end: number
+  seconds: number
+  /** jogado no espaço de uma empresa: a administração vê este tempo nos relatórios */
+  orgId?: string
+  memberId?: string
+}
 
 export type DeletedUser = {
   id: string

@@ -4,7 +4,8 @@ export class ApiError extends Error {
   }
 }
 
-type Options = { method?: string; body?: unknown; form?: FormData; headers?: Record<string, string> }
+/** keepalive: o pedido continua mesmo que a página feche (ex.: guardar o tempo ao sair de um jogo) */
+type Options = { method?: string; body?: unknown; form?: FormData; headers?: Record<string, string>; keepalive?: boolean }
 
 /**
  * Token da sessão do Clerk (definido pelo AccountProvider). Vai em cada pedido para o servidor
@@ -34,6 +35,7 @@ export async function api<T = { ok: true }>(path: string, opts: Options = {}): P
       body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
       credentials: 'same-origin',
       cache: 'no-store',
+      keepalive: opts.keepalive,
     })
   } catch {
     throw new ApiError(0, 'Sem ligação ao servidor')

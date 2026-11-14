@@ -575,6 +575,86 @@ function Ranking({ step }: SceneProps) {
   )
 }
 
+/* ─── Jogos ───────────────────────────────────────────────────────────── */
+
+const GAME_TILES = [
+  { t: 'Respirar', tag: 'Relaxar', c: ACCENT, bg: '#DCF7F3', g: '◎' },
+  { t: 'Jogo do Galo', tag: 'Estratégia', c: BRAND, bg: '#EEEAFF', g: '✕' },
+  { t: 'Sudoku', tag: 'Lógica', c: BLUE, bg: '#E6EDFF', g: '#' },
+  { t: 'Cores', tag: 'Atenção', c: PINK, bg: '#FCE6F2', g: '◐' },
+]
+const PAIR_FACES = [DANGER, WARM, BLUE, ACCENT, BRAND, PINK, DANGER, BLUE]
+/** cartas já viradas no passo 2 e quando viram (s) */
+const PAIR_OPEN: Record<number, number> = { 0: 0.3, 6: 0.8, 2: 1.4, 7: 2 }
+
+function Jogos({ step }: SceneProps) {
+  return (
+    <Stage>
+      <Win title={step === 1 ? 'Respirar' : step === 2 ? 'Pares' : step === 3 ? 'Contas rápidas' : 'Jogos'}>
+        {step === 0 && (
+          <>
+            <div className="absolute left-4 top-4 grid w-[220px] grid-cols-2 gap-2">
+              {GAME_TILES.map((x, i) => (
+                <div key={x.t} className="tut-in rounded-xl border-2 border-line bg-white p-2" style={{ ['--d' as string]: (i * 0.12) + 's' }}>
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-lg text-[13px] font-black" style={{ background: x.bg, color: x.c }}>{x.g}</span>
+                  <p className="mt-1 text-[10px] font-black text-ink">{x.t}</p>
+                  <Chip color={x.c} bg={x.bg}>{x.tag}</Chip>
+                </div>
+              ))}
+            </div>
+            <At step={step} at={0} anim="tut-pop" d={0.9} className="right-3 top-[34px] w-[136px] rounded-xl border-2 border-warm/40 bg-[#FFEDE0] p-2 shadow-lg">
+              <p className="text-[10px] font-black text-[#DB6A1F]">Hora de pausar!</p>
+              <p className="text-[8.5px] text-[#DB6A1F]/80">Focaste 25 min.</p>
+              <span className="mt-1.5 block rounded-md bg-warm px-2 py-1 text-center text-[8.5px] font-black text-white">Fazer pausa</span>
+              <span className="mt-1 block rounded-md bg-white px-2 py-1 text-center text-[8.5px] font-black text-[#DB6A1F]">Pausa com um minijogo</span>
+            </At>
+          </>
+        )}
+        {step === 1 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className="relative flex h-[130px] w-[130px] items-center justify-center">
+              <span className="tut-breathe absolute inset-0 rounded-full bg-accent/15" />
+              <span className="tut-breathe absolute inset-[14px] rounded-full bg-gradient-to-br from-[#5EE0D2] to-accent" />
+              <span className="relative text-[13px] font-black text-white">Inspira…</span>
+            </div>
+            <p className="mt-2 text-[9px] text-muted">inspira 4 s · segura 4 s · expira 6 s</p>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="absolute left-1/2 top-[18px] grid -translate-x-1/2 grid-cols-4 gap-1.5">
+            {PAIR_FACES.map((c, i) => (
+              <span key={i} className="relative h-[42px] w-[42px]">
+                <span className="absolute inset-0 rounded-lg border-b-2 border-brand-dark bg-brand" />
+                {i in PAIR_OPEN && (
+                  <span className="tut-pop absolute inset-0 flex items-center justify-center rounded-lg border-2 bg-white" style={{ borderColor: c + '55', ['--d' as string]: PAIR_OPEN[i] + 's' }}>
+                    <span className="h-[14px] w-[14px] rounded-full" style={{ background: c }} />
+                  </span>
+                )}
+              </span>
+            ))}
+            <span className="col-span-4 mt-1 text-center text-[9px] text-muted">2 de 8 pares · 3 jogadas</span>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <p className="text-[11px] font-black text-ink">Boa cabeça!</p>
+            <p className="text-[30px] font-black tabular-nums text-warm"><Ticker from={0} to={18} ms={1400} format={n => String(n)} /> certas</p>
+            <span className="tut-pop mt-1 rounded-full bg-[#FFF4D6] px-2 py-0.5 text-[9px] font-black text-gold-dark" style={{ ['--d' as string]: '1.5s' }}>🏆 Novo recorde!</span>
+            <p className="tut-in mt-2 text-[8.5px] text-muted" style={{ ['--d' as string]: '2s' }}>Os jogos não dão XP: são só para descansar</p>
+            <Float d={1.6} style={{ right: 120, top: 40 }}>Recorde</Float>
+          </div>
+        )}
+      </Win>
+      <Cursor step={step} paths={[
+        [p(150, 150, 0), p(320, 118, 1400, { click: true })],
+        [p(330, 180, 0)],
+        [p(110, 30, 0, { click: true }), p(290, 75, 900, { click: true }), p(200, 30, 1700, { click: true })],
+        [p(330, 180, 0)],
+      ]} />
+    </Stage>
+  )
+}
+
 /* ─── Equipa ──────────────────────────────────────────────────────────── */
 
 function Equipa({ step }: SceneProps) {
@@ -676,5 +756,6 @@ export const SCENES: Record<LessonId, (props: SceneProps) => ReactNode> = {
   diagramas: Diagramas,
   estatisticas: Estatisticas,
   ranking: Ranking,
+  jogos: Jogos,
   equipa: Equipa,
 }

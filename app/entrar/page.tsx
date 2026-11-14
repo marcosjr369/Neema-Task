@@ -10,6 +10,7 @@ import {
 import { useAccount } from '../context/AccountContext'
 import { api, errorText } from '../lib/api'
 import { ORG_SIZES, SECTORS } from '../lib/org'
+import { safeReturnPath } from '../lib/account'
 import Mascot from '../components/ui/Mascot'
 import Splash from '../components/ui/Splash'
 import Confetti from '../components/ui/Confetti'
@@ -220,7 +221,12 @@ function EnterFlow() {
   // Fica uma cópia fixa: os passos seguintes não mudam a meio do fluxo.
   const search = useSearchParams()
   const [params] = useState(() => new URLSearchParams(search.toString()))
-  const forced = !!params.get('passo')
+  // só "criar empresa" e "tenho um código" abrem um passo a quem já tem a conta configurada;
+  // ?passo=login ou ?passo=como com sessão (ex.: um marcador antigo) mostravam o "tipo de conta"
+  // e a meta diária a uma conta que já os tinha escolhido
+  const forced = params.get('passo') === 'criar' || params.get('passo') === 'codigo'
+  /** para onde ir no fim (ex.: o quadro do link que abriu sem sessão) */
+  const home = safeReturnPath(params.get('volta')) ?? '/'
   // de volta do Clerk (ou de um link de convite), o URL traz o que já foi escolhido antes do login
   const fromUrl = {
     code: params.get('codigo') ?? '',
@@ -288,7 +294,8 @@ function EnterFlow() {
   }
   const back = () => {
     if (stack.length <= 1) {
-      if (!user || !needsSetup) router.push('/')
+      // sem sessão, "voltar" é a página inicial (a página do link pedia o login outra vez)
+      if (!user || !needsSetup) router.push(user ? home : '/')
       return
     }
     setDir('left')
@@ -346,13 +353,25 @@ function EnterFlow() {
   // Conta já configurada (ex.: de volta do login com a página recarregada): não há nada a fazer aqui.
   // Antes só olhava para ola/como/tipo e uma conta de empresa com empresa via o passo "código"
   // ("Já não estás em nenhuma empresa"), porque é esse o passo inicial das contas de empresa.
-  const alreadySetUp = !!user && !needsSetup && !forced && !pending && stack.length === 1 && step !== 'login'
+  // (na meta diária fica: o tipo é gravado ao chegar lá, ver em baixo, e a conta deixa de "precisar de configuração")
+  const alreadySetUp = !!user && !needsSetup && !forced && !pending && stack.length === 1 && step !== 'login' && step !== 'meta'
   const routed = useRef(false)
+
+  // Conta pessoal: o tipo grava-se logo ao chegar à meta diária, não só no "Continuar". Antes, quem
+  // criava a conta e saía nesse passo ficava com a conta a meio e, no login seguinte, voltava a
+  // passar pelo "tipo de conta" e pela meta como se a conta fosse nova.
+  const savedType = useRef(false)
+  useEffect(() => {
+    if (savedType.current || step !== 'meta' || !user || !needsSetup) return
+    savedType.current = true
+    account.choosePersonal().catch(() => { savedType.current = false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- uma vez, ao chegar à meta
+  }, [step, user, needsSetup])
   useEffect(() => {
     if (routed.current || !alreadySetUp) return
     routed.current = true
-    router.replace('/')
-  }, [alreadySetUp, router])
+    router.replace(home)
+  }, [alreadySetUp, router, home])
 
   // Depois do login (a conta chega pelo AccountContext) conclui o que foi escolhido antes:
   // empresa → cria-a com os dados já preenchidos; convite → entra na empresa; pessoal → meta diária
@@ -361,9 +380,9 @@ function EnterFlow() {
   const existing = beforeAccount && !!user && !needsSetup && creating
   useEffect(() => {
     if (!existing) return
-    const t = setTimeout(() => router.replace('/'), 3200)
+    const t = setTimeout(() => router.replace(home), 3200)
     return () => clearTimeout(t)
-  }, [existing, router])
+  }, [existing, router, home])
 
   const continued = useRef(false)
   useEffect(() => {
@@ -376,7 +395,7 @@ function EnterFlow() {
     }
     if (!needsSetup) {
       // a criar conta mas o email já tinha uma: avisa (ver "existing") e só depois vai para o início
-      if (!creating) router.replace('/')
+      if (!creating) router.replace(home)
       return
     }
     if (use === 'org' && orgName) {
@@ -427,6 +446,7 @@ function EnterFlow() {
   const returnUrl = (() => {
     const q = new URLSearchParams()
     if (use) q.set('tipo', USE_PARAM[use])
+    if (home !== '/') q.set('volta', home)
     if (use === 'invite' && code) q.set('codigo', code)
     if (use === 'org' && orgName.trim()) {
       q.set('nome', orgName.trim())
@@ -484,7 +504,7 @@ function EnterFlow() {
     }
   } else if (step === 'empresa') primary = { label: 'Continuar', disabled: !orgPath, onClick: () => go(orgPath!) }
   else if (step === 'pronto') {
-    primary = { label: 'Vamos lá!', onClick: () => router.replace(done?.kind === 'created' ? '/empresa/pessoas' : '/') }
+    primary = { label: 'Vamos lá!', onClick: () => router.replace(done?.kind === 'created' ? '/empresa/pessoas' : home) }
   }
 
   const animation = dir === 'right' ? 'animate-step-right' : 'animate-step-left'

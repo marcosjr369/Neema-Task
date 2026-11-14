@@ -13,6 +13,7 @@ import { CategoryBadge, CategoryGlyph } from './components/ui/icons'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, Task } from './types'
 import { formatClock, formatDuration, phaseElapsed, startOfDay, todaySeconds } from './lib/stats'
 import UpcomingEvents from './components/calendar/UpcomingEvents'
+import RestSuggestion from './components/games/RestSuggestion'
 import { PageSkeleton } from './components/ui/Skeleton'
 
 const OFFSETS = [0, 44, 66, 44, 0, -44, -66, -44]
@@ -232,6 +233,8 @@ export default function HomePage() {
             </span>
           </Link>
         )}
+
+        <RestSuggestion className="lg:hidden" />
 
         <div className="lg:hidden"><UpcomingEvents /></div>
 

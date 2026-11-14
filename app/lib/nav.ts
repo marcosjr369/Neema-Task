@@ -1,6 +1,6 @@
 import {
   BuildingsIcon, CalendarBlankIcon, FlowArrowIcon, GraduationCapIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
-  SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
+  PuzzlePieceIcon, SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
 export type NavItem = {
@@ -26,6 +26,7 @@ const ITEMS = {
   empresa: { href: '/empresa', label: 'Empresa', icon: BuildingsIcon, color: '#4C7DFF' },
   perfil: { href: '/perfil', label: 'Perfil', icon: UserIcon, color: '#FF8A3D' },
   tutorial: { href: '/tutorial', label: 'Tutorial', icon: GraduationCapIcon, color: '#7B61FF' },
+  jogos: { href: '/jogos', label: 'Jogos', icon: PuzzlePieceIcon, color: '#EC5BA6' },
 } satisfies Record<string, NavItem>
 
 export type SectionId = 'geral' | 'tarefas' | 'relatorios' | 'recordes' | 'pessoas' | 'departamentos' | 'definicoes'
@@ -63,6 +64,7 @@ export function navGroups(mode: NavMode): NavGroup[] {
     { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario] },
     { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas] },
     { title: 'Progresso', items: [ITEMS.estatisticas, ITEMS.ranking] },
+    { title: 'Descontrair', items: [ITEMS.jogos] },
   ]
   if (mode === 'manager' || mode === 'admin') {
     groups.push({ title: 'Equipa', items: visibleSections(mode === 'admin').map(s => (s.id === 'geral' ? { ...s, label: 'Painel da equipa' } : s)) })

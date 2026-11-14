@@ -16,6 +16,7 @@ import {
 import MiniTimer from '../focus/MiniTimer'
 import UpcomingEvents from '../calendar/UpcomingEvents'
 import { CategoryBadge } from '../ui/icons'
+import RestSuggestion from '../games/RestSuggestion'
 
 export default function RightPanel() {
   const { tasks, history, settings, timer } = useApp()
@@ -62,6 +63,8 @@ export default function RightPanel() {
           </span>
         </Link>
       )}
+
+      <RestSuggestion />
 
       <UpcomingEvents />
 

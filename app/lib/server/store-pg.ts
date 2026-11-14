@@ -1,5 +1,6 @@
 import postgres from 'postgres'
 import { emptyDB, TABLES, type Condition, type DB, type Loader, type Scope, type Table } from './store'
+import { COLUMNS, keyOf } from './columns'
 
 /**
  * Postgres (Supabase). Cada tabela guarda o objecto inteiro em "data" (jsonb) e, à parte,
@@ -11,40 +12,6 @@ import { emptyDB, TABLES, type Condition, type DB, type Loader, type Scope, type
 
 type Sql = postgres.Sql
 type Row = Record<string, unknown>
-
-const COLUMNS: Record<Table, (r: Row) => Record<string, string | number | null>> = {
-  users: r => ({ id: r.id as string, clerk_id: (r.clerkId as string) ?? null, email: (r.email as string) ?? null }),
-  orgs: r => ({ id: r.id as string, invite_code: r.inviteCode as string, domain: (r.domain as string) ?? null }),
-  departments: r => ({ id: r.id as string, org_id: r.orgId as string }),
-  members: r => ({ id: r.id as string, org_id: r.orgId as string, user_id: (r.userId as string) ?? null, email: (r.email as string) ?? null }),
-  tasks: r => ({ id: r.id as string, org_id: (r.orgId as string) ?? null, owner_id: (r.ownerId as string) ?? null, assignee_id: (r.assigneeId as string) ?? null }),
-  sessions: r => ({ id: r.id as string, task_id: r.taskId as string, user_id: (r.userId as string) ?? null, member_id: (r.memberId as string) ?? null, start_at: r.start as number }),
-  presence: r => ({ id: r.id as string, org_id: r.orgId as string, member_id: r.memberId as string, start_at: r.start as number, end_at: (r.end as number) ?? null }),
-  push: r => ({ id: r.endpoint as string, user_id: r.userId as string }),
-  events: r => ({ id: r.id as string, org_id: (r.orgId as string) ?? null, owner_id: (r.ownerId as string) ?? null, start_at: r.start as number }),
-  deleted: r => ({ id: r.id as string, deleted_at: r.deletedAt as number }),
-  boards: r => ({
-    id: r.id as string,
-    org_id: (r.orgId as string) ?? null,
-    owner_id: r.ownerId as string,
-    token: (r.sharing as { token?: string } | undefined)?.token ?? null,
-  }),
-  sheets: r => ({
-    id: r.id as string,
-    org_id: (r.orgId as string) ?? null,
-    owner_id: r.ownerId as string,
-    token: (r.sharing as { token?: string } | undefined)?.token ?? null,
-  }),
-  diagrams: r => ({
-    id: r.id as string,
-    org_id: (r.orgId as string) ?? null,
-    owner_id: r.ownerId as string,
-    token: (r.sharing as { token?: string } | undefined)?.token ?? null,
-  }),
-  grants: r => ({ id: r.id as string, resource_id: r.resourceId as string, email: (r.email as string) ?? null, user_id: (r.userId as string) ?? null }),
-}
-
-const keyOf = (table: Table, r: Row) => (table === 'push' ? (r.endpoint as string) : (r.id as string))
 
 const SCHEMA = `
 create table if not exists users (id text primary key, clerk_id text, email text, data jsonb not null);
@@ -86,6 +53,9 @@ create index if not exists sheets_org on sheets (org_id);
 create index if not exists sheets_owner on sheets (owner_id);
 create unique index if not exists sheets_token on sheets (token);
 create table if not exists diagrams (id text primary key, org_id text, owner_id text not null, token text, data jsonb not null);
+create table if not exists plays (id text primary key, user_id text not null, org_id text, start_at bigint not null, data jsonb not null);
+create index if not exists plays_user on plays (user_id);
+create index if not exists plays_org_start on plays (org_id, start_at);
 create index if not exists diagrams_org on diagrams (org_id);
 create index if not exists diagrams_owner on diagrams (owner_id);
 create unique index if not exists diagrams_token on diagrams (token);
@@ -109,10 +79,11 @@ alter table boards enable row level security;
 alter table grants enable row level security;
 alter table sheets enable row level security;
 alter table diagrams enable row level security;
+alter table plays enable row level security;
 `
 
-// "__neemaSchema6": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema6?: Promise<void>; __neemaSlots?: Slots }
+// "__neemaSchema7": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema7?: Promise<void>; __neemaSlots?: Slots }
 
 const POOL_MAX = Number(process.env.DATABASE_POOL_MAX) || 5
 
@@ -160,11 +131,11 @@ function client(): Sql {
 }
 
 function ready(): Promise<void> {
-  g.__neemaSchema6 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
-    g.__neemaSchema6 = undefined
+  g.__neemaSchema7 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
+    g.__neemaSchema7 = undefined
     throw err
   })
-  return g.__neemaSchema6
+  return g.__neemaSchema7
 }
 
 function condition(sql: Sql, col: string, value: Condition) {

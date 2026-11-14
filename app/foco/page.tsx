@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckIcon, CoffeeIcon, PauseIcon, PlayIcon, SkipForwardIcon, StopIcon, XIcon, TimerIcon } from '@phosphor-icons/react'
+import { CheckIcon, CoffeeIcon, PauseIcon, PlayIcon, PuzzlePieceIcon, SkipForwardIcon, StopIcon, XIcon, TimerIcon } from '@phosphor-icons/react'
 import { useApp, useClock } from '../context/AppContext'
 import ProgressRing from '../components/ui/ProgressRing'
 import Mascot from '../components/ui/Mascot'
@@ -152,6 +152,9 @@ export default function FocusPage() {
       <div className="border-t-2 border-line bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4">
         {isBreak ? (
           <>
+            <Link href="/jogos" className="btn mb-3 w-full border-accent/30 bg-accent-light text-accent-dark hover:bg-accent/20">
+              <PuzzlePieceIcon size={18} weight="duotone" /> Jogar durante a pausa
+            </Link>
             <button onClick={backToFocus} className="btn btn-accent w-full">
               <SkipForwardIcon size={18} weight="fill" /> Saltar pausa
             </button>
