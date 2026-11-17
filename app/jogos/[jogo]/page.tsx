@@ -11,6 +11,7 @@ import { isGameId } from '../../lib/games'
 import type { GameId } from '../../types'
 import Mascot from '../../components/ui/Mascot'
 import Spinner from '../../components/ui/Spinner'
+import BreakOverLock from '../../components/games/BreakOverLock'
 
 const loading = () => <div className="flex min-h-[60dvh] items-center justify-center"><Spinner /></div>
 
@@ -73,5 +74,5 @@ export default function GamePage() {
     )
   }
   const Game = GAMES[jogo]
-  return <Game />
+  return <BreakOverLock><Game /></BreakOverLock>
 }

@@ -184,7 +184,7 @@ export const LESSONS: Lesson[] = [
     href: '/jogos',
     modes: PEOPLE,
     steps: [
-      { title: 'Na hora da pausa', text: 'Quando a app disser "Hora de pausar!", escolhe "Pausa com um minijogo". Também os encontras no menu, em Jogos.' },
+      { title: 'Na hora da pausa', text: 'Quando a app disser "Hora de pausar!", escolhe "Pausa com um minijogo". Quando a pausa acaba, o jogo fecha e voltas à tua tarefa. Também os encontras no menu, em Jogos.' },
       { title: 'Respirar', text: 'Um a três minutos de respiração guiada: inspira quando o círculo cresce, expira quando encolhe.' },
       { title: 'Clássicos e treino rápido', text: 'Jogo do Galo, Forca, Sudoku e Deslizar, sem pressa. Ou Pares, Contas rápidas e Cores, em um ou dois minutos.' },
       { title: 'Como cada jogo ajuda', text: 'Antes de começar, cada jogo explica por etapas como te ajuda a descontrair. O teu recorde fica guardado; os jogos não dão XP.' },

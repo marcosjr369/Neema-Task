@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { PuzzlePieceIcon } from '@phosphor-icons/react'
 import { useApp, useClock } from '../../context/AppContext'
 import { formatDuration, phaseElapsed } from '../../lib/stats'
@@ -10,7 +10,15 @@ export default function BreakPrompt() {
   const { prompt, timer, activeTask, settings, startBreak, extendFocus, backToFocus, stopTimer, setStatus } = useApp()
   const { now } = useClock()
   const router = useRouter()
+  const pathname = usePathname() ?? ''
   if (!prompt || !timer || !activeTask) return null
+  const inGames = pathname === '/jogos' || pathname.startsWith('/jogos/')
+  // dentro de um jogo, o BreakOverLock bloqueia o jogo e trata do regresso à tarefa
+  if (prompt === 'breakOver' && pathname.startsWith('/jogos/')) return null
+  const leaveGames = (action: () => void) => () => {
+    action()
+    if (inGames) router.push(`/tarefas/${activeTask.id}`)
+  }
 
   const elapsed = phaseElapsed(timer, now)
   const nextIsLong = (timer.pomodoros + 1) % Math.max(1, settings.longBreakEvery) === 0
@@ -33,8 +41,8 @@ export default function BreakPrompt() {
       mood: 'excited' as const,
       title: 'Pausa terminada!',
       text: `Recarregado? Vamos voltar a "${activeTask.title}".`,
-      primary: { label: 'Voltar ao foco', className: 'btn-accent', action: backToFocus },
-      secondary: { label: 'Terminar por agora', action: stopTimer },
+      primary: { label: 'Voltar ao foco', className: 'btn-accent', action: leaveGames(backToFocus) },
+      secondary: { label: 'Terminar por agora', action: leaveGames(stopTimer) },
     },
     restDone: {
       bg: '#EEEAFF',
