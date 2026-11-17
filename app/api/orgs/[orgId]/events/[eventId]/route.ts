@@ -6,7 +6,7 @@ import type { EventResponse } from '../../../../../types'
 type Action = { action: 'update'; patch: EventInput } | { action: 'respond'; response: EventResponse }
 
 export const PATCH = handle<{ orgId: string; eventId: string }>(async (req, { orgId, eventId }) => {
-  const { db, org, me } = await requireMember(orgId)
+  const { db, org, me } = await requireMember(orgId, { users: true })
   const input = await body<Action>(req)
   let added: string[] = []
   let moved: string[] = []
@@ -45,7 +45,7 @@ export const PATCH = handle<{ orgId: string; eventId: string }>(async (req, { or
 })
 
 export const DELETE = handle<{ orgId: string; eventId: string }>(async (_req, { orgId, eventId }) => {
-  const { db, me } = await requireMember(orgId)
+  const { db, me } = await requireMember(orgId, { users: true })
   const event = await mutate(async l => l.load('events', { id: eventId }), d => {
     const e = d.events.find(x => x.id === eventId && x.orgId === orgId) ?? fail(404, 'Evento não encontrado')
     if (e.createdBy !== me.id && me.role !== 'admin') fail(403, 'Só quem agendou pode cancelar')

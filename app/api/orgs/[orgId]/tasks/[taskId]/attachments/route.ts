@@ -9,7 +9,7 @@ const MAX_UPLOAD = 15 * 1024 * 1024
 type Params = { orgId: string; taskId: string }
 
 export const GET = handle<Params>(async (req, { orgId, taskId }) => {
-  const { db, me } = await requireMember(orgId, { tasks: true })
+  const { db, me } = await requireMember(orgId, { tasks: { id: taskId } })
   const url = new URL(req.url)
   const id = url.searchParams.get('id')
   const task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
@@ -30,7 +30,7 @@ export const GET = handle<Params>(async (req, { orgId, taskId }) => {
 })
 
 export const POST = handle<Params>(async (req, { orgId, taskId }) => {
-  const { db, me } = await requireMember(orgId, { tasks: true })
+  const { db, me } = await requireMember(orgId, { tasks: { id: taskId } })
   const task = db.tasks.find(t => t.id === taskId && t.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
   const access = taskAccess(db, me, task)
   if (!access.owner && !access.manager) fail(403, 'Só o responsável pode anexar ficheiros')
@@ -54,7 +54,7 @@ export const POST = handle<Params>(async (req, { orgId, taskId }) => {
   }
   await saveFile(attachment.id, Buffer.from(await f.arrayBuffer()), attachment.type)
 
-  return mutate(orgScope(orgId, { tasks: true }), d => {
+  return mutate(orgScope(orgId, { tasks: { id: taskId } }), d => {
     const t = d.tasks.find(x => x.id === taskId)
     if (!t) return fail(404, 'Tarefa não encontrada')
     t.attachments = [...(t.attachments ?? []), attachment]
@@ -66,7 +66,7 @@ export const POST = handle<Params>(async (req, { orgId, taskId }) => {
 export const DELETE = handle<Params>(async (req, { orgId, taskId }) => {
   const { me } = await requireMember(orgId)
   const id = new URL(req.url).searchParams.get('id')
-  const task = await mutate(orgScope(orgId, { tasks: true }), db => {
+  const task = await mutate(orgScope(orgId, { tasks: { id: taskId } }), db => {
     const t = db.tasks.find(x => x.id === taskId && x.orgId === orgId) ?? fail(404, 'Tarefa não encontrada')
     const att = t.attachments?.find(a => a.id === id) ?? fail(404, 'Anexo não encontrado')
     const access = taskAccess(db, me, t)

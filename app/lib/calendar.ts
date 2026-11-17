@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, throttled, whenVisible } from './api'
+import { api, keepIfSame, throttled, whenVisible } from './api'
 import { startOfDay } from './stats'
 import type { CalendarEvent, EventResponse } from '../types'
 
@@ -23,7 +23,8 @@ export function useEvents(base: string, from: number, to: number) {
   const reload = useCallback(async () => {
     try {
       const r = await api<{ events: CalendarEvent[] }>(`${base}/events?from=${from}&to=${to}`)
-      setEvents(r.events.sort((a, b) => a.start - b.start))
+      const next = r.events.sort((a, b) => a.start - b.start)
+      setEvents(prev => keepIfSame(prev, next))
     } catch { /* offline: mantém o que há */ }
     setLoaded(true)
   }, [base, from, to])

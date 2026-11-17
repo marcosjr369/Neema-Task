@@ -45,6 +45,12 @@ export async function api<T = { ok: true }>(path: string, opts: Options = {}): P
   return data as T
 }
 
+/**
+ * Para as actualizações periódicas (polling): se o servidor devolveu exactamente o mesmo,
+ * fica o valor antigo. Um array novo com o mesmo conteúdo faria redesenhar a app inteira.
+ */
+export const keepIfSame = <T,>(prev: T, next: T): T => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next)
+
 export const errorText = (err: unknown) => (err instanceof Error ? err.message : 'Algo correu mal')
 
 export const fileUrl = (orgBase: string, taskId: string, id: string, view = false) =>

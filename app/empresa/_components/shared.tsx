@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useOrgRequired } from '../../context/OrgContext'
-import { api, whenVisible } from '../../lib/api'
+import { api, keepIfSame, whenVisible } from '../../lib/api'
 import { presenceTotals } from '../../lib/org'
 import { startOfDay } from '../../lib/stats'
 import { PRESENCE_CONFIG, PRESENCE_STATUSES, type PresenceSegment, type PresenceStatus, type Session } from '../../types'
@@ -19,11 +19,12 @@ export function useTeamActivity(from: number, to?: number, memberId?: string) {
     if (memberId) q.set('memberId', memberId)
     try {
       const [s, p] = await Promise.all([
-        api<{ sessions: Session[] }>(`${base}/sessions?scope=team&from=${from}`),
+        api<{ sessions: Session[] }>(`${base}/sessions?scope=team&from=${from}${memberId ? `&memberId=${encodeURIComponent(memberId)}` : ''}`),
         api<{ segments: PresenceSegment[] }>(`${base}/presence?${q}`),
       ])
-      setSessions(memberId ? s.sessions.filter(x => x.memberId === memberId) : s.sessions)
-      setSegments(p.segments)
+      const nextSessions = memberId ? s.sessions.filter(x => x.memberId === memberId) : s.sessions
+      setSessions(prev => keepIfSame(prev, nextSessions))
+      setSegments(prev => keepIfSame(prev, p.segments))
     } catch { /* offline */ }
     setLoaded(true)
   }, [base, from, to, memberId])

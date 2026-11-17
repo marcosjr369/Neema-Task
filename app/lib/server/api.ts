@@ -56,7 +56,10 @@ export type OrgAccess = { db: DB; user: User; org: Org; me: Member }
 
 export async function requireMember(orgId: string, opts: OrgOpts = {}): Promise<OrgAccess> {
   // a conta e os dados da empresa chegam em paralelo (cada leitura é uma viagem à base de dados)
-  const [user, db] = await Promise.all([requireUser(), read(orgScope(orgId, opts))])
+  const userP = requireUser()
+  const userId = userP.then(u => u.id)
+  userId.catch(() => undefined) // o erro (sessão expirada) chega por userP; aqui só pode não ser usado
+  const [user, db] = await Promise.all([userP, read(orgScope(orgId, opts, userId))])
   const org = db.orgs.find(o => o.id === orgId) ?? fail(404, 'Empresa não encontrada')
   const me =
     db.members.find(m => m.orgId === orgId && m.userId === user.id && m.status === 'activo') ??

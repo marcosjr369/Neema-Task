@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { api, errorText, throttled, whenVisible } from '../lib/api'
+import { api, errorText, keepIfSame, throttled, whenVisible } from '../lib/api'
 import { assignableMembers, canManageRole, isCompanyAccount, isWorking, managedDepartmentIds, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
@@ -66,7 +66,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   const refresh = useCallback(async () => {
     try {
       const next = await api<OrgData>(base)
-      setData(next)
+      setData(prev => keepIfSame(prev, next))
       setError(null)
     } catch (err) {
       setError(errorText(err))
@@ -81,7 +81,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
     if (!isManager) return
     try {
       const { tasks } = await api<{ tasks: Task[] }>(`${base}/tasks?scope=team`)
-      setTeamTasks(tasks)
+      setTeamTasks(prev => keepIfSame(prev, tasks))
     } catch { /* offline */ }
     setTeamFetched(true)
   }, [base, isManager])

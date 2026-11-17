@@ -29,6 +29,8 @@ create index if not exists members_email on members (email);
 create table if not exists tasks (id text primary key, org_id text, owner_id text, assignee_id text, data jsonb not null);
 create index if not exists tasks_org on tasks (org_id);
 create index if not exists tasks_owner on tasks (owner_id);
+create index if not exists tasks_org_assignee on tasks (org_id, assignee_id);
+create index if not exists tasks_assignee on tasks (assignee_id);
 create table if not exists sessions (id text primary key, task_id text not null, user_id text, member_id text, start_at bigint not null, data jsonb not null);
 create index if not exists sessions_user on sessions (user_id, start_at);
 create index if not exists sessions_member on sessions (member_id, start_at);
@@ -36,6 +38,9 @@ create index if not exists sessions_task on sessions (task_id);
 create table if not exists presence (id text primary key, org_id text not null, member_id text not null, start_at bigint not null, end_at bigint, data jsonb not null);
 create index if not exists presence_org on presence (org_id, start_at);
 create index if not exists presence_member_open on presence (member_id) where end_at is null;
+create index if not exists presence_org_open on presence (org_id) where end_at is null;
+create index if not exists presence_org_end on presence (org_id, end_at);
+create index if not exists presence_member_end on presence (member_id, end_at);
 create table if not exists push (id text primary key, user_id text not null, data jsonb not null);
 create index if not exists push_user on push (user_id);
 create table if not exists events (id text primary key, org_id text, owner_id text, start_at bigint not null, data jsonb not null);
@@ -82,8 +87,8 @@ alter table diagrams enable row level security;
 alter table plays enable row level security;
 `
 
-// "__neemaSchema7": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema7?: Promise<void>; __neemaSlots?: Slots }
+// "__neemaSchema8": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema8?: Promise<void>; __neemaSlots?: Slots }
 
 const POOL_MAX = Number(process.env.DATABASE_POOL_MAX) || 5
 
@@ -131,11 +136,11 @@ function client(): Sql {
 }
 
 function ready(): Promise<void> {
-  g.__neemaSchema7 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
-    g.__neemaSchema7 = undefined
+  g.__neemaSchema8 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
+    g.__neemaSchema8 = undefined
     throw err
   })
-  return g.__neemaSchema7
+  return g.__neemaSchema8
 }
 
 function condition(sql: Sql, col: string, value: Condition) {

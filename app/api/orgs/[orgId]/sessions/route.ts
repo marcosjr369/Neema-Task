@@ -1,5 +1,5 @@
-import { body, handle, requireMember, requirePerson } from '../../../../lib/server/api'
-import { mutate, type Loader } from '../../../../lib/server/store'
+import { body, fail, handle, requireMember, requirePerson } from '../../../../lib/server/api'
+import { mutate, read, type Loader } from '../../../../lib/server/store'
 import { visibleMembers } from '../../../../lib/server/org'
 import { cleanSessions } from '../../../../lib/server/tasks'
 import type { Session } from '../../../../types'
@@ -7,13 +7,27 @@ import type { Session } from '../../../../types'
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const url = new URL(req.url)
   const from = Number(url.searchParams.get('from')) || 0
-  const { db, me } = await requireMember(orgId, { tasks: true, sessions: { since: from } })
-  const ids =
-    url.searchParams.get('scope') === 'team'
-      ? new Set(visibleMembers(db, me).map(m => m.id))
-      : new Set([me.id])
-  const orgTasks = new Set(db.tasks.filter(t => t.orgId === orgId).map(t => t.id))
-  const sessions = db.sessions.filter(s => s.memberId && ids.has(s.memberId) && orgTasks.has(s.taskId) && s.start >= from)
+  const team = url.searchParams.get('scope') === 'team'
+  if (!team) {
+    // as minhas: só as minhas sessões (o membro é desta empresa e apagar uma tarefa apaga as sessões dela)
+    const { db, me } = await requireMember(orgId, { sessions: { since: from, mine: true } })
+    return { sessions: db.sessions.filter(s => s.memberId === me.id && s.start >= from) }
+  }
+  // só se gravam sessões de tarefas da empresa e apagar uma tarefa apaga as sessões dela:
+  // não é preciso carregar as tarefas todas para filtrar
+  const only = url.searchParams.get('memberId')
+  if (only) {
+    // o relatório de uma pessoa: só as sessões dela, lidas em paralelo com a verificação de acesso
+    const [{ db, me }, s] = await Promise.all([
+      requireMember(orgId),
+      read(async l => { await l.load('sessions', { member_id: only, ...(from ? { start_at: { gte: from } } : {}) }) }),
+    ])
+    if (!visibleMembers(db, me).some(m => m.id === only)) fail(403, 'Sem acesso a este funcionário')
+    return { sessions: s.sessions.filter(x => x.memberId === only && x.start >= from) }
+  }
+  const { db, me } = await requireMember(orgId, { sessions: { since: from } })
+  const ids = new Set(visibleMembers(db, me).map(m => m.id))
+  const sessions = db.sessions.filter(s => s.memberId && ids.has(s.memberId) && s.start >= from)
   return { sessions }
 })
 

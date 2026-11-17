@@ -1,4 +1,4 @@
-import type { Loader, Scope } from './store'
+import type { Condition, Loader, Scope } from './store'
 
 /**
  * Âmbitos de leitura. Cada ida à base de dados custa uma viagem de rede (centenas de ms quando a
@@ -53,12 +53,21 @@ async function secondStage(l: Loader, userId: string, opts: UserOpts) {
 }
 
 export type OrgOpts = {
-  tasks?: boolean
-  sessions?: boolean | { since?: number }
+  /** true: todas as tarefas da empresa; 'mine': só as atribuídas a quem pede; { id }: só essa tarefa */
+  tasks?: boolean | 'mine' | { id: string }
+  /** 'mine': só as sessões de quem pede */
+  sessions?: boolean | { since?: number; mine?: boolean }
   presence?: boolean | { since?: number } | 'open'
+  /** as contas dos membros (fuso horário nos avisos): custa mais uma ida à base de dados */
+  users?: boolean
 }
 
-export const orgScope = (orgId: string, opts: OrgOpts = {}): Scope => async l => {
+/**
+ * Os dados de uma empresa. A primeira fase (empresa, departamentos, membros e o que não depende
+ * deles) vai toda em paralelo; só há segunda fase se for pedido algo que precise dos membros.
+ * userId: quem pede, para as opções "mine" (pode ser uma promessa: a sessão confirma-se em paralelo).
+ */
+export const orgScope = (orgId: string, opts: OrgOpts = {}, userId?: string | Promise<string>): Scope => async l => {
   const presence = () => {
     if (opts.presence === 'open') return [l.load('presence', { org_id: orgId, end_at: null })]
     if (!opts.presence) return []
@@ -69,17 +78,25 @@ export const orgScope = (orgId: string, opts: OrgOpts = {}): Scope => async l =>
       since ? l.load('presence', { org_id: orgId, end_at: null }) : undefined,
     ]
   }
+  const tasks = opts.tasks
   await all([
     l.load('orgs', { id: orgId }),
     l.load('departments', { org_id: orgId }),
     l.load('members', { org_id: orgId }),
-    opts.tasks && l.load('tasks', { org_id: orgId }),
+    tasks === true && l.load('tasks', { org_id: orgId }),
+    typeof tasks === 'object' && l.load('tasks', { id: tasks.id }),
     ...presence(),
   ])
-  const since = typeof opts.sessions === 'object' ? opts.sessions.since : undefined
+  const sessions = typeof opts.sessions === 'object' ? opts.sessions : opts.sessions ? {} : null
+  const mine = tasks === 'mine' || !!sessions?.mine
+  if (!opts.users && !sessions && !mine) return
+  const uid = mine && userId ? await userId : undefined
+  const meId = uid ? l.db.members.find(m => m.orgId === orgId && m.userId === uid)?.id : undefined
+  const since: Record<string, Condition> = sessions?.since ? { start_at: { gte: sessions.since } } : {}
   await all([
-    l.load('users', { id: l.db.members.map(m => m.userId).filter((x): x is string => !!x) }),
-    !!opts.sessions && l.load('sessions', { member_id: l.db.members.map(m => m.id), ...(since ? { start_at: { gte: since } } : {}) }),
+    opts.users && l.load('users', { id: l.db.members.map(m => m.userId).filter((x): x is string => !!x) }),
+    !!sessions && l.load('sessions', { member_id: sessions.mine ? (meId ? [meId] : []) : l.db.members.map(m => m.id), ...since }),
+    tasks === 'mine' && !!meId && l.load('tasks', { org_id: orgId, assignee_id: meId }),
   ])
 }
 

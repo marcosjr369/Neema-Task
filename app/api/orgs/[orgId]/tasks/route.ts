@@ -1,13 +1,20 @@
 import { body, canManage, fail, handle, requireMember, taskAccess } from '../../../../lib/server/api'
 import { orgScope, scopes } from '../../../../lib/server/scopes'
-import { mutate, newId } from '../../../../lib/server/store'
+import { mutate, newId, read } from '../../../../lib/server/store'
 import { buildTask, checkReviewer, cleanTaskFields, pickId, withGroup, type TaskPatch } from '../../../../lib/server/tasks'
 import { isCompanyAccount, isFormer } from '../../../../lib/org'
 import type { Task } from '../../../../types'
 
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
-  const { db, me } = await requireMember(orgId, { tasks: true })
   const scope = new URL(req.url).searchParams.get('scope') ?? 'mine'
+  // "as minhas" (de 30 em 30 s, por pessoa): só carrega as tarefas atribuídas a quem pede
+  const { db, me } = await requireMember(orgId, { tasks: scope === 'mine' ? 'mine' : true })
+  // tarefas de grupo: o resumo ("3 de 5 entregaram") precisa das tarefas das outras pessoas
+  if (scope === 'mine' && db.tasks.some(t => t.groupId)) {
+    const all = await read(async l => { await l.load('tasks', { org_id: orgId }) })
+    const have = new Set(db.tasks.map(t => t.id))
+    db.tasks.push(...all.tasks.filter(t => !have.has(t.id)))
+  }
   const tasks = db.tasks.filter(t => {
     if (t.orgId !== orgId) return false
     if (scope === 'mine') return t.assigneeId === me.id

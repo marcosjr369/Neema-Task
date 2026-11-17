@@ -23,7 +23,7 @@ import {
 import { pushNotification, sounds } from '../lib/sounds'
 import { formatDuration, liveSession, phaseElapsed, taskSeconds } from '../lib/stats'
 import { taskPoints } from '../lib/points'
-import { api, errorText, throttled, whenVisible } from '../lib/api'
+import { api, errorText, keepIfSame, throttled, whenVisible } from '../lib/api'
 import { useAccount } from './AccountContext'
 import { useOrg } from './OrgContext'
 
@@ -221,7 +221,7 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
           }
         }
       }
-      setTasks(fresh)
+      setTasks(prev => keepIfSame(prev, fresh))
       return true
     } catch {
       return false // sem ligação: mantém o que está no ecrã
@@ -242,7 +242,8 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
     try {
       const { sessions: fresh } = await api<{ sessions: Session[] }>(`${base}/sessions?scope=mine`)
       const ids = new Set(fresh.map(s => s.id))
-      setSessions([...fresh, ...pendingSessions.current.filter(s => !ids.has(s.id))])
+      const next = [...fresh, ...pendingSessions.current.filter(s => !ids.has(s.id))]
+      setSessions(prev => keepIfSame(prev, next))
       return true
     } catch {
       return false

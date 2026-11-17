@@ -10,9 +10,12 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const now = Date.now()
   const from = Number(url.searchParams.get('from')) || now - 31 * DAY
   const to = Number(url.searchParams.get('to')) || now + 62 * DAY
-  const { db: orgDb, me } = await requireMember(orgId)
-  // os eventos duram no máximo um dia: um dia antes apanha os que atravessam o início
-  const db = await read(async l => l.load('events', { org_id: orgId, start_at: { gte: from - DAY, lte: to } }))
+  // a pertença e os eventos não dependem um do outro: chegam em paralelo.
+  // Os eventos duram no máximo um dia: um dia antes apanha os que atravessam o início.
+  const [{ db: orgDb, me }, db] = await Promise.all([
+    requireMember(orgId),
+    read(async l => l.load('events', { org_id: orgId, start_at: { gte: from - DAY, lte: to } })),
+  ])
   const sees = (e: CalendarEvent) =>
     e.createdBy === me.id || e.attendeeIds.includes(me.id) || canManage(orgDb, me, orgDb.members.find(m => m.id === e.createdBy))
   const events = db.events.filter(e => e.orgId === orgId && e.end > from && e.start < to && sees(e))
@@ -20,7 +23,7 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
 })
 
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
-  const { db, org, me } = await requireMember(orgId)
+  const { db, org, me } = await requireMember(orgId, { users: true })
   const input = await body<EventInput>(req)
   const fields = cleanEvent(input)
   const attendeeIds = checkAttendees(db, org, me, input.attendeeIds)
