@@ -2,7 +2,7 @@ import { body, canManage, fail, handle, requireMember, taskAccess } from '../../
 import { orgScope, scopes } from '../../../../lib/server/scopes'
 import { mutate, newId } from '../../../../lib/server/store'
 import { buildTask, checkReviewer, cleanTaskFields, pickId, withGroup, type TaskPatch } from '../../../../lib/server/tasks'
-import { isCompanyAccount } from '../../../../lib/org'
+import { isCompanyAccount, isFormer } from '../../../../lib/org'
 import type { Task } from '../../../../types'
 
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
@@ -30,6 +30,7 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   const assignees = ids.map(id => {
     const a = db.members.find(m => m.id === id && m.orgId === orgId)
     if (!a || isCompanyAccount(a, org)) fail(400, 'Funcionário inválido')
+    if (isFormer(a)) fail(400, `${a!.name} já saiu da empresa`)
     if (a!.id !== me.id && !canManage(db, me, a)) fail(403, `Só podes atribuir tarefas à tua equipa (${a!.name})`)
     return a!
   })

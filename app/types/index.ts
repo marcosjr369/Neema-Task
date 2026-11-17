@@ -309,8 +309,11 @@ export type Member = {
   phone?: string
   departmentId?: string
   role: Role
-  status: 'activo' | 'pendente'
+  /** "saiu": saiu ou foi removido; o registo fica para a empresa manter o histórico (tarefas, tempo, reuniões) */
+  status: 'activo' | 'pendente' | 'saiu'
   joinedAt?: number
+  /** quando saiu da empresa (status "saiu") */
+  leftAt?: number
   consentAt?: number
   presence: PresenceStatus
   lastSeen?: number

@@ -6,7 +6,7 @@ import { fail } from './api'
  * Partilha de recursos (quadros; mais tarde planilhas).
  *
  * Quem tem acesso:
- * - o dono, e os administradores da empresa nos recursos da empresa;
+ * - o dono (nos recursos da empresa, só enquanto for membro activo), e os administradores da empresa nos recursos da empresa;
  * - quem foi convidado (por email) com "ver" ou "editar";
  * - recursos da empresa com visibilidade "org": todos os membros activos (orgRole);
  * - sem conta: com visibilidade "link", qualquer pessoa vê; com "private" e senha, quem a souber vê.
@@ -34,8 +34,9 @@ export function grantOf(grants: ShareGrant[], resourceId: string, user: User | n
 
 export function resolveAccess(r: Shared & { id: string }, user: User | null, ctx: { member?: Member; grants: ShareGrant[] }): Access | null {
   if (!user || user.disabled) return null
-  if (r.ownerId === user.id) return 'owner'
   const member = r.orgId && ctx.member?.orgId === r.orgId && ctx.member.status === 'activo' ? ctx.member : undefined
+  // o que foi criado na empresa é da empresa: quem saiu deixa de ser dono (fica com a administração)
+  if (r.ownerId === user.id && (!r.orgId || member)) return 'owner'
   if (member?.role === 'admin') return 'owner'
   const grant = grantOf(ctx.grants, r.id, user)
   const fromGrant = grant && grant.role !== 'pending' ? grant.role : null

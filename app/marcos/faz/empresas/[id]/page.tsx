@@ -123,7 +123,7 @@ export default function PanelOrgPage() {
             </thead>
             <tbody className="divide-y-2 divide-line">
               {d.members.map(m => (
-                <tr key={m.id} className={m.status === 'pendente' ? 'opacity-60' : ''}>
+                <tr key={m.id} className={m.status !== 'activo' ? 'opacity-60' : ''}>
                   <td className="px-4 py-2.5">
                     <span className="flex items-center gap-3">
                       <Avatar name={m.name || m.email} picture={m.picture} size={34} />
@@ -140,15 +140,15 @@ export default function PanelOrgPage() {
                   <td className="px-3 py-2.5 font-semibold text-body">{ROLE_LABEL[m.role]}</td>
                   <td className="px-3 py-2.5 font-semibold text-body">{m.department ?? '—'}</td>
                   <td className="px-3 py-2.5">
-                    {m.status === 'pendente' ? (
-                      <span className="rounded-lg bg-snow px-2 py-0.5 text-xs font-extrabold text-muted">Convite pendente</span>
+                    {m.status !== 'activo' ? (
+                      <span className="rounded-lg bg-snow px-2 py-0.5 text-xs font-extrabold text-muted">{m.status === 'saiu' ? 'Saiu' : 'Convite pendente'}</span>
                     ) : (
                       <span className="rounded-lg px-2 py-0.5 text-xs font-extrabold" style={{ background: PRESENCE_CONFIG[m.presence].light, color: PRESENCE_CONFIG[m.presence].color }}>
                         {PRESENCE_CONFIG[m.presence].label}
                       </span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-body">{m.status === 'pendente' ? '—' : ago(m.lastSeen, now)}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-body">{m.status !== 'activo' ? '—' : ago(m.lastSeen, now)}</td>
                   <td className="px-3 py-2.5 text-right font-bold tabular-nums text-ink">{formatShort(m.focusSeconds)}</td>
                   <td className="px-3 py-2.5 text-right font-bold tabular-nums text-ink">{m.tasksDone}</td>
                   <td className="px-4 py-2.5 text-right font-bold tabular-nums text-ink">{m.points}</td>

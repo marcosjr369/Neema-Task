@@ -1,6 +1,7 @@
 import { body, fail, handle, isManager, requireAdmin, requireMember } from '../../../lib/server/api'
 import { inviteCode, mutate } from '../../../lib/server/store'
-import { effectivePresence } from '../../../lib/server/org'
+import { effectivePresence, visibleMembers } from '../../../lib/server/org'
+import { isFormer } from '../../../lib/org'
 import { orgScope } from '../../../lib/server/scopes'
 
 export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
@@ -8,18 +9,21 @@ export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
   const manager = isManager(me)
   const now = Date.now()
   const members = db.members
-    .filter(m => m.orgId === orgId)
+    .filter(m => m.orgId === orgId && !isFormer(m))
     .map(m => ({
       ...m,
       presence: effectivePresence(m, now),
       phone: manager || m.id === me.id ? m.phone : undefined,
       email: manager || m.id === me.id ? m.email : '',
     }))
+  // quem já saiu: só para quem gere (histórico das tarefas, do tempo e das reuniões)
+  const former = manager ? visibleMembers(db, me).filter(isFormer) : []
   return {
     org: manager ? org : { ...org, inviteCode: '' },
     me,
     departments: db.departments.filter(d => d.orgId === orgId),
     members,
+    former,
   }
 })
 

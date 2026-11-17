@@ -30,6 +30,9 @@ export const isCompanyAccount = (m: Member | undefined, org: Pick<Org, 'createdB
 export const teamMembers = (members: Member[], org: Pick<Org, 'createdBy'> | undefined) =>
   members.filter(m => !isCompanyAccount(m, org))
 
+/** Já saiu da empresa: o registo fica só para o histórico (não entra em listas, atribuições nem convites) */
+export const isFormer = (m: Pick<Member, 'status'> | undefined) => m?.status === 'saiu'
+
 export const canSuperviseTask = (m: Member, org: Pick<Org, 'createdBy'> | undefined) =>
   m.status === 'activo' && (canManageRole(m.role) || isCompanyAccount(m, org))
 

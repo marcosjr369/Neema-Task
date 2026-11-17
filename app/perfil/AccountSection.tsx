@@ -37,7 +37,7 @@ export default function AccountSection() {
   }
 
   const leaveOrg = async () => {
-    if (!org || !confirm(`Sair da ${org.org.name}? Deixas de ver as tarefas da empresa.`)) return
+    if (!org || !confirm(`Sair da ${org.org.name}? Deixas de ter acesso. O que fizeste na empresa (tarefas, quadros, planilhas, tempo) fica com a empresa.`)) return
     setBusy(true)
     try {
       await api(`${org.base}/members/${org.me.id}`, { method: 'DELETE' })

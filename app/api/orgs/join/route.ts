@@ -34,7 +34,12 @@ export const POST = handle(async req => {
       m => m.orgId === org.id && (m.userId === user.id || (user.emailVerified !== false && m.email === user.email)),
     )
     if (member) {
-      if (member.status === 'pendente') activateMember(db, member, user.id)
+      // quem saiu e volta retoma o mesmo registo (o histórico continua), mas como membro
+      if (member.status === 'saiu') {
+        member.role = 'membro'
+        member.leftAt = undefined
+      }
+      if (member.status !== 'activo') activateMember(db, member, user.id)
       member.userId = user.id
     } else {
       member = {

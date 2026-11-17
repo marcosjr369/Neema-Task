@@ -189,7 +189,7 @@ export function panelOverview(db: DB, days: number, timeZone: string, now = Date
         sector: o.sector,
         createdAt: o.createdAt,
         members: active.length,
-        pending: members.length - active.length,
+        pending: members.filter(m => m.status === 'pendente').length,
         admins: active.filter(m => m.role === 'admin').map(m => m.name),
         hidden: !!o.hideFromRanking,
         ...total,

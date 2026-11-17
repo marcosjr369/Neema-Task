@@ -27,7 +27,7 @@ export function invitesOf(db: DB, user: User) {
 export function domainSuggestions(db: DB, user: User) {
   if (user.emailVerified === false) return []
   const domain = user.email.split('@')[1]
-  const mine = new Set(db.members.filter(m => m.userId === user.id).map(m => m.orgId))
+  const mine = new Set(db.members.filter(m => m.userId === user.id && m.status !== 'saiu').map(m => m.orgId))
   return db.orgs
     .filter(o => o.domain && o.domain.toLowerCase() === domain && !mine.has(o.id))
     .map(o => ({ id: o.id, name: o.name, sector: o.sector }))

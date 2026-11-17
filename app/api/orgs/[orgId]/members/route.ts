@@ -30,7 +30,8 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
         skipped.push({ email: row.email ?? '', reason: 'Email inválido' })
         continue
       }
-      if (db.members.some(m => m.orgId === orgId && m.email === email)) {
+      const existing = db.members.find(m => m.orgId === orgId && m.email === email)
+      if (existing && existing.status !== 'saiu') {
         skipped.push({ email, reason: 'Já existe' })
         continue
       }
@@ -53,24 +54,24 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
         continue
       }
       const role: Role = row.role && ROLES.includes(row.role) ? row.role : 'membro'
-      const member: Member = {
-        id: newId(),
-        orgId,
-        userId: user?.id,
+      const fields = {
+        userId: user?.id ?? existing?.userId,
         email,
-        name: row.name?.trim().slice(0, 80) || user?.name || email.split('@')[0],
-        picture: user?.picture,
+        name: row.name?.trim().slice(0, 80) || user?.name || existing?.name || email.split('@')[0],
+        picture: user?.picture ?? existing?.picture,
         jobTitle: row.jobTitle?.trim().slice(0, 60) || undefined,
         phone: row.phone?.trim().slice(0, 30) || undefined,
         departmentId,
         role,
-        status: 'pendente',
-        presence: 'offline',
+        status: 'pendente' as const,
+        presence: 'offline' as const,
       }
+      // quem já saiu é convidado outra vez com o mesmo registo: o histórico continua ligado
+      const member: Member = existing ? Object.assign(existing, fields, { leftAt: undefined }) : { id: newId(), orgId, ...fields }
       if (role === 'supervisor' && departmentId) {
         db.departments.find(d => d.id === departmentId)?.supervisorIds.push(member.id)
       }
-      db.members.push(member)
+      if (!existing) db.members.push(member)
       added.push(member)
       if (user) invited.push(user.id)
     }

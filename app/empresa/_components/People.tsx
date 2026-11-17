@@ -160,7 +160,7 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
   }
 
   const remove = async () => {
-    if (!member || !confirm(`Remover ${member.name} da empresa?`)) return
+    if (!member || !confirm(`Remover ${member.name} da empresa? Deixa de ter acesso, mas as tarefas, o tempo e as reuniões ficam guardados.`)) return
     setBusy(true)
     try {
       await api(`${org.base}/members/${member.id}`, { method: 'DELETE' })
@@ -433,6 +433,28 @@ export default function People() {
           <CopyIcon size={14} />
           <button onClick={() => copy(`${window.location.origin}/convite/${org.org.inviteCode}`)} className="font-extrabold text-accent underline cursor-pointer">Copiar link de convite</button>
         </p>
+      )}
+
+      {org.former.length > 0 && (
+        <section>
+          <h3 className="mb-1 text-sm font-black text-ink">Já saíram ({org.former.length})</h3>
+          <p className="mb-2 text-xs font-semibold text-muted">Já não têm acesso, mas as tarefas, o tempo e as reuniões continuam guardados.</p>
+          <ul className="card divide-y-2 divide-line">
+            {[...org.former].sort((a, b) => (b.leftAt ?? 0) - (a.leftAt ?? 0)).map(m => (
+              <li key={m.id}>
+                <Link href={`/empresa/membro/${m.id}`} className="flex items-center gap-3 px-4 py-3 opacity-80 hover:bg-snow hover:opacity-100">
+                  <Avatar name={m.name} picture={m.picture} size={40} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-black text-ink">{m.name}</span>
+                    <span className="block truncate text-xs font-semibold text-muted">
+                      {[m.jobTitle, org.deptById(m.departmentId)?.name, m.leftAt ? `saiu a ${new Date(m.leftAt).toLocaleDateString('pt-PT')}` : 'saiu'].filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {editing && <MemberForm member={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}

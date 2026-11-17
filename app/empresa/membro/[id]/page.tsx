@@ -53,9 +53,15 @@ function Report({ memberId }: { memberId: string }) {
           <h1 className="truncate text-2xl font-black text-ink">{m.name}{isMe ? ' (tu)' : ''}</h1>
           <p className="truncate font-bold text-muted">{[m.jobTitle, dept?.name, ROLE_LABEL[m.role]].filter(Boolean).join(' · ')}</p>
           <div className="mt-1 flex flex-wrap gap-x-4 text-sm font-semibold text-muted">
-            <span className="flex items-center gap-1" style={{ color: PRESENCE_CONFIG[m.presence].color === '#D3D0E0' ? undefined : PRESENCE_CONFIG[m.presence].color }}>
-              <PresenceGlyph status={m.presence} size={16} weight="fill" /> {PRESENCE_CONFIG[m.presence].label}
-            </span>
+            {m.status === 'saiu' ? (
+              <span className="rounded-md bg-snow px-2 py-0.5 font-extrabold text-muted">
+                Saiu da empresa{m.leftAt ? ` a ${new Date(m.leftAt).toLocaleDateString('pt-PT')}` : ''}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1" style={{ color: PRESENCE_CONFIG[m.presence].color === '#D3D0E0' ? undefined : PRESENCE_CONFIG[m.presence].color }}>
+                <PresenceGlyph status={m.presence} size={16} weight="fill" /> {PRESENCE_CONFIG[m.presence].label}
+              </span>
+            )}
             {m.email && <a href={`mailto:${m.email}`} className="flex items-center gap-1 hover:text-body"><EnvelopeSimpleIcon size={14} /> {m.email}</a>}
             {m.phone && <a href={`tel:${m.phone}`} className="flex items-center gap-1 hover:text-body"><PhoneIcon size={14} /> {m.phone}</a>}
           </div>

@@ -57,7 +57,7 @@ export type UserDetail = {
     orgName: string
     role: Role
     department?: string
-    status: 'activo' | 'pendente'
+    status: 'activo' | 'pendente' | 'saiu'
     presence: PresenceStatus
     joinedAt?: number
     lastSeen?: number
@@ -93,7 +93,7 @@ export type OrgDetail = {
     role: Role
     department?: string
     jobTitle?: string
-    status: 'activo' | 'pendente'
+    status: 'activo' | 'pendente' | 'saiu'
     presence: PresenceStatus
     joinedAt?: number
     lastSeen?: number
@@ -270,7 +270,7 @@ export function orgDetail(db: DB, orgId: string, days: number, tz: string, now =
     },
     totals: {
       members: active.length,
-      pending: members.length - active.length,
+      pending: members.filter(m => m.status === 'pendente').length,
       departments: departments.length,
       tasksOpen: tasks.filter(t => !isCompleted(t)).length,
       tasksDone: tasks.filter(isCompleted).length,

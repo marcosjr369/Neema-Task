@@ -44,7 +44,7 @@ export function visibleMembers(db: DB, me: Member) {
 
 export function syncSupervisors(db: DB, dept: Department, ids: string[]) {
   const org = db.orgs.find(o => o.id === dept.orgId)
-  const valid = new Set(teamMembers(db.members.filter(m => m.orgId === dept.orgId), org).map(m => m.id))
+  const valid = new Set(teamMembers(db.members.filter(m => m.orgId === dept.orgId && m.status !== 'saiu'), org).map(m => m.id))
   dept.supervisorIds = [...new Set(ids)].filter(id => valid.has(id))
   db.members.forEach(m => {
     if (dept.supervisorIds.includes(m.id) && m.role === 'membro') m.role = 'supervisor'

@@ -5,7 +5,7 @@ import { api, errorText, throttled, whenVisible } from '../lib/api'
 import { assignableMembers, canManageRole, isCompanyAccount, isWorking, managedDepartmentIds, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
-type OrgData = { org: Org; me: Member; departments: Department[]; members: Member[] }
+type OrgData = { org: Org; me: Member; departments: Department[]; members: Member[]; /** quem já saiu (só para quem gere): histórico */ former?: Member[] }
 
 type OrgValue = OrgData & {
   base: string
@@ -14,7 +14,9 @@ type OrgValue = OrgData & {
   isManager: boolean
   scope: Set<string> | 'all'
   assignable: Member[]
+  /** também encontra quem já saiu da empresa (para o histórico de tarefas, tempo e reuniões) */
   memberById: (id?: string) => Member | undefined
+  former: Member[]
   deptById: (id?: string) => Department | undefined
   refresh: () => Promise<void>
   presence: PresenceStatus
@@ -162,7 +164,8 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       isManager,
       scope: managedDepartmentIds(data.departments, data.me),
       assignable: assignableMembers(members.filter(m => m.status === 'activo' || m.status === 'pendente'), data.departments, data.me),
-      memberById: id => all.find(m => m.id === id),
+      former: data.former ?? [],
+      memberById: id => all.find(m => m.id === id) ?? data.former?.find(m => m.id === id),
       deptById: id => data.departments.find(d => d.id === id),
       refresh,
       presence,

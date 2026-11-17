@@ -53,12 +53,12 @@ export function timeText(ms: number, timeZone?: string) {
 export function recipients(db: DB, e: CalendarEvent): string[] {
   if (e.ownerId) return [e.ownerId]
   const ids = [e.createdBy, ...e.attendeeIds.filter(id => e.responses?.[id] !== 'nao')]
-  return [...new Set(ids.map(id => db.members.find(m => m.id === id && m.orgId === e.orgId)?.userId).filter((x): x is string => !!x))]
+  return [...new Set(ids.map(id => db.members.find(m => m.id === id && m.orgId === e.orgId && m.status !== 'saiu')?.userId).filter((x): x is string => !!x))]
 }
 
 export function notifyMembers(db: DB, memberIds: string[], e: CalendarEvent, title: (u?: User) => string) {
   if (!pushConfigured() || !memberIds.length) return
-  const userIds = [...new Set(memberIds.map(id => db.members.find(m => m.id === id)?.userId).filter((x): x is string => !!x))]
+  const userIds = [...new Set(memberIds.map(id => db.members.find(m => m.id === id && m.status !== 'saiu')?.userId).filter((x): x is string => !!x))]
   for (const userId of userIds) {
     const user = db.users.find(u => u.id === userId)
     sendToUser(userId, {

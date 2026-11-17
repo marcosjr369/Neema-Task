@@ -5,7 +5,7 @@ import { removeFiles } from '../../../../../lib/server/files'
 import {
   addComment, checkReviewer, cleanTaskFields, cloneForAssignee, deleteTask, mergeChecklist, SHARED_FIELDS, spawnNext, withGroup, type TaskPatch,
 } from '../../../../../lib/server/tasks'
-import { groupKey, groupSiblings, isCompanyAccount } from '../../../../../lib/org'
+import { groupKey, groupSiblings, isCompanyAccount, isFormer } from '../../../../../lib/org'
 import type { Member, Org, Task, TaskStatus } from '../../../../../types'
 
 type UpdatePatch = TaskPatch & {
@@ -55,6 +55,7 @@ function editGroup(db: DB, org: Org, me: Member, task: Task, fields: Partial<Tas
     for (const id of wanted.filter(id => !current.has(id))) {
       const a = db.members.find(m => m.id === id && m.orgId === org.id)
       if (!a || isCompanyAccount(a, org)) fail(400, 'Funcionário inválido')
+      if (isFormer(a)) fail(400, `${a!.name} já saiu da empresa`)
       if (a!.id !== me.id && !canManage(db, me, a)) fail(403, `Só podes atribuir tarefas à tua equipa (${a!.name})`)
       if (task.reviewerId === a!.id) fail(400, `${a!.name} é o supervisor desta tarefa e não pode ser também responsável`)
       db.tasks.push(cloneForAssignee(task, a!, me.id))
@@ -118,6 +119,7 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
         if (editor && assigneeId && assigneeId !== task.assigneeId) {
           const target = db.members.find(m => m.id === assigneeId && m.orgId === orgId)
           if (!target || isCompanyAccount(target, org)) fail(400, 'Funcionário inválido')
+          if (isFormer(target)) fail(400, `${target!.name} já saiu da empresa`)
           if (target!.id !== me.id && !canManage(db, me, target)) fail(403, 'Só podes atribuir tarefas à tua equipa')
           task.assigneeId = target!.id
           task.departmentId = target!.departmentId

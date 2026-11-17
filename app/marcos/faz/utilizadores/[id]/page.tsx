@@ -106,7 +106,7 @@ export default function PanelUserPage() {
                   <span className="min-w-0 flex-1">
                     <Link href={`/marcos/faz/empresas/${m.orgId}`} className="block truncate font-black text-ink hover:text-brand">{m.orgName}</Link>
                     <span className="block truncate text-xs font-semibold text-muted">
-                      {ROLE_LABEL[m.role]}{m.department ? ` · ${m.department}` : ''}{m.status === 'pendente' ? ' · pendente' : m.joinedAt ? ` · desde ${date(m.joinedAt)}` : ''}
+                      {ROLE_LABEL[m.role]}{m.department ? ` · ${m.department}` : ''}{m.status === 'pendente' ? ' · pendente' : m.status === 'saiu' ? ' · saiu' : m.joinedAt ? ` · desde ${date(m.joinedAt)}` : ''}
                     </span>
                   </span>
                   <span className="rounded-lg px-2 py-0.5 text-xs font-extrabold" style={{ background: PRESENCE_CONFIG[m.presence].light, color: PRESENCE_CONFIG[m.presence].color }}>
