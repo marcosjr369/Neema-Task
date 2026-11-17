@@ -42,7 +42,8 @@ function Report({ memberId }: { memberId: string }) {
   const periodText = range === 'hoje' ? 'Hoje' : `Últimos ${RANGES.find(r => r.id === range)!.label}`
 
   const days: number[] = []
-  for (let d = new Date(startOfDay(now)); d.getTime() >= from && days.length < 7; d.setDate(d.getDate() - 1)) days.push(d.getTime())
+  // um dia por linha, do mais recente para trás, todos os dias do período (hoje: 1, 7 dias: 7, 30 dias: 30)
+  for (let d = new Date(startOfDay(now)); d.getTime() >= from; d.setDate(d.getDate() - 1)) days.push(d.getTime())
 
   return (
     <div className="space-y-5 px-4 pt-5 lg:px-0">
