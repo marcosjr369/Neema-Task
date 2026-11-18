@@ -6,7 +6,7 @@ import { CopyIcon, DownloadSimpleIcon, LinkIcon, MagnifyingGlassIcon, ShareNetwo
 import { useApp } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { api, errorText, UserError } from '../../lib/api'
-import { parseCsv } from '../../lib/org'
+import { departmentTree, indentedName, parseCsv } from '../../lib/org'
 import { ROLE_LABEL, type Member, type Role } from '../../types'
 import Avatar from '../../components/ui/Avatar'
 import Modal from '../../components/ui/Modal'
@@ -120,14 +120,14 @@ function InviteCard() {
   )
 }
 
-function MemberForm({ member, onClose }: { member: Member | null; onClose: () => void }) {
+export function MemberForm({ member, onClose, departmentId: presetDept }: { member: Member | null; onClose: () => void; departmentId?: string }) {
   const org = useOrgRequired()
   const { showToast } = useApp()
   const [name, setName] = useState(member?.name ?? '')
   const [email, setEmail] = useState(member?.email ?? '')
   const [jobTitle, setJobTitle] = useState(member?.jobTitle ?? '')
   const [phone, setPhone] = useState(member?.phone ?? '')
-  const [departmentId, setDepartmentId] = useState(member?.departmentId ?? '')
+  const [departmentId, setDepartmentId] = useState(member?.departmentId ?? presetDept ?? '')
   const [role, setRole] = useState<Role>(member?.role ?? 'membro')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -213,7 +213,7 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
           <label className="label" htmlFor="m-dept">Departamento</label>
           <select id="m-dept" className="input" value={departmentId} onChange={e => setDepartmentId(e.target.value)}>
             <option value="">Sem departamento</option>
-            {org.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            {departmentTree(org.departments).map(({ dept: d, depth }) => <option key={d.id} value={d.id}>{indentedName(d.name, depth)}</option>)}
           </select>
         </div>
         <div>
@@ -370,7 +370,7 @@ export default function People() {
         </div>
         <select value={dept} onChange={e => setDept(e.target.value)} className="input py-2.5 lg:w-56" aria-label="Departamento">
           <option value="all">Todos os departamentos</option>
-          {org.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+          {departmentTree(org.departments).map(({ dept: d, depth }) => <option key={d.id} value={d.id}>{indentedName(d.name, depth)}</option>)}
           <option value="none">Sem departamento</option>
         </select>
         {org.isAdmin && (

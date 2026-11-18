@@ -15,7 +15,7 @@ import { ReviewBadge } from '../../components/tasks/ReviewBadge'
 import { fileUrl } from '../../lib/api'
 import { isCompleted, taskPoints } from '../../lib/points'
 import { CATEGORY_CONFIG, PRIORITY_CONFIG, STATUS_LABEL, type Attachment, type Member, type Task, type TaskStatus } from '../../types'
-import { canReviewTask, groupSiblings, isCompanyAccount } from '../../lib/org'
+import { groupSiblings, isCompanyAccount } from '../../lib/org'
 import { formatClock, formatDeadline, formatDuration, phaseElapsed, startOfDay } from '../../lib/stats'
 import { CategoryGlyph } from '../../components/ui/icons'
 import { Busy } from '../../components/ui/Spinner'
@@ -46,7 +46,6 @@ function GroupPanel({ task }: { task: Task }) {
   const org = useOrg()!
   const { openTaskSheet } = useApp()
   const actions = useTaskActions()
-  const manages = useManages()
   const [rejecting, setRejecting] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const copies = groupSiblings(org.teamTasks, task)
@@ -75,7 +74,7 @@ function GroupPanel({ task }: { task: Task }) {
         {copies.map(c => {
           const m = org.memberById(c.assigneeId)
           const isPending = c.status === 'done' && c.review?.status === 'pending'
-          const canReview = canReviewTask(c, org.me, manages(c))
+          const canReview = org.canReview(c)
           const due = c.deadline ? new Date(c.deadline).getTime() : null
           const onTime = due !== null && c.status === 'done' && c.completedAt !== undefined ? c.completedAt <= due : null
           const checks = c.checklist ?? []
@@ -140,7 +139,7 @@ function OrgPanel({ task, isOwner }: { task: Task; isOwner: boolean }) {
   const reviewer = org.memberById(task.reviewerId)
   const nameOf = (m: Member) => (m.id === org.me.id ? 'Mim' : isCompanyAccount(m, org.org) ? org.org.name : m.name)
   const isManager = useManages()(task)
-  const canReview = canReviewTask(task, org.me, isManager)
+  const canReview = org.canReview(task)
   const pending = task.status === 'done' && task.review?.status === 'pending'
   const approved = task.review?.status === 'approved'
   const canUpload = (isOwner || isManager) && !approved

@@ -678,20 +678,26 @@ function Equipa({ step }: SceneProps) {
           </>
         )}
         {step === 1 && (
-          <div className="absolute inset-x-3 top-3 grid grid-cols-2 gap-3">
-            {[{ t: 'Vendas', c: WARM, who: [0, 3] }, { t: 'Operações', c: ACCENT, who: [1, 2] }].map((d, k) => (
-              <div key={d.t} className="tut-in rounded-xl border-2 bg-white p-2" style={{ borderColor: d.c, ['--d' as string]: `${k * 0.2}s` }}>
-                <p className="text-[10px] font-black" style={{ color: d.c }}>{d.t}</p>
-                <p className="text-[8px] text-muted">Chefe: {team[d.who[0]][0]}</p>
-                <div className="mt-2 space-y-1">
-                  {d.who.map((w, i) => (
-                    <div key={w} className="tut-up flex items-center gap-1.5 rounded-md bg-snow px-1.5 py-1" style={{ ['--d' as string]: `${0.6 + (k * 2 + i) * 0.35}s` }}>
-                      <Face name={team[w][0]} color={team[w][1]} /><span className="text-[9px] text-ink">{team[w][0]}</span>
-                    </div>
-                  ))}
-                </div>
+          <div className="absolute inset-0">
+            {/* empresa → Vendas, Operações → (+) Online */}
+            <svg className="absolute inset-0 h-full w-full" aria-hidden>
+              <path d="M 160 44 V 58 H 85 V 70 M 160 58 H 235 V 70" fill="none" stroke="#D5D2E3" strokeWidth="2" />
+              <path className="tut-in" style={{ ['--d' as string]: '1.6s' }} d="M 85 118 V 140" fill="none" stroke={BRAND} strokeWidth="2" />
+            </svg>
+            <div className="tut-in absolute left-[110px] top-2 w-[100px] rounded-lg border-2 border-accent bg-white px-1.5 py-1 text-center">
+              <p className="text-[9px] font-black text-ink">🏢 A tua empresa</p>
+            </div>
+            {[{ t: 'Vendas', c: WARM, who: 0, x: 30 }, { t: 'Operações', c: ACCENT, who: 1, x: 180 }].map((d, k) => (
+              <div key={d.t} className="tut-in absolute top-[70px] w-[110px] rounded-lg border-2 bg-white p-1.5" style={{ left: d.x, borderColor: d.c, ['--d' as string]: `${0.3 + k * 0.25}s` }}>
+                <p className="text-[9px] font-black" style={{ color: d.c }}>{d.t}</p>
+                <div className="mt-1 flex items-center gap-1"><Face name={team[d.who][0]} color={team[d.who][1]} /><span className="text-[8px] text-ink">{team[d.who][0]} · Chefe</span></div>
               </div>
             ))}
+            <span className="tut-glow absolute left-[78px] top-[111px] flex h-[15px] w-[15px] items-center justify-center rounded-full bg-white text-[10px] font-black text-accent ring-2 ring-line" style={{ ['--d' as string]: '0.9s' }}>+</span>
+            <div className="tut-pop absolute left-[30px] top-[140px] w-[110px] rounded-lg border-2 border-dashed bg-white p-1.5" style={{ borderColor: BRAND, ['--d' as string]: '1.8s' }}>
+              <p className="text-[9px] font-black" style={{ color: BRAND }}>Online</p>
+              <div className="mt-1 flex items-center gap-1"><Face name={team[3][0]} color={team[3][1]} /><span className="text-[8px] text-ink">{team[3][0]} · Chefe</span></div>
+            </div>
           </div>
         )}
         {step === 2 && (

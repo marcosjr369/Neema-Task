@@ -280,7 +280,11 @@ export type Department = {
   orgId: string
   name: string
   color: string
+  /** Chefia: o primeiro é o chefe do departamento, os restantes são os adjuntos */
   supervisorIds: string[]
+  /** Departamento superior na estrutura da empresa (vazio: logo abaixo da empresa) */
+  parentId?: string
+  description?: string
 }
 
 export type PresenceStatus = 'trabalho' | 'pausa' | 'almoco' | 'reuniao' | 'formacao' | 'ausente' | 'offline'

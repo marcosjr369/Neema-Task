@@ -201,7 +201,7 @@ export const LESSONS: Lesson[] = [
     modes: ['manager', 'admin', 'company'],
     steps: [
       { title: 'Convidar', text: 'Em Funcionários, carrega em Convidar para a equipa e envia o email ou copia o link de convite.' },
-      { title: 'Departamentos', text: 'Organiza as pessoas em departamentos e escolhe quem os chefia.' },
+      { title: 'Departamentos', text: 'Em Departamentos vês a estrutura da empresa em árvore. Carrega no + debaixo de um departamento para criar um subdepartamento e escolhe o chefe e os adjuntos.' },
       { title: 'Atribuir e aprovar', text: 'Em Tarefas da equipa atribuis trabalho. As tarefas que precisam de aprovação esperam pelo teu Aprovar.' },
       { title: 'Relatórios', text: 'Acompanha o tempo, as tarefas e a presença da equipa em Relatórios e Recordes.' },
     ],

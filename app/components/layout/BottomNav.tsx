@@ -23,7 +23,7 @@ export default function BottomNav() {
   const org = useOrg()
   const [open, setOpen] = useState(false)
   const unseen = useUnseenShares(!!user)
-  const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done').length ?? 0
+  const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done' && org.canReview(t)).length ?? 0
   const reviewsHref = org?.isCompany ? '/empresa/tarefas' : '/empresa'
   const mode = navModeOf(org)
   const more = mobileMore(mode)

@@ -46,7 +46,7 @@ export default function SideNav() {
   const { timer, openTaskSheet, tasks, history, sessions } = useApp()
   const { user } = useAccount()
   const org = useOrg()
-  const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done').length ?? 0
+  const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done' && org.canReview(t)).length ?? 0
   const { level } = levelInfo(totalXp(sessions, tasks, history))
   const unseen = useUnseenShares(!!user)
 

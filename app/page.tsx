@@ -136,7 +136,7 @@ export default function HomePage() {
   const { user } = useAccount()
   const firstName = user?.name.split(' ')[0] ?? ''
   const org = useOrg()
-  const toReview = org?.teamTasks.filter(t => t.status === 'done' && t.review?.status === 'pending').length ?? 0
+  const toReview = org?.teamTasks.filter(t => t.status === 'done' && t.review?.status === 'pending' && org.canReview(t)).length ?? 0
 
   const today = todaySeconds(allSessions, now)
   const goal = settings.dailyGoalMinutes * 60

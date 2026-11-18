@@ -158,6 +158,7 @@ export const PATCH = handle<{ orgId: string; taskId: string }>(async (req, { org
 
       case 'approve':
       case 'reject': {
+        if (task.assigneeId === me.id) fail(403, 'Não podes aprovar a tua própria tarefa. A aprovação vem de um administrador ou de outro supervisor.')
         if (!access.review) fail(403, 'Só o supervisor desta tarefa a pode rever')
         if (task.status !== 'done' || task.review?.status !== 'pending') fail(400, 'A tarefa não está à espera de revisão')
         const comment = input.comment?.trim()

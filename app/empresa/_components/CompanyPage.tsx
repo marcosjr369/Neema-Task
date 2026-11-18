@@ -53,7 +53,7 @@ export default function CompanyPage({ section }: { section: SectionId }) {
 
   if (!allowed) return null
   const current = sections.find(s => s.id === section)!
-  const pending = org.teamTasks.filter(t => t.status === 'done' && t.review?.status === 'pending').length
+  const pending = org.teamTasks.filter(t => t.status === 'done' && t.review?.status === 'pending' && org.canReview(t)).length
   const goTo = (id: SectionId) => router.push(sectionHref(id))
 
   return (

@@ -168,7 +168,7 @@ export default function TeamTasks() {
                     </span>
                   </span>
                 </Link>
-                {pending && (
+                {pending && org.canReview(t) && (
                   <button
                     onClick={() => actions.approve(t.id)}
                     disabled={actions.busy} aria-busy={actions.busy}

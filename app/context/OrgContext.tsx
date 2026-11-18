@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, errorText, keepIfSame, throttled, whenVisible } from '../lib/api'
-import { assignableMembers, canManageRole, isCompanyAccount, isWorking, managedDepartmentIds, teamMembers } from '../lib/org'
+import { assignableMembers, canManageRole, canReviewTask, isCompanyAccount, isWorking, managedDepartmentIds, managesMember, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
 type OrgData = { org: Org; me: Member; departments: Department[]; members: Member[]; /** quem já saiu (só para quem gere): histórico */ former?: Member[] }
@@ -16,6 +16,8 @@ type OrgValue = OrgData & {
   assignable: Member[]
   /** também encontra quem já saiu da empresa (para o histórico de tarefas, tempo e reuniões) */
   memberById: (id?: string) => Member | undefined
+  /** pode aprovar/devolver esta tarefa (nunca o próprio responsável) */
+  canReview: (task: Task) => boolean
   former: Member[]
   deptById: (id?: string) => Department | undefined
   refresh: () => Promise<void>
@@ -155,6 +157,8 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
   const value = useMemo<OrgValue>(() => {
     const all = data.members.length ? data.members : [data.me]
     const members = teamMembers(all, data.org)
+    const scope = managedDepartmentIds(data.departments, data.me)
+    const memberById = (id?: string) => all.find(m => m.id === id) ?? data.former?.find(m => m.id === id)
     return {
       ...data,
       members,
@@ -162,10 +166,12 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       isCompany,
       isAdmin: data.me.role === 'admin',
       isManager,
-      scope: managedDepartmentIds(data.departments, data.me),
+      scope,
       assignable: assignableMembers(members.filter(m => m.status === 'activo' || m.status === 'pendente'), data.departments, data.me),
       former: data.former ?? [],
-      memberById: id => all.find(m => m.id === id) ?? data.former?.find(m => m.id === id),
+      memberById,
+      canReview: task =>
+        canReviewTask(task, data.me, managesMember(scope, data.me, memberById(task.assigneeId)) || (isManager && task.createdBy === data.me.id)),
       deptById: id => data.departments.find(d => d.id === id),
       refresh,
       presence,

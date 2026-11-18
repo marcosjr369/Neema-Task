@@ -338,6 +338,13 @@ function TaskForm({ task, onDone }: { task: Task | null; onDone: () => void }) {
                     </option>
                   ))}
                 </select>
+                {assigneeIds.includes(task?.createdBy ?? org.me.id) && (
+                  <p className="mt-1.5 text-xs font-semibold text-muted">
+                    {supervisors.length
+                      ? 'Quem executa a tarefa não a pode aprovar: a aprovação vem de um administrador ou de outro supervisor.'
+                      : 'Não há outro supervisor ou administrador para aprovar. Adiciona um à equipa ou desliga a aprovação.'}
+                  </p>
+                )}
               </div>
             )}
             <label className="flex items-center gap-3 rounded-xl border-2 border-line px-3 py-2.5 cursor-pointer">
