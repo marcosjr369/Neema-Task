@@ -1,5 +1,5 @@
 import {
-  CalendarBlankIcon, ChartBarIcon, FlowArrowIcon, KanbanIcon, ListChecksIcon, PuzzlePieceIcon, RocketLaunchIcon, TableIcon, TimerIcon, TrophyIcon,
+  ArmchairIcon, CalendarBlankIcon, ChartBarIcon, FlowArrowIcon, KanbanIcon, ListChecksIcon, PuzzlePieceIcon, RocketLaunchIcon, TableIcon, TimerIcon, TrophyIcon,
   UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 import type { NavMode } from './nav'
@@ -9,7 +9,7 @@ import type { NavMode } from './nav'
  * e as mesmas fases em texto. As fases e as cenas andam a par: a fase N é o passo N da cena.
  */
 
-export type LessonId = 'inicio' | 'tarefas' | 'foco' | 'calendario' | 'quadros' | 'planilhas' | 'diagramas' | 'estatisticas' | 'ranking' | 'jogos' | 'equipa'
+export type LessonId = 'inicio' | 'tarefas' | 'foco' | 'calendario' | 'quadros' | 'planilhas' | 'diagramas' | 'estatisticas' | 'ranking' | 'jogos' | 'equipa' | 'espacos'
 
 export type Lesson = {
   id: LessonId
@@ -23,6 +23,8 @@ export type Lesson = {
   href: string
   /** tipos de conta que vêem esta lição */
   modes: NavMode[]
+  /** só para quem pertence a uma empresa (os funcionários sem chefia também estão no modo "person") */
+  orgOnly?: boolean
   steps: { title: string; text: string }[]
 }
 
@@ -89,9 +91,9 @@ export const LESSONS: Lesson[] = [
     modes: ALL,
     steps: [
       { title: 'Escolher o dia', text: 'Abre o Calendário e toca no dia, ou carrega em Agendar.' },
-      { title: 'O quê e quando', text: 'Escreve o nome (ex.: "Reunião de equipa"), o tipo, a hora e o local ou link da chamada.' },
+      { title: 'O quê e quando', text: 'Escreve o nome (ex.: "Reunião de equipa"), o tipo e a hora. Escolhe a Sala do escritório: se já estiver reservada nesse horário, a app avisa.' },
       { title: 'Participantes', text: 'Numa empresa, junta os colegas em Participantes. Eles recebem o convite.' },
-      { title: 'Avisos', text: 'Todos recebem um aviso 5 minutos antes e outro à hora certa (com as notificações ligadas, até com a app fechada).' },
+      { title: 'Avisos', text: 'Todos recebem um aviso 5 minutos antes e outro à hora certa. Quando a reunião começa, cada um diz se participa presencialmente, online ou se não vai.' },
     ],
   },
   {
@@ -206,9 +208,26 @@ export const LESSONS: Lesson[] = [
       { title: 'Relatórios', text: 'Acompanha o tempo, as tarefas e a presença da equipa em Relatórios e Recordes.' },
     ],
   },
+  {
+    id: 'espacos',
+    title: 'Mapa do escritório',
+    summary: 'Dizer onde estás sentado e ver quem está em cada sala',
+    icon: ArmchairIcon,
+    color: '#12B5A6',
+    light: '#DCF7F3',
+    href: '/mapa',
+    modes: ALL,
+    orgOnly: true,
+    steps: [
+      { title: 'Onde estás sentado?', text: 'Ao entrar na plataforma, escolhes a sala e a cadeira onde estás hoje, ou Trabalho remoto. Só depois continuas.' },
+      { title: 'Trocar de lugar', text: 'Mudaste de sala? Carrega no teu lugar, por baixo do teu estado, e em Trocar.' },
+      { title: 'Quem está onde', text: 'Em Mapa vês o escritório em 3D e as Reuniões de hoje. Quem está numa reunião presencial aparece na sala da reunião, e as salas ocupadas ficam a roxo.' },
+      { title: 'Criar o mapa', text: 'A conta da empresa carrega a planta como guia, desenha as salas e os corredores e põe as mesas e as cadeiras. O 3D é feito a partir do desenho.' },
+    ],
+  },
 ]
 
-export const lessonsFor = (mode: NavMode) => LESSONS.filter(l => l.modes.includes(mode))
+export const lessonsFor = (mode: NavMode, inOrg = mode !== 'person') => LESSONS.filter(l => l.modes.includes(mode) && (!l.orgOnly || inOrg))
 
 
 /** As lições mostradas nas boas-vindas (as essenciais de cada tipo de conta) */

@@ -5,6 +5,9 @@ import { api, errorText, keepIfSame, throttled, whenVisible } from '../lib/api'
 import { assignableMembers, canManageRole, canReviewTask, isCompanyAccount, isWorking, managedDepartmentIds, managesMember, teamMembers } from '../lib/org'
 import type { Department, Member, Org, PresenceStatus, Task } from '../types'
 
+/** Onde a pessoa está agora: uma cadeira do mapa do escritório ou trabalho remoto */
+export type SeatChoice = { seatId: string } | { remote: true }
+
 type OrgData = { org: Org; me: Member; departments: Department[]; members: Member[]; /** quem já saiu (só para quem gere): histórico */ former?: Member[] }
 
 type OrgValue = OrgData & {
@@ -25,6 +28,8 @@ type OrgValue = OrgData & {
   setPresence: (status: PresenceStatus) => void
   workStart: number | null
   startWork: () => void
+  /** grava onde estou (pode falhar: cadeira ocupada); se ainda não estava a trabalhar, começa */
+  setSeat: (seat: SeatChoice) => Promise<void>
   endWork: () => void
   teamTasks: Task[]
   refreshTeam: () => Promise<void>
@@ -54,6 +59,8 @@ const HEARTBEAT = 60 * 1000
 export function OrgProvider({ orgId, initial, children }: { orgId: string; initial: { org: Org; member: Member }; children: ReactNode }) {
   const base = `/api/orgs/${orgId}`
   const [data, setData] = useState<OrgData>(() => ({ org: initial.org, me: initial.member, departments: [], members: [] }))
+  const officeVersion = useRef<number | undefined>(undefined)
+  useEffect(() => { officeVersion.current = data.org.office?.updatedAt }, [data.org.office])
   const [presence, setPresenceState] = useState<PresenceStatus>('offline')
   const [workStart, setWorkStart] = useState<number | null>(() => (isWorking(initial.member.workStart) ? initial.member.workStart! : null))
   const workStartRef = useRef(workStart)
@@ -67,8 +74,11 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
 
   const refresh = useCallback(async () => {
     try {
-      const next = await api<OrgData>(base)
-      setData(prev => keepIfSame(prev, next))
+      // o mapa do escritório só vem quando mudou (o servidor compara com a versão que já temos)
+      const have = officeVersion.current
+      const next = await api<OrgData & { sameMap?: boolean }>(have ? `${base}?mapa=${have}` : base)
+      const { sameMap, ...fresh } = next
+      setData(prev => keepIfSame(prev, sameMap ? { ...fresh, org: { ...fresh.org, office: prev.org.office } } : fresh))
       setError(null)
     } catch (err) {
       setError(errorText(err, 'Não foi possível carregar os dados da empresa.'))
@@ -110,12 +120,21 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
 
   const startWork = useCallback(() => {
     applyLocal('trabalho', workStartRef.current ?? Date.now())
-    sendPresence({ work: 'start' })
-  }, [sendPresence, applyLocal])
+    sendPresence({ work: 'start' }).then(() => refresh())
+  }, [sendPresence, applyLocal, refresh])
   const endWork = useCallback(() => {
     applyLocal('offline', null)
-    sendPresence({ work: 'end' })
-  }, [sendPresence, applyLocal])
+    sendPresence({ work: 'end' }).then(() => refresh())
+  }, [sendPresence, applyLocal, refresh])
+  const setSeat = useCallback(async (seat: SeatChoice) => {
+    await api(`${base}/lugar`, { body: seat })
+    // quem diz onde está sentado está a trabalhar (aparece no mapa a partir de agora)
+    if (!workStartRef.current && data.me.consentAt) {
+      applyLocal('trabalho', Date.now())
+      await sendPresence({ work: 'start' })
+    }
+    await refresh()
+  }, [base, refresh, applyLocal, sendPresence, data.me.consentAt])
 
   const isCompany = isCompanyAccount(data.me, data.org)
   const tracksPresence = !!data.me.consentAt && !isCompany
@@ -178,6 +197,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       setPresence,
       workStart,
       startWork,
+      setSeat,
       endWork,
       teamTasks,
       refreshTeam,
@@ -187,7 +207,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       loaded,
       teamLoaded: !isManager || teamFetched,
     }
-  }, [data, base, isCompany, isManager, refresh, presence, setPresence, workStart, startWork, endWork, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error, loaded, teamFetched])
+  }, [data, base, isCompany, isManager, refresh, presence, setPresence, workStart, startWork, setSeat, endWork, teamTasks, refreshTeam, upsertTeamTask, removeTeamTask, error, loaded, teamFetched])
 
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>
 }

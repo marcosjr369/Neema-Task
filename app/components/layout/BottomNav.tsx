@@ -26,7 +26,7 @@ export default function BottomNav() {
   const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done' && org.canReview(t)).length ?? 0
   const reviewsHref = org?.isCompany ? '/empresa/tarefas' : '/empresa'
   const mode = navModeOf(org)
-  const more = mobileMore(mode)
+  const more = mobileMore(mode, !!org)
   const moreItems = more.flatMap(g => g.items)
   const moreActive = moreItems.some(i => isActivePath(pathname, i.href, i.exact))
   const moreNews = moreItems.some(i => unseenFor(unseen, i.href) > 0)

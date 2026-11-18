@@ -14,6 +14,7 @@ import Avatar from '../ui/Avatar'
 import InstallCard from '../ui/InstallCard'
 import WorkspaceSwitcher from '../account/WorkspaceSwitcher'
 import PresencePicker from '../account/PresencePicker'
+import { SeatButton } from '../office/SeatGate'
 import LogoutButton from '../account/LogoutButton'
 import { unseenFor, useUnseenShares } from './useUnseenShares'
 
@@ -73,6 +74,7 @@ export default function SideNav() {
       <div className="space-y-2">
         <WorkspaceSwitcher />
         {org && !org.isCompany && <PresencePicker />}
+        <SeatButton />
       </div>
 
       <button onClick={() => openTaskSheet()} className="btn btn-primary mt-4 w-full">
@@ -80,7 +82,7 @@ export default function SideNav() {
       </button>
 
       <nav className="mt-5 space-y-5" aria-label="Navegação principal">
-        {navGroups(navModeOf(org)).map(group => (
+        {navGroups(navModeOf(org), !!org).map(group => (
           <div key={group.title}>
             <p className="mb-1.5 px-3 text-[11px] font-black uppercase tracking-[0.14em] text-muted">{group.title}</p>
             <ul className="space-y-1">

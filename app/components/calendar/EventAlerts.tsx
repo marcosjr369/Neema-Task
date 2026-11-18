@@ -9,6 +9,7 @@ import { eventsBase, hhmm, involves, isLink, useEvents, whenText } from '../../l
 import { pushNotification, sounds } from '../../lib/sounds'
 import { EVENT_KINDS, EVENT_LEAD_MINUTES, type CalendarEvent } from '../../types'
 import { KIND_ICON } from './EventCard'
+import MeetingCheckIn from './MeetingCheckIn'
 
 type Stage = 'pre' | 'start'
 type Alert = { key: string; event: CalendarEvent; stage: Stage }
@@ -94,9 +95,13 @@ export default function EventAlerts() {
   }, [events, loaded, meId, showToast])
 
   const close = (key: string) => setAlerts(list => list.filter(a => a.key !== key))
-  if (!alerts.length) return null
+  // quando uma reunião começa, pergunta como a pessoa participa (presencial, online ou não vai)
+  const checkIn = org ? <MeetingCheckIn events={events} now={now} /> : null
+  if (!alerts.length) return checkIn
 
   return (
+    <>
+    {checkIn}
     <div className="fixed inset-x-0 top-3 z-60 mx-auto flex w-full max-w-md flex-col gap-2 px-3 lg:left-auto lg:right-6 lg:top-6 lg:mx-0" role="alert">
       {alerts.map(({ key, event: e, stage }) => {
         const cfg = EVENT_KINDS[e.kind]
@@ -140,5 +145,6 @@ export default function EventAlerts() {
         )
       })}
     </div>
+    </>
   )
 }

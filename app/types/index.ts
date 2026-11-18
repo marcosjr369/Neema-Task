@@ -273,6 +273,67 @@ export type Org = {
   hideFromRanking?: boolean
   /** meta diária de trabalho activo por pessoa, em horas (vazio = 8h) */
   dailyGoalHours?: number
+  /** mapa do escritório (planta em 3D com salas, corredores, mesas e cadeiras) */
+  office?: OfficeMap
+}
+
+/*
+ * Mapa do escritório. Tudo em metros, num plano visto de cima: x para a direita, z para baixo
+ * (no 3D, o chão fica em y = 0). Só a conta da empresa o desenha.
+ */
+
+/** Sala (com paredes) ou corredor (só chão), sempre rectangular */
+export type OfficeRoom = {
+  id: string
+  kind: 'sala' | 'corredor'
+  name: string
+  x: number
+  z: number
+  w: number
+  d: number
+  /** cor do chão */
+  color: string
+  /** cor das paredes (só nas salas; vazio: branco) */
+  wallColor?: string
+  /** departamento que usa a sala (vazio: espaço comum) */
+  departmentId?: string
+}
+
+/** Tipos de mesa: de trabalho (com monitor), de reunião, redonda, balcão (recepção) */
+export type DeskStyle = 'escritorio' | 'reuniao' | 'redonda' | 'balcao'
+/** Tipos de cadeira: de escritório (com rodas), simples (4 pernas), poltrona, banco alto */
+export type ChairStyle = 'escritorio' | 'simples' | 'poltrona' | 'banco'
+
+/** Mobiliário: mesas (só decoração) e cadeiras (os lugares onde as pessoas se sentam) */
+export type OfficeItem = {
+  id: string
+  type: 'mesa' | 'cadeira'
+  x: number
+  z: number
+  /** rotação em graus, à volta do eixo vertical */
+  rot: number
+  /** nome da cadeira ("Cadeira 4"); nas mesas não se usa */
+  label?: string
+  /** tipo (vazio: de escritório) */
+  style?: DeskStyle | ChairStyle
+  /** tamanho da mesa em metros (vazio: o do tipo); as cadeiras têm o tamanho do tipo */
+  w?: number
+  d?: number
+  /** acabamento do tampo da mesa */
+  color?: string
+  /** lugares da mesa (quantas cadeiras tem); vazio: o do tipo */
+  seats?: number
+}
+
+export type OfficeMap = {
+  /** tamanho do piso, em metros */
+  width: number
+  depth: number
+  rooms: OfficeRoom[]
+  items: OfficeItem[]
+  /** planta ou foto usada como guia por baixo do editor (esticada ao tamanho do piso) */
+  guideId?: string
+  updatedAt?: number
 }
 
 export type Department = {
@@ -322,6 +383,13 @@ export type Member = {
   presence: PresenceStatus
   lastSeen?: number
   workStart?: number
+  /** onde está hoje (escolhido ao entrar na plataforma; limpo ao terminar o trabalho): a cadeira ou trabalho remoto */
+  seatId?: string
+  remote?: boolean
+  /** quando escolheu o lugar: vale durante um dia de trabalho (WORKDAY_MS); depois pergunta-se outra vez */
+  seatAt?: number
+  /** numa reunião agora: presencial (aparece na sala da reunião) ou online (fica no seu lugar) */
+  meeting?: { eventId: string; roomId?: string; mode: 'presencial' | 'online'; until: number }
   history?: CarriedHistory
 }
 
@@ -375,6 +443,9 @@ export const EVENT_KINDS: Record<EventKind, { label: string; color: string; ligh
 
 export type EventResponse = 'sim' | 'nao'
 
+/** Como a pessoa participa numa reunião que já começou */
+export type AttendanceMode = 'presencial' | 'online' | 'ausente'
+
 export type CalendarEvent = {
   id: string
   orgId?: string
@@ -386,8 +457,12 @@ export type CalendarEvent = {
   start: number
   end: number
   location?: string
+  /** sala do mapa do escritório reservada para a reunião */
+  roomId?: string
   attendeeIds: string[]
   responses?: Record<string, EventResponse>
+  /** como cada pessoa disse que participa, quando a reunião começou */
+  attendance?: Record<string, AttendanceMode>
   sentPre?: boolean
   sentStart?: boolean
   createdAt: number

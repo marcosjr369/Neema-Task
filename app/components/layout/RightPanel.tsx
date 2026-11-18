@@ -33,7 +33,7 @@ export default function RightPanel() {
     .slice(0, 4)
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[340px] shrink-0 space-y-5 overflow-y-auto py-6 lg:block">
+    <aside className="no-scrollbar sticky top-0 hidden h-dvh w-[340px] shrink-0 space-y-5 overflow-y-auto py-6 lg:block 2xl:w-[380px]">
       <div className="flex items-center justify-between px-1">
         <Link href="/perfil" className="flex items-center gap-2 font-extrabold text-brand-dark" aria-label={`Nível ${lvl.level}`}>
           <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-brand px-2 text-sm font-black text-white">{lvl.level}</span>

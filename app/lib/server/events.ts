@@ -4,7 +4,10 @@ import { fail } from './api'
 import { pushConfigured, sendToUser } from './push'
 import { mutate, read, type DB } from './store'
 
-export type EventInput = Partial<Pick<CalendarEvent, 'title' | 'description' | 'kind' | 'start' | 'end' | 'location' | 'attendeeIds'>>
+export type EventInput = Partial<Pick<CalendarEvent, 'title' | 'description' | 'kind' | 'start' | 'end' | 'location' | 'attendeeIds' | 'roomId'>> & {
+  /** marcar mesmo com a sala já reservada nesse horário (a pessoa foi avisada) */
+  allowOverlap?: boolean
+}
 
 const DAY = 24 * 3600 * 1000
 
@@ -139,4 +142,57 @@ export function checkAttendees(db: DB, org: Org, me: Member, ids: unknown): stri
     if (!m || isCompanyAccount(m, org)) fail(400, 'Convidado inválido')
   }
   return list
+}
+
+/* ─── Salas de reunião (as salas do mapa do escritório) ─── */
+
+/** A sala reservada tem de ser uma sala do mapa da empresa */
+export function checkRoom(org: Org, roomId: unknown): string | undefined {
+  if (roomId === undefined || roomId === null || roomId === '') return undefined
+  const room = org.office?.rooms.find(r => r.id === roomId && r.kind === 'sala')
+  if (!room) fail(400, 'Esta sala já não existe no mapa do escritório')
+  return room!.id
+}
+
+/** As reuniões já marcadas na mesma sala que se cruzam com [start, end) */
+export function roomClashes(events: CalendarEvent[], roomId: string, start: number, end: number, ignoreId?: string) {
+  return events
+    .filter(e => e.roomId === roomId && e.id !== ignoreId && e.start < end && e.end > start)
+    .sort((a, b) => a.start - b.start)
+}
+
+/** Mensagem de sala ocupada (sem detalhes da reunião: só o horário) */
+export function clashText(org: Org, roomId: string, clashes: CalendarEvent[], timeZone?: string) {
+  const room = org.office?.rooms.find(r => r.id === roomId)?.name ?? 'A sala'
+  const when = clashes.map(c => `das ${timeText(c.start, timeZone)} às ${timeText(c.end, timeZone)}`).join(', ')
+  return `${room} já está reservada ${when}.`
+}
+
+/**
+ * Uma reserva de sala vista por qualquer pessoa da empresa: a sala e o horário. O título e as
+ * pessoas só aparecem a quem participa (ou marcou) a reunião.
+ */
+export type RoomBooking = {
+  id: string
+  roomId: string
+  start: number
+  end: number
+  /** só para quem participa */
+  title?: string
+  mine: boolean
+  /** quantas pessoas estão presencialmente na sala agora */
+  present: number
+}
+
+export function bookingView(e: CalendarEvent, meId: string): RoomBooking {
+  const mine = e.createdBy === meId || e.attendeeIds.includes(meId)
+  return {
+    id: e.id,
+    roomId: e.roomId!,
+    start: e.start,
+    end: e.end,
+    ...(mine ? { title: e.title } : {}),
+    mine,
+    present: Object.values(e.attendance ?? {}).filter(a => a === 'presencial').length,
+  }
 }

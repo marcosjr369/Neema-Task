@@ -21,6 +21,7 @@ import IdleNudge from '../focus/IdleNudge'
 import EventAlerts from '../calendar/EventAlerts'
 import ToastView from '../ui/ToastView'
 import ConsentGate from '../account/ConsentGate'
+import SeatGate from '../office/SeatGate'
 import WelcomeTour from '../tutorial/WelcomeTour'
 import InviteDialog from '../account/InviteDialog'
 import { PresenceSync } from '../account/PresenceSync'
@@ -32,7 +33,7 @@ import Mascot from '../ui/Mascot'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
-const WIDE = ['/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/tutorial', '/jogos']
+const WIDE = ['/mapa', '/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/tutorial', '/jogos']
 /** páginas que ocupam a largura toda (o quadro desloca-se na horizontal) */
 const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/') || p.startsWith('/diagramas/')
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
@@ -83,7 +84,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="lg:pl-64">
             <div
               className={`mx-auto flex lg:gap-8 lg:px-8 ${
-                FULL(pathname) ? 'lg:max-w-none' : wide ? 'lg:max-w-6xl' : 'lg:max-w-5xl'
+                FULL(pathname) ? 'lg:max-w-none' : wide ? 'lg:max-w-6xl 2xl:max-w-[1600px]' : 'lg:max-w-5xl xl:max-w-6xl 2xl:max-w-[1440px]'
               }`}
             >
               <div className="relative mx-auto flex min-h-dvh w-full min-w-0 max-w-lg flex-col bg-white sm:border-x-2 sm:border-line lg:mx-0 lg:max-w-none lg:flex-1 lg:border-x-0">
@@ -123,6 +124,7 @@ function Shell({ children }: { children: ReactNode }) {
       <ToastView />
       <PresenceSync />
       <ConsentGate />
+      <SeatGate />
       <WelcomeTour />
     </div>
   )

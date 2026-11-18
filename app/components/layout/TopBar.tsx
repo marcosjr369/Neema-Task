@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { CalendarBlankIcon, FireIcon, LightningIcon, TimerIcon } from '@phosphor-icons/react'
 import { useApp, useClock } from '../../context/AppContext'
 import PresencePicker from '../account/PresencePicker'
+import { SeatButton } from '../office/SeatGate'
 import { computeStreak, formatShort, levelInfo, todaySeconds, totalXp } from '../../lib/stats'
 
 export default function TopBar() {
@@ -39,6 +40,7 @@ export default function TopBar() {
         >
           <CalendarBlankIcon size={22} weight={onCalendar ? 'duotone' : 'bold'} />
         </Link>
+        <SeatButton compact />
         <PresencePicker compact />
       </div>
     </header>

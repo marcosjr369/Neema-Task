@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { BellIcon, MapPinIcon } from '@phosphor-icons/react'
+import { BellIcon, MapPinIcon, WarningIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
-import { errorText } from '../../lib/api'
-import { dateInput, eventsBase, fromInputs, saveEvent, timeInput } from '../../lib/calendar'
+import { ApiError, errorText } from '../../lib/api'
+import { DAY_MS, bookingClashes, dateInput, eventsBase, fromInputs, hhmm, saveEvent, timeInput, useRoomBookings, type EventData } from '../../lib/calendar'
 import { EVENT_KINDS, EVENT_LEAD_MINUTES, type CalendarEvent, type EventKind } from '../../types'
 import Modal from '../ui/Modal'
 import MemberPicker from '../ui/MemberPicker'
@@ -44,6 +44,16 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
 
   const startMs = fromInputs(date, start)
   const endMs = fromInputs(date, end)
+
+  // salas do mapa do escritório: as reservas desse dia, para avisar se a sala já está ocupada
+  const rooms = (org?.org.office?.rooms ?? []).filter(r => r.kind === 'sala').sort((a, b) => a.name.localeCompare(b.name, 'pt', { numeric: true }))
+  const [roomId, setRoomId] = useState(event?.roomId ?? '')
+  const dayStart = fromInputs(date, '00:00')
+  const bookings = useRoomBookings(rooms.length ? org?.base : undefined, dayStart, dayStart + DAY_MS)
+  const roomDay = roomId ? bookings.filter(b => b.roomId === roomId && b.id !== event?.id) : []
+  const clashes = roomId && endMs > startMs ? bookingClashes(bookings, roomId, startMs, endMs, event?.id) : []
+  const roomName = rooms.find(r => r.id === roomId)?.name ?? 'A sala'
+  const clashMessage = `${roomName} já está reservada ${clashes.map(c => `das ${hhmm(c.start)} às ${hhmm(c.end)}`).join(', ')}.`
   const duration = Math.round((endMs - startMs) / 60000)
   const setDuration = (min: number) => setEnd(timeInput(startMs + min * 60000))
 
@@ -55,20 +65,39 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
       return
     }
     setBusy(true)
-    try {
-      await saveEvent(eventsBase(org?.base), event?.id ?? null, {
-        title: title.trim(),
-        kind,
-        start: startMs,
-        end: endMs,
-        location: location.trim(),
-        description: description.trim(),
-        ...(org && canInvite ? { attendeeIds: attendees } : {}),
-      })
+    const data = {
+      title: title.trim(),
+      kind,
+      start: startMs,
+      end: endMs,
+      location: location.trim(),
+      description: description.trim(),
+      ...(org && canInvite ? { attendeeIds: attendees } : {}),
+      ...(org ? { roomId: roomId || null } : {}),
+    } as EventData
+    const save = async (allowOverlap: boolean) => {
+      await saveEvent(eventsBase(org?.base), event?.id ?? null, allowOverlap ? { ...data, allowOverlap } : data)
       showToast(event ? 'Evento actualizado' : attendees.length ? `Agendado e enviado a ${attendees.length} pessoa${attendees.length === 1 ? '' : 's'}` : 'Agendado', 'success')
       onClose()
+    }
+    try {
+      // a sala já está reservada nesse horário: avisa antes e só marca por cima se a pessoa quiser
+      if (clashes.length && !confirm(`${clashMessage} Marcar mesmo assim?`)) {
+        setBusy(false)
+        return
+      }
+      await save(clashes.length > 0)
     } catch (err) {
-      showToast(errorText(err, 'Não foi possível guardar o evento. Tenta outra vez.'), 'danger')
+      // alguém reservou a sala entretanto: o servidor avisa (sem detalhes da outra reunião)
+      if (err instanceof ApiError && err.status === 409 && confirm(`${err.message} Marcar mesmo assim?`)) {
+        try {
+          await save(true)
+        } catch (again) {
+          showToast(errorText(again, 'Não foi possível guardar o evento. Tenta outra vez.'), 'danger')
+        }
+      } else if (!(err instanceof ApiError && err.status === 409)) {
+        showToast(errorText(err, 'Não foi possível guardar o evento. Tenta outra vez.'), 'danger')
+      }
     }
     setBusy(false)
   }
@@ -144,8 +173,29 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
           ))}
         </div>
 
+        {rooms.length > 0 && (
+          <div>
+            <label className="label" htmlFor="ev-room">Sala do escritório</label>
+            <select id="ev-room" className="input" value={roomId} onChange={e => setRoomId(e.target.value)}>
+              <option value="">Sem sala (online ou noutro sítio)</option>
+              {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            {clashes.length > 0 ? (
+              <p className="mt-1.5 flex items-start gap-1.5 rounded-xl bg-warm-light px-3 py-2 text-xs font-bold text-warm-dark">
+                <WarningIcon size={16} className="mt-px shrink-0" /> {clashMessage}
+              </p>
+            ) : roomId && roomDay.length > 0 ? (
+              <p className="mt-1.5 text-xs font-semibold text-muted">
+                Reservada nesse dia: {roomDay.map(b => `${hhmm(b.start)}–${hhmm(b.end)}`).join(', ')}
+              </p>
+            ) : roomId ? (
+              <p className="mt-1.5 text-xs font-semibold text-accent-dark">Livre nesse dia.</p>
+            ) : null}
+          </div>
+        )}
+
         <div>
-          <label className="label" htmlFor="ev-loc">Local ou link</label>
+          <label className="label" htmlFor="ev-loc">{rooms.length ? 'Link ou outro local' : 'Local ou link'}</label>
           <div className="relative">
             <MapPinIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input id="ev-loc" className="input pl-10" placeholder="Sala, endereço ou link da chamada" value={location} onChange={e => setLocation(e.target.value)} maxLength={300} />

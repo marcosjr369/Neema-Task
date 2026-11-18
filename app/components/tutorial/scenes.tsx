@@ -752,6 +752,79 @@ function Equipa({ step }: SceneProps) {
   )
 }
 
+/* ─── Espaços ─────────────────────────────────────────────────────────── */
+
+const DESKS = [[22, 34], [42, 34], [62, 34], [22, 70], [42, 70], [62, 70]] as const
+
+function Espacos({ step }: SceneProps) {
+  const team = [['Ana Silva', PINK], ['Rui Costa', BLUE], ['Inês Lopes', ACCENT], ['João Matos', WARM]] as const
+  // quem está sentado em cada mesa, em cada passo
+  const seated: Record<number, number> = step === 2 ? { 0: 0, 2: 1, 4: 2 } : step === 1 ? { 0: 0, 2: 1 } : step === 0 ? { 0: 0 } : {}
+  const rings = [ACCENT, BRAND, GOLD]
+  const room = (
+    <div className="absolute inset-0 rounded-lg" style={{ background: 'linear-gradient(135deg,#EFEAE2 0%,#E4DED3 100%)' }}>
+      <div className="absolute left-[12%] right-[28%] top-[24%] h-[22%] rounded-md bg-[#C9B79C]/70" />
+      <div className="absolute left-[12%] right-[28%] top-[60%] h-[22%] rounded-md bg-[#C9B79C]/70" />
+      {DESKS.map(([x, y], i) => {
+        const who = seated[i]
+        const added = step === 3
+        return (
+          <span key={i} className={`absolute -translate-x-1/2 -translate-y-1/2 ${added ? 'tut-pop' : ''}`} style={{ left: `${x}%`, top: `${y}%`, ['--d' as string]: `${0.5 + i * 0.35}s` }}>
+            {who !== undefined ? (
+              <span className={`block rounded-full ${who === 2 || (step === 1 && who === 1) ? 'tut-pop' : ''}`} style={{ boxShadow: `0 0 0 2px ${rings[who]}`, ['--d' as string]: '1.6s' }}>
+                <Face name={team[who][0]} color={team[who][1]} />
+              </span>
+            ) : (
+              <span className={`flex h-[15px] w-[15px] items-center justify-center rounded-full border bg-white text-[8px] font-black ${step === 1 && i === 1 ? 'tut-glow border-accent text-accent' : 'border-white text-body'}`}>{i + 1}</span>
+            )}
+          </span>
+        )
+      })}
+    </div>
+  )
+  return (
+    <Stage>
+      <Win title={step === 3 ? 'Mapa do escritório · editar' : step === 2 ? 'Mapa' : step === 1 ? 'Trocar de lugar' : 'Onde estás sentado?'}
+        head={step === 1 ? <Chip color="#fff" bg={BRAND} className="tut-glow">⇄ Trocar</Chip> : undefined}>
+        <div className="absolute bottom-3 left-3 top-3 w-[230px] overflow-hidden rounded-lg">{room}</div>
+        {step <= 1 && (
+          <div className="absolute right-3 top-3 w-[120px] space-y-1.5">
+            <div className={step === 1 ? 'tut-pop' : 'tut-in'} style={{ ['--d' as string]: step === 1 ? '1.4s' : '0.6s' }}>
+              <Chip color="#fff" bg={BRAND} className="w-full justify-center">{step === 1 ? 'Sentar em Sala 1 · Cadeira 2' : 'Escolhe uma cadeira'}</Chip>
+            </div>
+            <Chip className="w-full justify-center">🏠 Trabalho remoto</Chip>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="absolute right-3 top-3 w-[120px] space-y-1">
+            <p className="text-[9px] font-black text-ink">No escritório 3</p>
+            {[0, 1, 2].map(i => (
+              <div key={i} className="tut-in flex items-center gap-1 rounded-md bg-snow px-1 py-0.5" style={{ ['--d' as string]: `${0.3 + i * 0.2}s` }}>
+                <Face name={team[i][0]} color={team[i][1]} /><span className="truncate text-[8px] text-ink">{team[i][0]} · Cadeira {[1, 3, 5][i]}</span>
+              </div>
+            ))}
+            <p className="pt-1 text-[9px] font-black text-ink">Remoto 1</p>
+            <div className="flex items-center gap-1 rounded-md bg-snow px-1 py-0.5"><Face name={team[3][0]} color={team[3][1]} /><span className="text-[8px] text-ink">{team[3][0]}</span></div>
+          </div>
+        )}
+        {step === 3 && (
+          <div className="absolute right-3 top-3 w-[120px] space-y-1.5">
+            <div className="flex flex-wrap gap-1"><Chip>▭ Sala</Chip><Chip>┅ Corredor</Chip><Chip color="#fff" bg={ACCENT}>🪑 Cadeira</Chip></div>
+            <Chip className="w-full justify-center">🗺 Carregar planta</Chip>
+            <p className="text-[8px] font-bold text-muted">Desenha por cima da planta: o 3D é feito do desenho</p>
+          </div>
+        )}
+      </Win>
+      <Cursor step={step} paths={[
+        [p(330, 2, 200), p(330, 2, 500, { click: true })],
+        [p(120, 60, 200), p(103, 72, 700, { click: true }), p(320, 30, 1200, { click: true })],
+        undefined,
+        [p(60, 80, 300, { click: true }), p(105, 80, 650, { click: true }), p(150, 80, 1000, { click: true }), p(60, 160, 1350, { click: true })],
+      ]} />
+    </Stage>
+  )
+}
+
 export const SCENES: Record<LessonId, (props: SceneProps) => ReactNode> = {
   inicio: Inicio,
   tarefas: Tarefas,
@@ -764,4 +837,5 @@ export const SCENES: Record<LessonId, (props: SceneProps) => ReactNode> = {
   ranking: Ranking,
   jogos: Jogos,
   equipa: Equipa,
+  espacos: Espacos,
 }

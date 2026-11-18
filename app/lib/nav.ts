@@ -1,5 +1,5 @@
 import {
-  BuildingsIcon, CalendarBlankIcon, FlowArrowIcon, GraduationCapIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
+  ArmchairIcon, BuildingsIcon, CalendarBlankIcon, FlowArrowIcon, GraduationCapIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
   PuzzlePieceIcon, SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
@@ -27,6 +27,7 @@ const ITEMS = {
   perfil: { href: '/perfil', label: 'Perfil', icon: UserIcon, color: '#FF8A3D' },
   tutorial: { href: '/tutorial', label: 'Tutorial', icon: GraduationCapIcon, color: '#7B61FF' },
   jogos: { href: '/jogos', label: 'Jogos', icon: PuzzlePieceIcon, color: '#EC5BA6' },
+  mapa: { href: '/mapa', label: 'Mapa', icon: ArmchairIcon, color: '#12B5A6' },
 } satisfies Record<string, NavItem>
 
 export type SectionId = 'geral' | 'tarefas' | 'relatorios' | 'recordes' | 'pessoas' | 'departamentos' | 'definicoes'
@@ -51,17 +52,18 @@ export type NavMode = 'person' | 'manager' | 'admin' | 'company'
 
 export const PERSONAL_ONLY_PATHS = ['/', '/tarefas', '/foco', '/estatisticas']
 
-export function navGroups(mode: NavMode): NavGroup[] {
+/** "inOrg": pertence a uma empresa (os funcionários sem chefia também usam o modo "person") */
+export function navGroups(mode: NavMode, inOrg = mode !== 'person'): NavGroup[] {
   if (mode === 'company') {
     return [
-      { title: 'Empresa', items: [section('geral'), ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas, section('tarefas'), section('relatorios'), section('recordes')] },
+      { title: 'Empresa', items: [section('geral'), ITEMS.mapa, ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas, section('tarefas'), section('relatorios'), section('recordes')] },
       { title: 'Equipa', items: [section('pessoas'), section('departamentos'), ITEMS.ranking] },
       { title: 'Gestão', items: [section('definicoes')] },
       { title: 'Ajuda', items: [ITEMS.tutorial] },
     ]
   }
   const groups: NavGroup[] = [
-    { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario] },
+    { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario, ...(inOrg ? [ITEMS.mapa] : [])] },
     { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas] },
     { title: 'Progresso', items: [ITEMS.estatisticas, ITEMS.ranking] },
     { title: 'Descontrair', items: [ITEMS.jogos] },
@@ -86,9 +88,9 @@ export function mobileNav(mode: NavMode): NavItem[] {
 }
 
 /** O resto do menu no telemóvel (botão "Mais"): o que não cabe na barra de baixo, por grupos */
-export function mobileMore(mode: NavMode): NavGroup[] {
+export function mobileMore(mode: NavMode, inOrg = mode !== 'person'): NavGroup[] {
   const inBar = new Set(mobileNav(mode).map(i => i.href))
-  const groups = navGroups(mode)
+  const groups = navGroups(mode, inOrg)
     .map(g => ({ ...g, items: g.items.filter(i => !inBar.has(i.href)) }))
     .filter(g => g.items.length)
   groups.push({ title: 'Conta', items: [ITEMS.perfil] })

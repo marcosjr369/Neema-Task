@@ -9,13 +9,18 @@ import { sectionHref, visibleSections, type SectionId } from '../../lib/nav'
 import { COMPANY_ACCOUNT_LABEL, ROLE_LABEL } from '../../types'
 import Mascot from '../../components/ui/Mascot'
 import { ListSkeleton, StatsSkeleton } from '../../components/ui/Skeleton'
+import dynamic from 'next/dynamic'
 import Overview from './Overview'
-import TeamTasks from './TeamTasks'
-import People from './People'
-import Departments from './Departments'
-import Reports from './Reports'
-import Records from './Records'
-import Settings from './Settings'
+
+// cada secção só é descarregada quando se abre (a visão geral vem logo: é a que abre primeiro)
+const list = () => <ListSkeleton rows={6} />
+const stats = () => <StatsSkeleton />
+const TeamTasks = dynamic(() => import('./TeamTasks'), { loading: list })
+const People = dynamic(() => import('./People'), { loading: list })
+const Departments = dynamic(() => import('./Departments'), { loading: list })
+const Reports = dynamic(() => import('./Reports'), { loading: stats })
+const Records = dynamic(() => import('./Records'), { loading: stats })
+const Settings = dynamic(() => import('./Settings'), { loading: list })
 
 export default function CompanyPage({ section }: { section: SectionId }) {
   const org = useOrg()

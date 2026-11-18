@@ -15,7 +15,7 @@ function TutorialContent() {
   const org = useOrg()
   const router = useRouter()
   const params = useSearchParams()
-  const lessons = useMemo(() => lessonsFor(navModeOf(org ? { isCompany: org.isCompany, isAdmin: org.isAdmin, isManager: org.isManager } : null)), [org])
+  const lessons = useMemo(() => lessonsFor(navModeOf(org ? { isCompany: org.isCompany, isAdmin: org.isAdmin, isManager: org.isManager } : null), !!org), [org])
   const done = useMemo(() => new Set(user?.tutorial?.done ?? []), [user])
   const wanted = params.get('licao')
   const [activeId, setActiveId] = useState<string>(() => (lessons.find(l => l.id === wanted) ?? lessons.find(l => !done.has(l.id)) ?? lessons[0]).id)

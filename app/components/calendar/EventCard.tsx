@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { BellIcon, CalendarCheckIcon, CheckIcon, LinkIcon, MapPinIcon, PencilSimpleIcon, TrashIcon, UsersThreeIcon, XIcon } from '@phosphor-icons/react'
+import { BellIcon, CalendarCheckIcon, CheckIcon, DoorOpenIcon, LinkIcon, MapPinIcon, PencilSimpleIcon, TrashIcon, UsersThreeIcon, XIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { errorText } from '../../lib/api'
@@ -27,6 +27,9 @@ export default function EventCard({ event: e, now, onEdit, compact = false }: { 
   const creator = org?.memberById(e.createdBy)
   const live = now >= e.start && now < e.end
   const past = now >= e.end
+  const room = e.roomId ? org?.org.office?.rooms.find(r => r.id === e.roomId) : undefined
+  const present = Object.values(e.attendance ?? {}).filter(a => a === 'presencial').length
+  const myMode = org ? e.attendance?.[org.me.id] : undefined
 
   const act = async (fn: () => Promise<unknown>, ok?: string) => {
     setBusy(true)
@@ -56,6 +59,17 @@ export default function EventCard({ event: e, now, onEdit, compact = false }: { 
             {live && <span className="rounded-md bg-danger px-1.5 text-white">A decorrer</span>}
           </p>
           <h3 className="truncate font-black text-ink">{e.title}</h3>
+          {room && (
+            <p className="mt-0.5 flex items-center gap-1 truncate text-sm font-semibold text-muted">
+              <DoorOpenIcon size={14} className="shrink-0" /> <span className="truncate">{room.name}</span>
+              {live && present > 0 && <span className="shrink-0 text-xs font-bold text-brand-dark">· {present} na sala</span>}
+            </p>
+          )}
+          {live && myMode && (
+            <p className="mt-0.5 text-xs font-bold text-brand-dark">
+              Participas {myMode === 'presencial' ? 'presencialmente' : myMode === 'online' ? 'online' : '— disseste que não vais'}
+            </p>
+          )}
           {e.location && (
             <p className="mt-0.5 flex items-center gap-1 truncate text-sm font-semibold text-muted">
               {isLink(e.location) ? (

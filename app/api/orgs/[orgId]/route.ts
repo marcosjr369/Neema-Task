@@ -4,7 +4,7 @@ import { effectivePresence, visibleMembers } from '../../../lib/server/org'
 import { isFormer } from '../../../lib/org'
 import { orgScope } from '../../../lib/server/scopes'
 
-export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
+export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { db, org, me } = await requireMember(orgId)
   const manager = isManager(me)
   const now = Date.now()
@@ -18,8 +18,14 @@ export const GET = handle<{ orgId: string }>(async (_req, { orgId }) => {
     }))
   // quem já saiu: só para quem gere (histórico das tarefas, do tempo e das reuniões)
   const former = manager ? visibleMembers(db, me).filter(isFormer) : []
+  // o mapa do escritório pode ser grande: se o cliente já tem esta versão (?mapa=updatedAt), não vai outra vez
+  const known = new URL(req.url).searchParams.get('mapa')
+  const sameMap = !!known && !!org.office?.updatedAt && String(org.office.updatedAt) === known
+  const { office, ...rest } = org
+  const sent = sameMap ? rest : { ...rest, office }
   return {
-    org: manager ? org : { ...org, inviteCode: '' },
+    org: manager ? sent : { ...sent, inviteCode: '' },
+    sameMap,
     me,
     departments: db.departments.filter(d => d.orgId === orgId),
     members,

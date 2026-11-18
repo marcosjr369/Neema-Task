@@ -1,6 +1,6 @@
-import { body, canManage, handle, requireMember } from '../../../../lib/server/api'
+import { body, canManage, fail, handle, requireMember } from '../../../../lib/server/api'
 import { mutate, newId, read } from '../../../../lib/server/store'
-import { checkAttendees, cleanEvent, notifyMembers, type EventInput } from '../../../../lib/server/events'
+import { checkAttendees, checkRoom, clashText, cleanEvent, notifyMembers, roomClashes, type EventInput } from '../../../../lib/server/events'
 import type { CalendarEvent } from '../../../../types'
 
 const DAY = 24 * 3600 * 1000
@@ -23,12 +23,20 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
 })
 
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
-  const { db, org, me } = await requireMember(orgId, { users: true })
+  const { db, org, me, user } = await requireMember(orgId, { users: true })
   const input = await body<EventInput>(req)
   const fields = cleanEvent(input)
   const attendeeIds = checkAttendees(db, org, me, input.attendeeIds)
+  const roomId = checkRoom(org, input.roomId)
   const now = Date.now()
-  const event = await mutate(async () => {}, d => {
+  const event = await mutate(async l => {
+    // as reuniões à volta (para ver se a sala já está reservada)
+    if (roomId) await l.load('events', { org_id: orgId, start_at: { gte: fields.start! - DAY, lte: fields.end! } })
+  }, d => {
+    if (roomId) {
+      const clashes = roomClashes(d.events.filter(e => e.orgId === orgId), roomId, fields.start!, fields.end!)
+      if (clashes.length && !input.allowOverlap) fail(409, clashText(org, roomId, clashes, user.timezone))
+    }
     const e: CalendarEvent = {
       title: fields.title!,
       kind: fields.kind!,
@@ -36,6 +44,7 @@ export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
       end: fields.end!,
       description: fields.description,
       location: fields.location,
+      ...(roomId ? { roomId } : {}),
       id: newId(),
       orgId,
       createdBy: me.id,

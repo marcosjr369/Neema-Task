@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, keepIfSame, throttled, whenVisible } from './api'
 import { startOfDay } from './stats'
-import type { CalendarEvent, EventResponse } from '../types'
+import type { AttendanceMode, CalendarEvent, EventResponse } from '../types'
 
 export const DAY_MS = 24 * 3600 * 1000
 
@@ -46,7 +46,8 @@ export function useEvents(base: string, from: number, to: number) {
   return { events, loaded, reload }
 }
 
-export type EventData = Pick<CalendarEvent, 'title' | 'kind' | 'start' | 'end'> & Partial<Pick<CalendarEvent, 'description' | 'location' | 'attendeeIds'>>
+export type EventData = Pick<CalendarEvent, 'title' | 'kind' | 'start' | 'end'> &
+  Partial<Pick<CalendarEvent, 'description' | 'location' | 'attendeeIds' | 'roomId'>> & { allowOverlap?: boolean }
 
 export async function saveEvent(base: string, id: string | null, data: EventData) {
   const r = id
@@ -97,3 +98,41 @@ export const eventsOn = (events: CalendarEvent[], day: number) => {
 export const isLink = (s?: string) => !!s && /^https?:\/\//i.test(s.trim())
 export const whenText = (ms: number) =>
   new Date(ms).toLocaleString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
+/** Como participo numa reunião que começou (presencial na sala, online, ou não vou) */
+export async function attendEvent(base: string, id: string, mode: AttendanceMode) {
+  const r = await api<{ event: CalendarEvent }>(`${base}/events/${id}`, { method: 'PATCH', body: { action: 'attend', mode } })
+  eventsChanged()
+  return r.event
+}
+
+/** Reserva de uma sala do mapa, vista por toda a empresa (sem detalhes para quem não participa) */
+export type RoomBooking = { id: string; roomId: string; start: number; end: number; title?: string; mine: boolean; present: number }
+
+/** As reservas das salas (de hoje e amanhã, por omissão); actualiza a cada minuto e quando os eventos mudam */
+export function useRoomBookings(orgBase: string | undefined, from?: number, to?: number) {
+  const [bookings, setBookings] = useState<RoomBooking[]>([])
+  const reload = useCallback(async () => {
+    if (!orgBase) return
+    try {
+      const q = from && to ? `?from=${from}&to=${to}` : ''
+      const r = await api<{ bookings: RoomBooking[] }>(`${orgBase}/salas${q}`)
+      setBookings(prev => keepIfSame(prev, r.bookings))
+    } catch { /* offline: mantém o que há */ }
+  }, [orgBase, from, to])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carregar do servidor
+    reload()
+    const id = setInterval(whenVisible(reload), 60 * 1000)
+    window.addEventListener(CHANGED, reload)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener(CHANGED, reload)
+    }
+  }, [reload])
+  return bookings
+}
+
+/** As reservas que se cruzam com [start, end) numa sala */
+export const bookingClashes = (bookings: RoomBooking[], roomId: string, start: number, end: number, ignoreId?: string) =>
+  bookings.filter(b => b.roomId === roomId && b.id !== ignoreId && b.start < end && b.end > start)
