@@ -69,7 +69,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     res = await fn(req, { params: Promise.resolve(route.params) })
   } catch (err) {
     console.error('[proxy]', method, path.join('/'), err)
-    return error(500, 'Erro interno')
+    return error(500, 'Algo correu mal do nosso lado. Tenta outra vez dentro de momentos.')
   }
 
   const headers = new Headers(res.headers)

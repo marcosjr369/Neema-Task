@@ -36,7 +36,7 @@ export default function InviteDialog() {
       setConfirming(false)
       if (accept && pathname.startsWith('/entrar')) router.replace('/')
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível responder ao convite. Tenta outra vez.'))
     }
     setBusy(false)
   }

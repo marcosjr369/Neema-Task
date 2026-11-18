@@ -59,7 +59,7 @@ export default function DiagramPage() {
       const out = await editor.current!.exportAs(format)
       await downloadDataUri(`${safeName(diagram.title)}.${format === 'svg' ? 'svg' : 'png'}`, out.data)
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível exportar o diagrama.'), 'danger')
     }
   }
   const exportFile = async () => {
@@ -73,7 +73,7 @@ export default function DiagramPage() {
     try {
       await api(`/api/diagramas/${id}/share`, { method: 'DELETE' })
       router.replace('/diagramas')
-    } catch (err) { showToast(errorText(err), 'danger') }
+    } catch (err) { showToast(errorText(err, 'Não foi possível sair do diagrama. Tenta outra vez.'), 'danger') }
   }
   const remove = async () => {
     if (!confirm(`Apagar o diagrama "${diagram.title}"? Não dá para desfazer.`)) return
@@ -81,7 +81,7 @@ export default function DiagramPage() {
       await api(`/api/diagramas/${id}`, { method: 'DELETE' })
       showToast('Diagrama apagado', 'success')
       router.replace('/diagramas')
-    } catch (err) { showToast(errorText(err), 'danger') }
+    } catch (err) { showToast(errorText(err, 'Não foi possível apagar o diagrama. Tenta outra vez.'), 'danger') }
   }
 
   const status = {

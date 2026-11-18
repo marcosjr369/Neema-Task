@@ -32,7 +32,7 @@ export default function AccountSection() {
       await account.updateMe({ rankingVisibility: v })
       showToast('Privacidade actualizada', 'success')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar a preferência. Tenta outra vez.'), 'danger')
     }
   }
 
@@ -44,7 +44,7 @@ export default function AccountSection() {
       await account.refresh()
       showToast('Saíste da empresa', 'info')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível sair da empresa. Tenta outra vez.'), 'danger')
     }
     setBusy(false)
   }

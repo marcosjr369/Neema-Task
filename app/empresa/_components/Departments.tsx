@@ -32,7 +32,7 @@ function DepartmentForm({ dept, onClose }: { dept: Department | null; onClose: (
       showToast(dept ? 'Departamento actualizado' : 'Departamento criado', 'success')
       onClose()
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível guardar o departamento. Tenta outra vez.'))
     }
     setBusy(false)
   }
@@ -45,7 +45,7 @@ function DepartmentForm({ dept, onClose }: { dept: Department | null; onClose: (
       await org.refresh()
       onClose()
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível apagar o departamento. Tenta outra vez.'))
     }
     setBusy(false)
   }

@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { CopyIcon, DownloadSimpleIcon, LinkIcon, MagnifyingGlassIcon, ShareNetworkIcon, TrashIcon, UploadSimpleIcon, UserPlusIcon } from '@phosphor-icons/react'
 import { useApp } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
-import { api, errorText } from '../../lib/api'
+import { api, errorText, UserError } from '../../lib/api'
 import { parseCsv } from '../../lib/org'
 import { ROLE_LABEL, type Member, type Role } from '../../types'
 import Avatar from '../../components/ui/Avatar'
@@ -106,7 +106,7 @@ function InviteCard() {
                 await api(org.base, { method: 'PATCH', body: { regenerateCode: true } })
                 await org.refresh()
               } catch (err) {
-                showToast(errorText(err), 'danger')
+                showToast(errorText(err, 'Não foi possível gerar um novo código. Tenta outra vez.'), 'danger')
               }
               setBusy(false)
             }}
@@ -148,13 +148,13 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
         const res = await api<{ added: Member[]; skipped: { reason: string }[] }>(`${org.base}/members`, {
           body: { members: [{ name, email, jobTitle, phone, departmentId: departmentId || undefined, role }] },
         })
-        if (res.skipped.length) throw new Error(res.skipped[0].reason === 'Já existe' ? 'Já existe um funcionário com este email' : res.skipped[0].reason)
+        if (res.skipped.length) throw new UserError(res.skipped[0].reason === 'Já existe' ? 'Já existe um funcionário com este email' : res.skipped[0].reason)
         showToast(res.added[0]?.userId ? 'Convite enviado' : 'Convite criado', 'success')
       }
       await org.refresh()
       onClose()
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível guardar o funcionário. Tenta outra vez.'))
     }
     setBusy(false)
   }
@@ -168,7 +168,7 @@ function MemberForm({ member, onClose }: { member: Member | null; onClose: () =>
       showToast('Funcionário removido', 'danger')
       onClose()
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível remover o funcionário. Tenta outra vez.'))
     }
     setBusy(false)
   }
@@ -253,7 +253,7 @@ function ImportModal({ onClose }: { onClose: () => void }) {
       await org.refresh()
       showToast(`${res.added.length} funcionário${res.added.length === 1 ? '' : 's'} importado${res.added.length === 1 ? '' : 's'}`, 'success')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível importar os funcionários. Tenta outra vez.'), 'danger')
     }
     setBusy(false)
   }

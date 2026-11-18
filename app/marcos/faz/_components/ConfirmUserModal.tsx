@@ -37,7 +37,7 @@ export default function ConfirmUserModal({
           : await api<ActionResult>(url, { method: 'PATCH', body: { disabled: action === 'disable', password } }),
       )
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível actualizar o utilizador. Tenta outra vez.'))
       setBusy(false)
     }
   }

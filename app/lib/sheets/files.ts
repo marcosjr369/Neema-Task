@@ -1,3 +1,4 @@
+import { UserError } from '../api'
 import type { CellFmt, SheetTab } from '../../types'
 import { Calc, display, isError, isFormula, literal, refText, rewriteRefs, toExcelFormula, type RefTok, type Val } from './formula'
 import { FILL_COLORS } from './ops'
@@ -91,7 +92,7 @@ async function inflate(data: Uint8Array, budget: { left: number }): Promise<Uint
     budget.left -= value.length
     if (budget.left < 0) {
       await reader.cancel()
-      throw new Error('O ficheiro é demasiado grande')
+      throw new UserError('O ficheiro é demasiado grande')
     }
     chunks.push(value)
   }
@@ -108,14 +109,14 @@ export async function unzip(buf: Uint8Array, want: (name: string) => boolean): P
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 65535); i--) {
     if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break }
   }
-  if (eocd < 0) throw new Error('Não é um ficheiro .xlsx válido')
+  if (eocd < 0) throw new UserError('Não é um ficheiro .xlsx válido')
   const count = view.getUint16(eocd + 10, true)
   let p = view.getUint32(eocd + 16, true)
   const dec = new TextDecoder()
   const out = new Map<string, Uint8Array>()
   const budget = { left: MAX_UNZIPPED }
   for (let n = 0; n < count; n++) {
-    if (p + 46 > buf.length || view.getUint32(p, true) !== 0x02014b50) throw new Error('Ficheiro .xlsx danificado')
+    if (p + 46 > buf.length || view.getUint32(p, true) !== 0x02014b50) throw new UserError('Ficheiro .xlsx danificado')
     const method = view.getUint16(p + 10, true)
     const compSize = view.getUint32(p + 20, true)
     const nameLen = view.getUint16(p + 28, true)
@@ -125,14 +126,14 @@ export async function unzip(buf: Uint8Array, want: (name: string) => boolean): P
     const name = dec.decode(buf.subarray(p + 46, p + 46 + nameLen))
     p += 46 + nameLen + extraLen + commentLen
     if (!want(name)) continue
-    if (local + 30 > buf.length) throw new Error('Ficheiro .xlsx danificado')
+    if (local + 30 > buf.length) throw new UserError('Ficheiro .xlsx danificado')
     const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true)
     const data = buf.subarray(start, start + compSize)
     if (method === 0) {
       budget.left -= data.length
       out.set(name, data)
     } else if (method === 8) out.set(name, await inflate(data, budget))
-    else throw new Error('Compressão do ficheiro não suportada')
+    else throw new UserError('Compressão do ficheiro não suportada')
   }
   return out
 }
@@ -168,7 +169,7 @@ export async function readXlsx(buf: ArrayBuffer): Promise<ImportedTab[]> {
   const files = await unzip(new Uint8Array(buf), n => n.startsWith('xl/') && (n.endsWith('.xml') || n.endsWith('.rels')) && !n.includes('/theme/') && !n.includes('drawings'))
   const dec = new TextDecoder()
   const get = (n: string) => { const f = files.get(n); return f ? dec.decode(f) : undefined }
-  const workbook = get('xl/workbook.xml') ?? (() => { throw new Error('Não é um ficheiro .xlsx válido') })()
+  const workbook = get('xl/workbook.xml') ?? (() => { throw new UserError('Não é um ficheiro .xlsx válido') })()
   const rels = get('xl/_rels/workbook.xml.rels') ?? ''
   const targets = new Map<string, string>()
   for (const m of rels.matchAll(/<Relationship\b([^>]*)\/?>/g)) {
@@ -232,7 +233,7 @@ export async function readXlsx(buf: ArrayBuffer): Promise<ImportedTab[]> {
     }
     tabs.push({ name, rows: Math.max(rows + 20, 100), cols: Math.max(cols, 26), cells, widths })
   }
-  if (!tabs.length) throw new Error('O ficheiro não tem folhas')
+  if (!tabs.length) throw new UserError('O ficheiro não tem folhas')
   return tabs.map(t => ({ ...t, rows: Math.min(t.rows, MAX_ROWS), cols: Math.min(t.cols, MAX_COLS) }))
 }
 
@@ -398,9 +399,9 @@ export function download(name: string, data: BlobPart, type: string) {
 }
 
 export async function readSheetFile(file: File): Promise<ImportedTab[]> {
-  if (file.size > 15 * 1024 * 1024) throw new Error('O ficheiro tem mais de 15 MB')
+  if (file.size > 15 * 1024 * 1024) throw new UserError('O ficheiro tem mais de 15 MB')
   const lower = file.name.toLowerCase()
   if (lower.endsWith('.xlsx')) return readXlsx(await file.arrayBuffer())
   if (lower.endsWith('.csv') || lower.endsWith('.txt') || lower.endsWith('.tsv')) return [readCsv(await file.text(), file.name)]
-  throw new Error('Escolhe um ficheiro .xlsx ou .csv')
+  throw new UserError('Escolhe um ficheiro .xlsx ou .csv')
 }

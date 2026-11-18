@@ -57,7 +57,7 @@ export function useDiagram(id: string, editor: React.RefObject<DrawioHandle | nu
       apply({ ...r, rev: rev.current })
       setError(null)
     } catch (err) {
-      setError({ status: err instanceof ApiError ? err.status : 0, text: errorText(err) })
+      setError({ status: err instanceof ApiError ? err.status : 0, text: errorText(err, 'Não foi possível abrir o diagrama.') })
     }
   }, [id, apply])
 
@@ -120,7 +120,7 @@ export function useDiagram(id: string, editor: React.RefObject<DrawioHandle | nu
         setState('error')
       } else {
         setState('error')
-        showToast(`Não foi possível gravar o diagrama: ${errorText(err)}`, 'danger')
+        showToast(errorText(err, 'Não foi possível gravar o diagrama. Vamos tentar outra vez.'), 'danger')
         timer.current = window.setTimeout(() => flush(), RETRY)
       }
     } finally {
@@ -163,7 +163,7 @@ export function useDiagram(id: string, editor: React.RefObject<DrawioHandle | nu
       setRemote(null)
       setState('saved')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível actualizar o diagrama.'), 'danger')
     }
   }, [id, apply, editor, flush, showToast])
 
@@ -174,7 +174,7 @@ export function useDiagram(id: string, editor: React.RefObject<DrawioHandle | nu
     try {
       await api(`/api/diagramas/${id}`, { method: 'PATCH', body: { title: t } })
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível mudar o nome do diagrama.'), 'danger')
       load()
     }
   }, [id, load, showToast])

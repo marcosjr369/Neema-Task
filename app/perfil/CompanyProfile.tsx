@@ -29,7 +29,7 @@ function useTeamProgress() {
   useEffect(() => {
     api<{ people: TeamProgress[] }>(`${org.base}/equipa`)
       .then(r => setPeople(r.people))
-      .catch(err => setError(errorText(err)))
+      .catch(err => setError(errorText(err, 'Não foi possível carregar o progresso da equipa.')))
   }, [org.base])
   return { people, error }
 }

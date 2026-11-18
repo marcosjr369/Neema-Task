@@ -24,7 +24,7 @@ export function useTaskActions() {
       if (success) showToast(success, 'success')
       return task
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível actualizar a tarefa. Tenta outra vez.'), 'danger')
       return null
     } finally {
       setBusy(false)
@@ -58,7 +58,7 @@ export function useTaskActions() {
         showToast(`Tarefa atribuída a ${assigneeIds.length} pessoas`, 'success')
         return true
       } catch (err) {
-        showToast(errorText(err), 'danger')
+        showToast(errorText(err, 'Não foi possível criar a tarefa. Tenta outra vez.'), 'danger')
         return false
       } finally {
         setBusy(false)
@@ -71,7 +71,7 @@ export function useTaskActions() {
         showToast('Tarefa apagada para todos', 'success')
         return true
       } catch (err) {
-        showToast(errorText(err), 'danger')
+        showToast(errorText(err, 'Não foi possível apagar a tarefa. Tenta outra vez.'), 'danger')
         return false
       }
     },

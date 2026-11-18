@@ -78,7 +78,7 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
       setTabs({ file: f.name, tabs: read })
       if (!title.trim()) setTitle(f.name.replace(/\.[^.]+$/, '').slice(0, 80))
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível ler o ficheiro.'), 'danger')
     }
   }
 
@@ -88,7 +88,7 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
       const { id } = await api<{ id: string }>('/api/planilhas', { body: { title, visibility, orgId, tabs: tabs?.tabs } })
       router.push(`/planilhas/${id}`)
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível criar a planilha. Tenta outra vez.'), 'danger')
       setBusy(false)
     }
   }
@@ -149,7 +149,7 @@ export default function SheetsPage() {
     try {
       setSheets((await api<{ sheets: SheetSummary[] }>('/api/planilhas')).sheets)
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível carregar as planilhas.'))
     }
   }, [])
   useEffect(() => {

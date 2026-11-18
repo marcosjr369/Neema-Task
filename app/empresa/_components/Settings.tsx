@@ -27,7 +27,7 @@ export default function Settings() {
       await org.refresh()
       showToast('Definições guardadas', 'success')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar as definições. Tenta outra vez.'), 'danger')
     }
     setBusy(false)
   }

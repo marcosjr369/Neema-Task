@@ -78,7 +78,7 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
       const { id } = await api<{ id: string }>('/api/quadros', { body: { title, color, background, visibility, orgId } })
       router.push(`/quadros/${id}`)
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível criar o quadro. Tenta outra vez.'), 'danger')
       setBusy(false)
     }
   }
@@ -147,7 +147,7 @@ export default function BoardsPage() {
     try {
       setBoards((await api<{ boards: BoardSummary[] }>('/api/quadros')).boards)
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível carregar os quadros.'))
     }
   }, [])
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api, UserError } from './api'
 import { isStandalone } from './pwa'
 
 export type PushState = 'unsupported' | 'needs-install' | 'denied' | 'off' | 'on'
@@ -34,9 +34,9 @@ const timezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
 export async function enablePush() {
   const { publicKey, configured } = await api<{ publicKey: string | null; configured: boolean }>('/api/push')
-  if (!configured || !publicKey) throw new Error('O servidor ainda não tem as notificações push configuradas')
+  if (!configured || !publicKey) throw new UserError('Os lembretes ainda não estão disponíveis. Tenta mais tarde.')
   const permission = await Notification.requestPermission()
-  if (permission !== 'granted') throw new Error('Autoriza as notificações para receberes os lembretes')
+  if (permission !== 'granted') throw new UserError('Autoriza as notificações para receberes os lembretes')
   const reg = await registration()
   const sub =
     (await reg.pushManager.getSubscription()) ??

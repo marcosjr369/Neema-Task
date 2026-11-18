@@ -35,7 +35,7 @@ export default function PushCard() {
       }
       setState(await pushState())
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível activar os lembretes. Tenta outra vez.'), 'danger')
       setState(await pushState().catch(() => 'unsupported' as const))
     }
     setBusy(false)
@@ -46,7 +46,7 @@ export default function PushCard() {
       await api('/api/push/test', { method: 'POST' })
       showToast('Notificação de teste enviada', 'success')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível enviar a notificação de teste.'), 'danger')
     }
   }
 

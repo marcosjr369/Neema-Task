@@ -94,7 +94,7 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
       setImported({ file: f.name, xml: await readDiagramFile(f) })
       if (!title.trim()) setTitle(f.name.replace(/\.[^.]+$/, '').slice(0, 80))
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível ler o ficheiro.'), 'danger')
     }
   }
 
@@ -104,7 +104,7 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
       const { id } = await api<{ id: string }>('/api/diagramas', { body: { title, visibility, orgId, xml: imported?.xml ?? TEMPLATES.find(t => t.id === template)?.xml() } })
       router.push(`/diagramas/${id}`)
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível criar o diagrama. Tenta outra vez.'), 'danger')
       setBusy(false)
     }
   }
@@ -176,7 +176,7 @@ export default function DiagramsPage() {
     try {
       setDiagrams((await api<{ diagrams: DiagramSummary[] }>('/api/diagramas')).diagrams)
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível carregar os diagramas.'))
     }
   }, [])
   useEffect(() => {

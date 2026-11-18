@@ -53,7 +53,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    api<ShareState>(endpoint).then(setState).catch(err => showToast(errorText(err), 'danger'))
+    api<ShareState>(endpoint).then(setState).catch(err => showToast(errorText(err, 'Não foi possível carregar as opções de partilha.'), 'danger'))
   }, [endpoint, showToast])
 
   const call = async (fn: () => Promise<ShareState>, ok?: string) => {
@@ -64,7 +64,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
       if (ok) showToast(ok, 'success')
       return true
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar a partilha. Tenta outra vez.'), 'danger')
       return false
     } finally {
       setBusy(false)

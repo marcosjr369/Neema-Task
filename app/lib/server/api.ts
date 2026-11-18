@@ -25,7 +25,7 @@ export function handle<P = Record<string, string>>(fn: (req: Request, params: P)
     } catch (err) {
       if (err instanceof HttpError) return Response.json({ error: err.message }, { status: err.status })
       console.error(err)
-      return Response.json({ error: 'Erro interno' }, { status: 500 })
+      return Response.json({ error: 'Algo correu mal do nosso lado. Tenta outra vez dentro de momentos.' }, { status: 500 })
     }
   }
 }

@@ -69,7 +69,7 @@ export function OrgProvider({ orgId, initial, children }: { orgId: string; initi
       setData(prev => keepIfSame(prev, next))
       setError(null)
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível carregar os dados da empresa.'))
     }
     // mesmo com erro: mostra o erro em vez de ficar a carregar para sempre
     setLoaded(true)

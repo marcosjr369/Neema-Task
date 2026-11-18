@@ -141,7 +141,7 @@ export default function SheetPage() {
         setTabId(null)
       }
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível importar o ficheiro.'), 'danger')
     }
   }
   const exportXlsx = () => download(`${safeName(sheet.title)}.xlsx`, writeXlsx(sheet.tabs) as BlobPart, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -152,7 +152,7 @@ export default function SheetPage() {
     try {
       await api(`/api/planilhas/${id}/share`, { method: 'DELETE' })
       router.replace('/planilhas')
-    } catch (err) { showToast(errorText(err), 'danger') }
+    } catch (err) { showToast(errorText(err, 'Não foi possível sair da planilha. Tenta outra vez.'), 'danger') }
   }
   const remove = async () => {
     if (!confirm(`Apagar a planilha "${sheet.title}" com todas as folhas? Não dá para desfazer.`)) return
@@ -160,7 +160,7 @@ export default function SheetPage() {
       await api(`/api/planilhas/${id}`, { method: 'DELETE' })
       showToast('Planilha apagada', 'success')
       router.replace('/planilhas')
-    } catch (err) { showToast(errorText(err), 'danger') }
+    } catch (err) { showToast(errorText(err, 'Não foi possível apagar a planilha. Tenta outra vez.'), 'danger') }
   }
 
   const open = (kind: NonNullable<typeof pop>['kind'], tid?: string) => (e: React.MouseEvent) => setPop({ kind, rect: e.currentTarget.getBoundingClientRect(), tabId: tid })

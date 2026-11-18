@@ -109,7 +109,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     // o Clerk tem sessão mas a conta não chegou: mantém a que houver; senão mostra o erro
     // (mostrar o login aqui fazia o Clerk, já com sessão, redireccionar em ciclo)
-    const failed = lastError ? errorText(lastError) : 'Não foi possível carregar a tua conta.'
+    const failed = lastError ? errorText(lastError, 'Não foi possível carregar a tua conta.') : 'Não foi possível carregar a tua conta.'
     setMe(m => (m?.user && m.clerkId === clerkId ? m : { ...SIGNED_OUT, clerkId, failed }))
   }, [getToken])
 

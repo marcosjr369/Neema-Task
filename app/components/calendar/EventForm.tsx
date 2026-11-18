@@ -68,7 +68,7 @@ export default function EventForm({ event, day, onClose }: { event: CalendarEven
       showToast(event ? 'Evento actualizado' : attendees.length ? `Agendado e enviado a ${attendees.length} pessoa${attendees.length === 1 ? '' : 's'}` : 'Agendado', 'success')
       onClose()
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar o evento. Tenta outra vez.'), 'danger')
     }
     setBusy(false)
   }

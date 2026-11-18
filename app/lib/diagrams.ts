@@ -1,4 +1,5 @@
 /** Ficheiros de diagramas no browser: importar .drawio e descarregar .drawio / .svg / .png */
+import { UserError } from './api'
 
 export const safeName = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').trim() || 'diagrama'
 
@@ -6,9 +7,9 @@ const MAX_FILE = 2 * 1024 * 1024
 
 /** Lê um ficheiro do draw.io (.drawio ou .xml) e devolve o XML */
 export async function readDiagramFile(file: File): Promise<string> {
-  if (file.size > MAX_FILE) throw new Error('O ficheiro tem mais de 2 MB')
+  if (file.size > MAX_FILE) throw new UserError('O ficheiro tem mais de 2 MB')
   const text = (await file.text()).replace(/^﻿/, '').trim()
-  if (!/^(<\?xml[^>]*>\s*)?<(mxfile|mxGraphModel)[\s>]/.test(text)) throw new Error('Escolhe um ficheiro do draw.io (.drawio)')
+  if (!/^(<\?xml[^>]*>\s*)?<(mxfile|mxGraphModel)[\s>]/.test(text)) throw new UserError('Escolhe um ficheiro do draw.io (.drawio)')
   return text
 }
 

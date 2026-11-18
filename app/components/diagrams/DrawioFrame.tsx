@@ -2,6 +2,7 @@
 
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { drawioConfig } from './drawioTheme'
+import { UserError } from '../../lib/api'
 
 /**
  * Editor do diagrams.net (draw.io) embutido num iframe, no modo "embed" com protocolo JSON:
@@ -133,7 +134,7 @@ const DrawioFrame = forwardRef<DrawioHandle, {
         if (!p) return
         clearTimeout(p.timer)
         if (typeof msg.data === 'string') p.resolve({ data: msg.data, xml: msg.xml ?? '' })
-        else p.reject(new Error(msg.message || 'Não foi possível exportar'))
+        else p.reject(new UserError('Não foi possível exportar o diagrama. Tenta outra vez.'))
       }
     }
     window.addEventListener('message', onMessage)
@@ -162,10 +163,10 @@ const DrawioFrame = forwardRef<DrawioHandle, {
   useImperativeHandle(ref, () => ({
     load: x => post({ action: 'load', xml: x, autosave: readOnly ? 0 : 1 }),
     exportAs: format => new Promise<ExportResult>((resolve, reject) => {
-      if (!ready) return reject(new Error('O editor ainda está a abrir'))
+      if (!ready) return reject(new UserError('O editor ainda está a abrir. Espera um momento e tenta outra vez.'))
       const timer = window.setTimeout(() => {
         exports.current = exports.current.filter(p => p.timer !== timer)
-        reject(new Error('O editor não respondeu'))
+        reject(new UserError('O editor não respondeu. Tenta outra vez.'))
       }, EXPORT_TIMEOUT)
       exports.current.push({ resolve, reject, timer })
       post({ action: 'export', format, border: 10, background: format === 'svg' ? 'none' : '#ffffff', shadow: false })

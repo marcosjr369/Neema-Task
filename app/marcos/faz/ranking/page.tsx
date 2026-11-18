@@ -72,7 +72,7 @@ export default function PanelRankingPage() {
     if (kind === 'funcionarios') q.set('org', orgId)
     api<{ entries: PanelRankEntry[] }>(`/api/painel/ranking?${q}`)
       .then(r => { if (alive) { setEntries(r.entries); setError('') } })
-      .catch(err => { if (alive) setError(errorText(err)) })
+      .catch(err => { if (alive) setError(errorText(err, 'Não foi possível carregar o ranking.')) })
     return () => { alive = false }
   }, [kind, metric, period, orgId])
 

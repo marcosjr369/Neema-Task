@@ -143,7 +143,7 @@ export default function RankingPage() {
       }
       setError('')
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível carregar o ranking.'))
     }
   }, [user, org, from, metric, scope])
 

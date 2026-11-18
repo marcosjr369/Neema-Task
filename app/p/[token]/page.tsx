@@ -55,7 +55,7 @@ export default function SharedPage() {
       setRes(r)
       setError(null)
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 404 ? 'Este link não existe ou foi desactivado pelo dono.' : errorText(err))
+      setError(err instanceof ApiError && err.status === 404 ? 'Este link não existe ou foi desactivado pelo dono.' : errorText(err, 'Não foi possível abrir este link.'))
     }
   }, [token, router])
 
@@ -73,7 +73,7 @@ export default function SharedPage() {
       // a chave da senha fica só em memória (a app não guarda nada no browser)
       await load(k)
     } catch (err) {
-      setPwError(errorText(err))
+      setPwError(errorText(err, 'Não foi possível confirmar a senha. Tenta outra vez.'))
     }
     setBusy(false)
   }
@@ -85,7 +85,7 @@ export default function SharedPage() {
       if (r.status === 'member' && r.path) router.replace(r.path)
       else setRes(prev => (prev && prev.status !== 'ok' && prev.status !== 'member' ? { ...prev, requested: true } : prev))
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível pedir acesso. Tenta outra vez.'))
     }
     setBusy(false)
   }

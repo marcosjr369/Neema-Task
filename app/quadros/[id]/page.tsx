@@ -137,7 +137,7 @@ export default function BoardPage() {
       await api(`/api/quadros/${id}/share`, { method: 'DELETE' })
       router.replace('/quadros')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível sair do quadro. Tenta outra vez.'), 'danger')
     }
   }
   const remove = async () => {
@@ -147,7 +147,7 @@ export default function BoardPage() {
       showToast('Quadro apagado', 'success')
       router.replace('/quadros')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível apagar o quadro. Tenta outra vez.'), 'danger')
     }
   }
 

@@ -304,7 +304,7 @@ function EnterFlow() {
   }
 
   const fail = (err: unknown) => {
-    setError(errorText(err))
+    setError(errorText(err, 'Não foi possível continuar. Tenta outra vez.'))
     setErrorKey(k => k + 1)
   }
   const run = async (fn: () => Promise<void>) => {

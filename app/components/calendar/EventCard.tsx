@@ -34,7 +34,7 @@ export default function EventCard({ event: e, now, onEdit, compact = false }: { 
       await fn()
       if (ok) showToast(ok, 'success')
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível actualizar o evento. Tenta outra vez.'), 'danger')
     }
     setBusy(false)
   }

@@ -43,7 +43,7 @@ export function usePanelFetch<T>(path: string) {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     api<T>(`${path}?dias=${days}&tz=${encodeURIComponent(tz)}`)
       .then(data => { if (alive) setState({ key, data, error: '' }) })
-      .catch(err => { if (alive) setState(s => ({ key, data: s.data, error: errorText(err) })) })
+      .catch(err => { if (alive) setState(s => ({ key, data: s.data, error: errorText(err, 'Não foi possível carregar os dados.') })) })
     return () => { alive = false }
   }, [path, days, key])
   return { data: state.data, error: state.error, loading: state.key !== key }
@@ -94,7 +94,7 @@ function Login({ onDone }: { onDone: (email: string) => void }) {
       setPassword('')
       onDone(email.trim().toLowerCase())
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível entrar no painel. Tenta outra vez.'))
     }
     setBusy(false)
   }
@@ -238,7 +238,7 @@ export default function PanelShell({ children }: { children: ReactNode }) {
       setError('')
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setSession(false)
-      else setError(errorText(err))
+      else setError(errorText(err, 'Não foi possível carregar o resumo.'))
     }
     setLoading(false)
   }, [days])

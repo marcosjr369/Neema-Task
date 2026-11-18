@@ -31,7 +31,7 @@ export function useBoard(boardId: string) {
       if (v === version.current && inFlight.current === 0) setData(res)
       setError(null)
     } catch (err) {
-      setError({ status: err instanceof ApiError ? err.status : 0, text: errorText(err) })
+      setError({ status: err instanceof ApiError ? err.status : 0, text: errorText(err, 'Não foi possível abrir o quadro.') })
     }
   }, [boardId])
 
@@ -70,7 +70,7 @@ export function useBoard(boardId: string) {
       if (inFlight.current === 0) setData(d => (d ? { ...d, board: res.board } : d))
     } catch (err) {
       inFlight.current--
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar a alteração no quadro.'), 'danger')
       if (inFlight.current === 0) load()
     }
   }, [boardId, user, showToast, load])

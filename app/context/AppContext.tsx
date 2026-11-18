@@ -282,7 +282,7 @@ export function AppProvider({ workspace, children }: { workspace: Workspace; chi
           if (orgRef.current?.isManager) orgRef.current.upsertTeamTask(res.task)
         }
       } catch (err) {
-        showToast(errorText(err), 'danger')
+        showToast(errorText(err, 'Não foi possível guardar a alteração na tarefa. Tenta outra vez.'), 'danger')
         inflight.current = 0
         refreshTasks()
         return

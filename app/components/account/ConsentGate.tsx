@@ -22,7 +22,7 @@ export default function ConsentGate() {
       await api(`${org.base}/consent`, { method: 'POST' })
       await org.refresh()
     } catch (err) {
-      setError(errorText(err))
+      setError(errorText(err, 'Não foi possível guardar a tua resposta. Tenta outra vez.'))
     }
     setBusy(false)
   }

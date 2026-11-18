@@ -38,7 +38,7 @@ export function useSheet(id: string) {
       if (v === version.current && !busy.current && queue.current.length === 0) setData(res)
       setError(null)
     } catch (err) {
-      setError({ status: err instanceof ApiError ? err.status : 0, text: errorText(err) })
+      setError({ status: err instanceof ApiError ? err.status : 0, text: errorText(err, 'Não foi possível abrir a planilha.') })
     }
   }, [id, setData])
 
@@ -66,7 +66,7 @@ export function useSheet(id: string) {
       }
     } catch (err) {
       queue.current = []
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar a alteração na planilha.'), 'danger')
       version.current++
       busy.current = false
       load()
@@ -86,7 +86,7 @@ export function useSheet(id: string) {
     try {
       for (const op of ops) applySheetOp(sheet, op, { now: Date.now(), newId })
     } catch (err) {
-      showToast(errorText(err), 'danger')
+      showToast(errorText(err, 'Não foi possível guardar a alteração na planilha.'), 'danger')
       return false
     }
     version.current++
