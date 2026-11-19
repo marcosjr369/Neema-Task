@@ -41,7 +41,8 @@ function Section({ title, hint, boards, onNew }: { title: string; hint?: string;
     <section className="mb-8">
       <h2 className="font-black text-ink">{title}</h2>
       {hint && <p className="text-sm font-semibold text-muted">{hint}</p>}
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      {/* colunas automáticas: em ecrãs grandes cabem mais cartões, sem os esticar */}
+      <div className="mt-3 grid gap-3 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(230px,1fr))]">
         {boards.map(b => <BoardTile key={b.id} b={b} />)}
         {onNew && (
           <button onClick={onNew} className="flex h-28 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-line bg-snow text-sm font-extrabold text-muted hover:border-brand/40 hover:text-brand cursor-pointer">

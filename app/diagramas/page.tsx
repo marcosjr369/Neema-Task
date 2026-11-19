@@ -65,7 +65,7 @@ function Section({ title, hint, diagrams }: { title: string; hint?: string; diag
     <section className="mb-7">
       <h2 className="font-black text-ink">{title}</h2>
       {hint && <p className="text-sm font-semibold text-muted">{hint}</p>}
-      <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{diagrams.map((d, i) => <Card key={d.id} d={d} i={i} />)}</ul>
+      <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">{diagrams.map((d, i) => <Card key={d.id} d={d} i={i} />)}</ul>
     </section>
   )
 }

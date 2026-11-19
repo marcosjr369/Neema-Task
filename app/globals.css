@@ -429,6 +429,9 @@ body {
 }
 .btn[aria-busy="true"],
 .chip[aria-busy="true"] { cursor: progress; }
+/* o botão já tem o spinner do <Busy> lá dentro: não desenha outro */
+.btn[aria-busy="true"]:has(.busy-spin)::before,
+.chip[aria-busy="true"]:has(.busy-spin)::before { display: none; }
 
 /* Esqueletos de carregamento: bloco cinzento com um brilho a passar */
 @keyframes shimmer {

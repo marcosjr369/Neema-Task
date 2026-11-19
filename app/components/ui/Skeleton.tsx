@@ -52,7 +52,7 @@ export function ListSkeleton({ rows = 5, avatar = true, className = '' }: { rows
 /** Grelha de cartões (quadros, empresas…) */
 export function CardGridSkeleton({ count = 6, height = 112, className = '' }: { count?: number; height?: number; className?: string }) {
   return (
-    <Loading className={`grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 ${className}`}>
+    <Loading className={`grid gap-3 grid-cols-[repeat(auto-fill,minmax(150px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(230px,1fr))] ${className}`}>
       {Array.from({ length: count }, (_, i) => <Sk key={i} className="rounded-2xl" style={{ height }} />)}
     </Loading>
   )

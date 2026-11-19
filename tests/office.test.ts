@@ -187,3 +187,18 @@ describe('dados da empresa: o mapa só vai quando mudou', () => {
     expect(old.org.office.items.length).toBeGreaterThan(0)
   })
 })
+
+describe('conta: pedida a cada minuto, por isso leve', () => {
+  it('sem o mapa do escritório nem o último sinal da pessoa', async () => {
+    as = users.ana
+    const me = await import('../app/api/me/route')
+    const res = await (me.GET as unknown as (r: Request, c: unknown) => Promise<Response>)(new Request('http://t/x'), { params: Promise.resolve({}) })
+    const json = await res.json()
+    expect(json.memberships.length).toBeGreaterThan(0)
+    for (const m of json.memberships) {
+      expect(m.org.office).toBeUndefined()
+      expect(m.member.lastSeen).toBeUndefined()
+      expect(m.org.name).toBe('Acme')
+    }
+  })
+})

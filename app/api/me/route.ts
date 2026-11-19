@@ -4,15 +4,28 @@ import { userScope } from '../../lib/server/scopes'
 import { mutate, read } from '../../lib/server/store'
 import { domainSuggestions, invitesOf, membershipsOf } from '../../lib/server/views'
 import { accountTypeOf, BUSINESS_ONLY, PERSONAL_ONLY } from '../../lib/account'
-import { DEFAULT_SETTINGS, type RankingVisibility, type Settings, type Workspace } from '../../types'
+import { DEFAULT_SETTINGS, type Member, type Org, type RankingVisibility, type Settings, type Workspace } from '../../types'
 
 export const GET = handle(async () => {
   const user = await currentUser()
   if (!user) return { user: null, memberships: [], invites: [], suggestions: [] }
   if (user.disabled) return { user: null, memberships: [], invites: [], suggestions: [], disabled: true }
   const db = await read(userScope(user.id, { memberships: true, domainOrgs: true }))
-  return { user, memberships: membershipsOf(db, user), invites: invitesOf(db, user), suggestions: domainSuggestions(db, user) }
+  return { user, memberships: membershipsOf(db, user).map(slim), invites: invitesOf(db, user).map(slim), suggestions: domainSuggestions(db, user) }
 })
+
+/**
+ * A conta é pedida a cada minuto (para os convites aparecerem logo): sem o mapa do escritório
+ * (pode ser grande; chega pelos dados da empresa, só quando muda) nem o último sinal da pessoa
+ * (muda a cada minuto e obrigava a app a redesenhar sem nada ter mudado).
+ */
+function slim<T extends { member: Member; org: Org }>(x: T): T {
+  const { office: _office, ...org } = x.org
+  const { lastSeen: _seen, ...member } = x.member
+  void _office
+  void _seen
+  return { ...x, org, member }
+}
 
 type Patch = {
   name?: string

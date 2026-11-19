@@ -84,7 +84,7 @@ export default function GamesPage() {
         return (
           <section key={group.id} className="mt-10">
             <h2 className="gm-in text-lg font-black text-ink" style={{ ['--d' as string]: `${0.08 + n * 0.04}s` }}>{group.title}</h2>
-            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+            <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-4 gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
               {list.map(g => <Tile key={g.id} g={g} stats={user?.games?.[g.id]} i={n++} />)}
             </ul>
           </section>

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth, useClerk } from '@clerk/nextjs'
-import { api, ApiError, errorText, setTokenSource, throttled } from '../lib/api'
+import { api, ApiError, errorText, keepIfSame, setTokenSource, throttled, whenVisible } from '../lib/api'
 import { clearBrowserStorage } from '../lib/browserStorage'
 import { accountTypeOf, businessRoleOf } from '../lib/account'
 import { isBetter, recordScore } from '../lib/games'
@@ -92,7 +92,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       try {
         const res = await api<MeResponse>('/api/me')
         if (res.user || res.disabled || !clerkId) {
-          if (n === seq.current) setMe({ ...SIGNED_OUT, ...res, clerkId })
+          // igual ao que já havia (ex.: verificação de minuto a minuto): fica o mesmo objecto, a app não redesenha
+          if (n === seq.current) setMe(prev => keepIfSame(prev, { ...SIGNED_OUT, ...res, clerkId }))
           return
         }
         lastError = null
@@ -118,7 +119,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // voltar à janela várias vezes seguidas não repete o pedido
     const onFocus = throttled(() => refresh())
     window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
+    // convites de empresas (e outras mudanças na conta) aparecem sem ser preciso recarregar a página:
+    // verifica a cada minuto, só com sessão iniciada e com o separador à vista
+    const poll = setInterval(whenVisible(() => { if (clerkRef.current) refresh() }), 60 * 1000)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(poll)
+    }
   }, [refresh])
 
   useEffect(() => {

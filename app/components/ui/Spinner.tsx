@@ -18,7 +18,7 @@ export function Busy({ busy, text, children }: { busy: boolean; text?: ReactNode
   if (!busy) return <>{children}</>
   return (
     <>
-      <Spinner />
+      <Spinner className="busy-spin" />
       <span aria-live="polite">{text ?? children}</span>
     </>
   )
