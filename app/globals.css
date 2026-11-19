@@ -40,6 +40,26 @@ body {
   font-family: var(--font-nunito), system-ui, sans-serif;
 }
 
+/* O Clerk dá as classes de formFieldInput (h-14!, w-full!, ...) também às caixas de seleção
+   (ex.: "Terminar sessão em todos os outros dispositivos" ao redefinir a palavra-passe).
+   Na mesma camada e com mais especificidade, estas regras ganham e devolvem-lhe o tamanho normal. */
+@layer utilities {
+  input[type="checkbox"].cl-formFieldInput,
+  input.cl-formFieldCheckboxInput {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+    min-width: 1.25rem !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0.375rem !important;
+    border-width: 2px !important;
+    box-shadow: none !important;
+    accent-color: var(--color-brand);
+    cursor: pointer;
+    flex: none;
+  }
+}
+
 @layer components {
   /* Botão "3D" com borda inferior que afunda ao carregar */
   .btn {

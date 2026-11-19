@@ -50,6 +50,7 @@ export const CLERK_APPEARANCE = {
     formFieldErrorText: 'mt-1 text-sm font-bold text-danger',
     formFieldHintText: 'text-xs font-semibold text-muted',
     formFieldAction: 'text-xs font-extrabold text-accent',
+    formFieldCheckboxLabel: 'text-sm font-bold text-body cursor-pointer',
     formButtonPrimary: primaryButton,
     buttonArrowIcon: 'hidden',
 
