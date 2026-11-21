@@ -3,6 +3,8 @@ import { inviteCode, mutate } from '../../../lib/server/store'
 import { effectivePresence, visibleMembers } from '../../../lib/server/org'
 import { isFormer } from '../../../lib/org'
 import { orgScope } from '../../../lib/server/scopes'
+import { cleanPermissions } from '../../../lib/permissions'
+import type { OrgPermissions } from '../../../types'
 
 export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { db, org, me } = await requireMember(orgId)
@@ -35,7 +37,7 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
 
 export const PATCH = handle<{ orgId: string }>(async (req, { orgId }) => {
   await requireAdmin(orgId)
-  const patch = await body<{ name?: string; sector?: string; size?: string; domain?: string; hideFromRanking?: boolean; dailyGoalHours?: number; regenerateCode?: boolean }>(req)
+  const patch = await body<{ name?: string; sector?: string; size?: string; domain?: string; hideFromRanking?: boolean; dailyGoalHours?: number; regenerateCode?: boolean; permissions?: OrgPermissions }>(req)
   const goal = patch.dailyGoalHours === undefined ? undefined : Number(patch.dailyGoalHours)
   if (goal !== undefined && (!Number.isFinite(goal) || goal < 1 || goal > 16)) fail(400, 'A meta diária tem de estar entre 1 e 16 horas')
   return mutate(orgScope(orgId), db => {
@@ -46,6 +48,12 @@ export const PATCH = handle<{ orgId: string }>(async (req, { orgId }) => {
     if (patch.domain !== undefined) org.domain = patch.domain.trim().toLowerCase().replace(/^@/, '') || undefined
     if (patch.hideFromRanking !== undefined) org.hideFromRanking = !!patch.hideFromRanking || undefined
     if (goal !== undefined) org.dailyGoalHours = Math.round(goal * 2) / 2
+    if (patch.permissions !== undefined) {
+      const memberIds = new Set(db.members.filter(m => m.orgId === orgId).map(m => m.id))
+      const deptIds = new Set(db.departments.filter(d => d.orgId === orgId).map(d => d.id))
+      const clean = cleanPermissions(patch.permissions, memberIds, deptIds)
+      org.permissions = Object.keys(clean).length ? clean : undefined
+    }
     if (patch.regenerateCode) {
       let code = inviteCode()
       while (db.orgs.some(o => o.inviteCode === code)) code = inviteCode()

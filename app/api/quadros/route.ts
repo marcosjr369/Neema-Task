@@ -1,4 +1,4 @@
-import { body, fail, handle, requireMember, requireUser } from '../../lib/server/api'
+import { body, fail, handle, requireMemberWith, requireUser } from '../../lib/server/api'
 import { boardAccess } from '../../lib/server/boards'
 import { loadMine, summaryBase } from '../../lib/server/shared'
 import { shareToken } from '../../lib/server/sharing'
@@ -36,7 +36,8 @@ export const POST = handle(async req => {
   const color = BOARD_COLORS.includes(input.color ?? '') ? input.color! : BOARD_COLORS[0]
 
   let visibility: ShareVisibility
-  const user = input.orgId ? (await requireMember(input.orgId)).user : await requireUser()
+  // na empresa, só quem tem permissão cria (Definições → Permissões)
+  const user = input.orgId ? (await requireMemberWith(input.orgId, 'quadros')).user : await requireUser()
   if (input.orgId) visibility = input.visibility === 'private' ? 'private' : 'org'
   else visibility = input.visibility === 'link' ? 'link' : 'private'
 

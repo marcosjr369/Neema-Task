@@ -385,6 +385,150 @@ function Planilhas({ step }: SceneProps) {
   )
 }
 
+/* ─── Inquéritos ──────────────────────────────────────────────────────── */
+
+function Inqueritos({ step }: SceneProps) {
+  const types = [
+    { t: 'Votação', c: BLUE, bg: '#E6EDFF' },
+    { t: 'Eleição', c: ACCENT, bg: '#DCF7F3' },
+    { t: 'Formulário', c: BRAND, bg: '#EEEAFF' },
+    { t: 'Concurso', c: PINK, bg: '#FCE6F2' },
+    { t: 'Ideias', c: WARM, bg: '#FFEDE0' },
+    { t: 'Agendar', c: '#22A6CF', bg: '#E0F4FA' },
+  ]
+  const bars = [{ t: 'Jantar no escritório', p: 58, c: BRAND }, { t: 'Restaurante na baixa', p: 30, c: ACCENT }, { t: 'Churrasco', p: 12, c: WARM }]
+  return (
+    <Stage>
+      <Win title={step === 0 ? 'O que queres criar?' : 'Jantar de fim de ano'}
+        head={step === 2 ? <Chip color="#fff" bg={BRAND} className="tut-glow">Publicar</Chip> : step === 3 ? <Chip color={ACCENT} bg="#DCF7F3">● Aberto</Chip> : undefined}>
+        {step === 0 && (
+          <div className="absolute inset-x-5 top-6 grid grid-cols-3 gap-2">
+            {types.map((x, i) => (
+              <div key={x.t} className={`tut-in relative rounded-xl border-2 p-2 transition-colors delay-[1000ms] duration-300 ${i === 0 ? 'border-[#4C7DFF] bg-[#E6EDFF]/50' : 'border-line bg-white'}`} style={{ ['--d' as string]: `${i * 0.08}s` }}>
+                <span className="flex h-[22px] w-[22px] items-center justify-center rounded-lg" style={{ background: x.bg }}><span className="h-[9px] w-[9px] rounded-[3px]" style={{ background: x.c }} /></span>
+                <p className="mt-1 text-[9.5px] font-black text-ink">{x.t}</p>
+                <p className="mt-0.5 h-[4px] w-4/5 rounded bg-snow" />
+              </div>
+            ))}
+          </div>
+        )}
+        {step === 1 && (
+          <div className="absolute inset-x-6 top-4 rounded-xl border-2 border-line bg-white p-2.5">
+            <p className="text-[8px] font-extrabold uppercase text-muted">Pergunta</p>
+            <p className="mt-0.5 rounded-md bg-snow px-1.5 py-1 text-[10.5px] font-black text-ink"><Typed text="Onde fazemos o jantar?" d={0.3} /></p>
+            {['Jantar no escritório', 'Restaurante na baixa', 'Churrasco'].map((o, i) => (
+              <div key={o} className="tut-in mt-1 flex items-center gap-1.5 rounded-md border-2 border-line px-1.5 py-[3px]" style={{ ['--d' as string]: `${1.4 + i * 0.35}s` }}>
+                <span className="h-[9px] w-[9px] rounded-full border-2 border-line" /><span className="text-[9px] font-bold text-body">{o}</span>
+              </div>
+            ))}
+            <span className="tut-pop mt-1.5 inline-flex" style={{ ['--d' as string]: '2.8s' }}><Chip color={BRAND} bg="#EEEAFF">↳ Mostrar só se…</Chip></span>
+          </div>
+        )}
+        {step === 2 && (
+          <>
+            <div className="tut-up absolute inset-x-12 top-6 rounded-xl border-2 border-line bg-white p-3 text-center shadow-lg" style={{ ['--d' as string]: '0.6s' }}>
+              <p className="text-[11px] font-black text-ink">Publicar</p>
+              <div className="mt-2 flex items-center gap-2 rounded-lg bg-snow p-1.5 text-left">
+                <span className="flex h-[12px] w-[20px] items-center rounded-full bg-brand p-[2px]"><span className="ml-auto h-[8px] w-[8px] rounded-full bg-white" /></span>
+                <span className="text-[9px] font-black text-ink">Avisar os colegas</span>
+              </div>
+            </div>
+            {['Ana', 'Rui', 'Eva', 'Tó'].map((n, i) => (
+              <span key={n} className="tut-pop absolute top-[132px] flex flex-col items-center" style={{ left: 104 + i * 48, ['--d' as string]: `${1.6 + i * 0.2}s` }}>
+                <Face name={n} color={[BRAND, ACCENT, WARM, PINK][i]} size={22} />
+                <span className="mt-0.5 rounded-md bg-danger px-1 text-[7px] font-black text-white">🔔 1</span>
+              </span>
+            ))}
+          </>
+        )}
+        {step === 3 && (
+          <div className="absolute inset-x-6 top-3 space-y-2">
+            {bars.map((b, i) => (
+              <div key={b.t}>
+                <div className="flex justify-between text-[9px] font-extrabold text-ink"><span>{i === 0 ? '👑 ' : ''}{b.t}</span><span>{b.p}%</span></div>
+                <div className="mt-[2px] h-[7px] overflow-hidden rounded-full bg-snow">
+                  <div className="tut-fill h-full rounded-full" style={{ width: `${b.p}%`, background: b.c, ['--d' as string]: `${0.3 + i * 0.2}s` }} />
+                </div>
+              </div>
+            ))}
+            <div className="tut-in mt-2 rounded-lg border-2 border-line p-1.5" style={{ ['--d' as string]: '1.2s' }}>
+              <div className="flex items-center justify-between text-[8.5px] font-black text-ink"><span>Participação · 18 de 24</span><Chip color={ACCENT} bg="#DCF7F3">Lembrar quem falta</Chip></div>
+              <div className="mt-1 h-[6px] overflow-hidden rounded-full bg-snow"><div className="tut-fill h-full w-3/4 rounded-full bg-accent" style={{ ['--d' as string]: '1.5s' }} /></div>
+            </div>
+          </div>
+        )}
+      </Win>
+      <Cursor step={step} paths={[
+        [p(200, 180, 0), p(60, 40, 600, { click: true })],
+        [p(300, 170, 0), p(180, 30, 400), p(90, 140, 2700, { click: true })],
+        [p(330, -12, 200, { click: true }), p(150, 60, 900, { click: true })],
+        [p(300, 120, 300), p(330, 120, 1700, { click: true })],
+      ]} />
+    </Stage>
+  )
+}
+
+/* ─── Aparência ───────────────────────────────────────────────────────── */
+
+function Aparencia({ step }: SceneProps) {
+  const swatches = ['#7B61FF', '#1F6FEB', '#0E9F6E', '#F97316', '#DB2777']
+  const color = step >= 1 ? '#F97316' : BRAND
+  const font = step >= 2 ? 'Georgia, serif' : undefined
+  const bg = step >= 3 ? 'radial-gradient(#F9731633 1.5px, transparent 1.6px) 0 0/14px 14px, #FFF7EF' : '#ffffff'
+  return (
+    <Stage>
+      <Win title="Empresa · Aparência">
+        {/* a app "por trás", a mudar com as escolhas */}
+        <div className="absolute inset-y-0 left-0 w-[86px] border-r-2 border-line bg-white px-1.5 py-2" style={{ fontFamily: font }}>
+          {step === 0 ? (
+            <div className="tut-pop flex h-[22px] items-center justify-center rounded-md border-2 border-dashed text-[8px] font-black" style={{ borderColor: color, color, ['--d' as string]: '0.9s' }}>ACME</div>
+          ) : (
+            <div className="flex h-[22px] items-center justify-center rounded-md text-[9px] font-black text-white" style={{ background: color }}>ACME</div>
+          )}
+          {['Início', 'Tarefas', 'Quadros'].map((m, i) => (
+            <div key={m} className="mt-1.5 rounded-md px-1.5 py-[3px] text-[8.5px] font-extrabold transition-colors duration-500"
+              style={i === 1 ? { background: `${color}22`, color } : { color: '#4A4763' }}>{m}</div>
+          ))}
+          <div className="mt-2 rounded-md py-1 text-center text-[8px] font-black text-white transition-colors duration-500" style={{ background: color }}>Nova tarefa</div>
+        </div>
+        <div className="absolute inset-y-0 left-[86px] right-[150px] p-2 transition-[background] duration-700" style={{ background: bg, fontFamily: font }}>
+          <p className="text-[11px] font-black text-ink">Bom dia, Ana!</p>
+          {['Relatório mensal', 'Ligar ao cliente'].map(t => (
+            <div key={t} className="mt-1.5 flex items-center gap-1 rounded-md border-2 border-line bg-white px-1.5 py-1 text-[8.5px] text-ink">
+              <span className="h-[8px] w-[8px] rounded-full border-2" style={{ borderColor: color }} />{t}
+            </div>
+          ))}
+        </div>
+        {/* o painel de escolhas */}
+        <div className="absolute inset-y-0 right-0 w-[150px] space-y-1.5 border-l-2 border-line bg-white p-2">
+          <p className={`text-[8px] font-extrabold uppercase text-muted ${step === 0 ? 'tut-hl' : ''}`}>Logótipo</p>
+          <p className={`text-[8px] font-extrabold uppercase text-muted ${step === 1 ? 'tut-hl' : ''}`}>Cor principal</p>
+          <div className="flex gap-1">
+            {swatches.map(c => <span key={c} className="h-[14px] w-[14px] rounded-full" style={{ background: c, boxShadow: c === color ? `0 0 0 1.5px #fff, 0 0 0 3px ${c}` : undefined }} />)}
+          </div>
+          <p className={`text-[8px] font-extrabold uppercase text-muted ${step === 2 ? 'tut-hl' : ''}`}>Letra</p>
+          <div className="flex gap-1">
+            <Chip bg={step < 2 ? '#EEEAFF' : '#F7F6FC'}>Nunito</Chip>
+            <Chip bg={step >= 2 ? '#FFEDE0' : '#F7F6FC'} style={{ fontFamily: 'Georgia, serif' }}>Clássica</Chip>
+          </div>
+          <p className={`text-[8px] font-extrabold uppercase text-muted ${step === 3 ? 'tut-hl' : ''}`}>Fundos</p>
+          <div className="flex gap-1">
+            <span className="h-[16px] w-[24px] rounded ring-1 ring-line" style={{ background: '#fff' }} />
+            <span className="h-[16px] w-[24px] rounded ring-1 ring-line" style={{ background: 'radial-gradient(#F9731655 1.5px, transparent 1.6px) 0 0/8px 8px, #FFF7EF' }} />
+          </div>
+          <At step={step} at={3} anim="tut-pop" d={1.2} className="bottom-2 left-2 right-2"><Chip color="#fff" bg={color} className="tut-glow w-full justify-center">Guardar</Chip></At>
+        </div>
+      </Win>
+      <Cursor step={step} paths={[
+        [p(320, 150, 0), p(275, 22, 400, { click: true })],
+        [p(275, 60, 0), p(301, 60, 600, { click: true })],
+        [p(301, 60, 0), p(320, 96, 600, { click: true })],
+        [p(320, 96, 0), p(282, 128, 600, { click: true }), p(300, 192, 1700, { click: true })],
+      ]} />
+    </Stage>
+  )
+}
+
 /* ─── Diagramas ───────────────────────────────────────────────────────── */
 
 function Diagramas({ step }: SceneProps) {
@@ -833,9 +977,11 @@ export const SCENES: Record<LessonId, (props: SceneProps) => ReactNode> = {
   quadros: Quadros,
   planilhas: Planilhas,
   diagramas: Diagramas,
+  inqueritos: Inqueritos,
   estatisticas: Estatisticas,
   ranking: Ranking,
   jogos: Jogos,
   equipa: Equipa,
+  aparencia: Aparencia,
   espacos: Espacos,
 }

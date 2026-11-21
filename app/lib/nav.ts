@@ -1,5 +1,5 @@
 import {
-  ArmchairIcon, BuildingsIcon, CalendarBlankIcon, FlowArrowIcon, GraduationCapIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
+  ArmchairIcon, BuildingsIcon, CalendarBlankIcon, CheckSquareIcon, FlowArrowIcon, GraduationCapIcon, KanbanIcon, TableIcon, ChartBarIcon, ChartLineUpIcon, ClipboardTextIcon, GearSixIcon, HouseIcon, ListChecksIcon, MedalIcon,
   PuzzlePieceIcon, SquaresFourIcon, TimerIcon, TreeStructureIcon, TrophyIcon, UserIcon, UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 
@@ -21,6 +21,7 @@ const ITEMS = {
   quadros: { href: '/quadros', label: 'Quadros', icon: KanbanIcon, color: '#7B61FF' },
   planilhas: { href: '/planilhas', label: 'Planilhas', icon: TableIcon, color: '#12B5A6' },
   diagramas: { href: '/diagramas', label: 'Diagramas', icon: FlowArrowIcon, color: '#FF8A3D' },
+  inqueritos: { href: '/inqueritos', label: 'Inquéritos', icon: CheckSquareIcon, color: '#4C7DFF' },
   estatisticas: { href: '/estatisticas', label: 'Estatísticas', icon: ChartBarIcon, color: '#EC5BA6' },
   ranking: { href: '/ranking', label: 'Ranking', icon: TrophyIcon, color: '#E0A419' },
   empresa: { href: '/empresa', label: 'Empresa', icon: BuildingsIcon, color: '#4C7DFF' },
@@ -41,7 +42,7 @@ export const SECTIONS: (NavItem & { id: SectionId; admin?: boolean })[] = [
   { id: 'recordes', href: '/empresa/recordes', label: 'Recordes', icon: MedalIcon, color: '#E0A419' },
   { id: 'pessoas', href: '/empresa/pessoas', label: 'Funcionários', icon: UsersThreeIcon, color: '#7B61FF' },
   { id: 'departamentos', href: '/empresa/departamentos', label: 'Departamentos', icon: TreeStructureIcon, color: '#FF8A3D', admin: true },
-  { id: 'definicoes', href: '/empresa/definicoes', label: 'Definições', icon: GearSixIcon, color: '#86829B', admin: true },
+  { id: 'definicoes', href: '/empresa/definicoes', label: 'Definições', icon: GearSixIcon, color: '#86829B' },
 ]
 
 const section = (id: SectionId) => SECTIONS.find(s => s.id === id)!
@@ -56,7 +57,7 @@ export const PERSONAL_ONLY_PATHS = ['/', '/tarefas', '/foco', '/estatisticas']
 export function navGroups(mode: NavMode, inOrg = mode !== 'person'): NavGroup[] {
   if (mode === 'company') {
     return [
-      { title: 'Empresa', items: [section('geral'), ITEMS.mapa, ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas, section('tarefas'), section('relatorios'), section('recordes')] },
+      { title: 'Empresa', items: [section('geral'), ITEMS.mapa, ITEMS.calendario, ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas, ITEMS.inqueritos, section('tarefas'), section('relatorios'), section('recordes')] },
       { title: 'Equipa', items: [section('pessoas'), section('departamentos'), ITEMS.ranking] },
       { title: 'Gestão', items: [section('definicoes')] },
       { title: 'Ajuda', items: [ITEMS.tutorial] },
@@ -64,7 +65,7 @@ export function navGroups(mode: NavMode, inOrg = mode !== 'person'): NavGroup[] 
   }
   const groups: NavGroup[] = [
     { title: 'Hoje', items: [ITEMS.inicio, ITEMS.tarefas, ITEMS.foco, ITEMS.calendario, ...(inOrg ? [ITEMS.mapa] : [])] },
-    { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas] },
+    { title: 'Colaborar', items: [ITEMS.quadros, ITEMS.planilhas, ITEMS.diagramas, ITEMS.inqueritos] },
     { title: 'Progresso', items: [ITEMS.estatisticas, ITEMS.ranking] },
     { title: 'Descontrair', items: [ITEMS.jogos] },
   ]

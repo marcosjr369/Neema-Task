@@ -1,4 +1,5 @@
-import type { Member, Org, Task, User } from '../../types'
+import type { FeatureKey, Member, Org, Task, User } from '../../types'
+import { canUse, deniedText } from '../permissions'
 import { canReviewTask, isCompanyAccount, managedDepartmentIds } from '../org'
 import { BUSINESS_ONLY } from '../account'
 import { currentUser } from './auth'
@@ -65,6 +66,18 @@ export async function requireMember(orgId: string, opts: OrgOpts = {}): Promise<
     db.members.find(m => m.orgId === orgId && m.userId === user.id && m.status === 'activo') ??
     fail(403, 'Não pertences a esta empresa')
   return { db, user, org, me }
+}
+
+/** Recusa (403) se a empresa não deu esta funcionalidade a esta pessoa (Definições → Permissões) */
+export function requireFeature(db: DB, org: Org, me: Member, key: FeatureKey) {
+  if (!canUse(org.permissions, db.departments.filter(d => d.orgId === org.id), me, key)) fail(403, deniedText(key))
+}
+
+/** Membro da empresa com permissão para a funcionalidade */
+export async function requireMemberWith(orgId: string, key: FeatureKey, opts: OrgOpts = {}) {
+  const access = await requireMember(orgId, opts)
+  requireFeature(access.db, access.org, access.me, key)
+  return access
 }
 
 export async function requirePerson(orgId: string, opts: OrgOpts = {}) {

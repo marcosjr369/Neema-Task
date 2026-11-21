@@ -1,4 +1,4 @@
-import type { Access, BoardPerson, Board, Diagram, ShareKind, Sheet, User } from '../../types'
+import type { Access, BoardPerson, Board, Diagram, Poll, ShareKind, Sheet, User } from '../../types'
 import { fail } from './api'
 import { grantOf, resolveAccess } from './sharing'
 import { mutate, type DB, type Loader } from './store'
@@ -8,15 +8,16 @@ import { mutate, type DB, type Loader } from './store'
  * e a mesma lista de pessoas. Cada tipo vive na sua tabela, com o link (token) numa coluna própria.
  */
 
-export type SharedTable = 'boards' | 'sheets' | 'diagrams'
-export type SharedResource = Board | Sheet | Diagram
+export type SharedTable = 'boards' | 'sheets' | 'diagrams' | 'polls'
+export type SharedResource = Board | Sheet | Diagram | Poll
 
-export const KIND: Record<SharedTable, ShareKind> = { boards: 'board', sheets: 'sheet', diagrams: 'diagram' }
+export const KIND: Record<SharedTable, ShareKind> = { boards: 'board', sheets: 'sheet', diagrams: 'diagram', polls: 'poll' }
 /** a: com artigo indefinido; o: terminação do género ("encontrado"/"encontrada") */
 export const NOUN: Record<SharedTable, { one: string; the: string; this: string; a: string; o: string; path: string }> = {
   boards: { one: 'quadro', the: 'o quadro', this: 'este quadro', a: 'um quadro', o: 'o', path: '/quadros' },
   sheets: { one: 'planilha', the: 'a planilha', this: 'esta planilha', a: 'uma planilha', o: 'a', path: '/planilhas' },
   diagrams: { one: 'diagrama', the: 'o diagrama', this: 'este diagrama', a: 'um diagrama', o: 'o', path: '/diagramas' },
+  polls: { one: 'inquérito', the: 'o inquérito', this: 'este inquérito', a: 'um inquérito', o: 'o', path: '/inqueritos' },
 }
 
 const list = (db: DB, table: SharedTable) => db[table] as SharedResource[]

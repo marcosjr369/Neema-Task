@@ -2,8 +2,16 @@
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 
+/* a letra pode ser trocada pela aparência da empresa (--app-font, posto no <html>) */
 @theme inline {
-  --font-sans: var(--font-nunito);
+  --font-sans: var(--app-font, var(--font-nunito));
+}
+
+/*
+ * Cores sem "inline": as classes usam var(--color-…), por isso a aparência da empresa troca-as em
+ * tempo real pondo outras variáveis no <html> (ver components/layout/BrandTheme.tsx).
+ */
+@theme {
 
   --color-brand: #7B61FF;
   --color-brand-dark: #5B43D6;
@@ -37,12 +45,9 @@ body {
 }
 
 body {
-  font-family: var(--font-nunito), system-ui, sans-serif;
+  font-family: var(--app-font, var(--font-nunito)), system-ui, sans-serif;
 }
 
-/* O Clerk dá as classes de formFieldInput (h-14!, w-full!, ...) também às caixas de seleção
-   (ex.: "Terminar sessão em todos os outros dispositivos" ao redefinir a palavra-passe).
-   Na mesma camada e com mais especificidade, estas regras ganham e devolvem-lhe o tamanho normal. */
 @layer utilities {
   input[type="checkbox"].cl-formFieldInput,
   input.cl-formFieldCheckboxInput {
@@ -68,10 +73,10 @@ body {
       active:translate-y-[2px] active:border-b-2 disabled:cursor-not-allowed disabled:opacity-100;
   }
   .btn-primary {
-    @apply bg-brand border-brand-dark text-white hover:brightness-105;
+    @apply bg-brand border-brand-dark text-(--color-on-brand,#fff) hover:brightness-105;
   }
   .btn-accent {
-    @apply bg-accent border-accent-dark text-white hover:brightness-105;
+    @apply bg-accent border-accent-dark text-(--color-on-accent,#fff) hover:brightness-105;
   }
   .btn-warm {
     @apply bg-warm border-warm-dark text-white hover:brightness-105;

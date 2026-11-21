@@ -1,4 +1,4 @@
-import { body, fail, handle, requireMember, requireUser } from '../../lib/server/api'
+import { body, fail, handle, requireMemberWith, requireUser } from '../../lib/server/api'
 import { accessOf, loadMine, summaryBase } from '../../lib/server/shared'
 import { shareToken } from '../../lib/server/sharing'
 import { mutate, newId, read } from '../../lib/server/store'
@@ -25,7 +25,8 @@ export const POST = handle(async req => {
   const input = await body<{ title?: string; orgId?: string; visibility?: ShareVisibility; tabs?: Partial<SheetTab>[] }>(req)
   const title = String(input.title ?? '').trim().slice(0, SHEET_LIMITS.title)
   if (!title) fail(400, 'Indica o nome da planilha')
-  const user = input.orgId ? (await requireMember(input.orgId)).user : await requireUser()
+  // na empresa, só quem tem permissão cria (Definições → Permissões)
+  const user = input.orgId ? (await requireMemberWith(input.orgId, 'planilhas')).user : await requireUser()
   const visibility: ShareVisibility = input.orgId ? (input.visibility === 'private' ? 'private' : 'org') : input.visibility === 'link' ? 'link' : 'private'
 
   let tabs: SheetTab[]

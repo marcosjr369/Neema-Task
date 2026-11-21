@@ -3,7 +3,7 @@ import { emailTrusted } from '../../../lib/server/sharing'
 import { read } from '../../../lib/server/store'
 import type { ShareKind } from '../../../types'
 
-/** Quantos quadros, planilhas e diagramas te partilharam que ainda não abriste (ponto no menu) */
+/** Quantos quadros, planilhas, diagramas e inquéritos te partilharam que ainda não abriste (ponto no menu) */
 export const GET = handle(async () => {
   const user = await requireUser()
   const db = await read(async l => {
@@ -12,7 +12,7 @@ export const GET = handle(async () => {
       emailTrusted(user) ? l.load('grants', { email: user.email }) : undefined,
     ])
   })
-  const counts: Record<ShareKind, number> = { board: 0, sheet: 0, diagram: 0 }
+  const counts: Record<ShareKind, number> = { board: 0, sheet: 0, diagram: 0, poll: 0 }
   const seen = new Set<string>()
   for (const g of db.grants) {
     if (seen.has(g.id) || !g.unseen || g.role === 'pending') continue

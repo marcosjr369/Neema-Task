@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import type { Board, CalendarEvent, DeletedUser, Department, Diagram, GamePlay, Member, Org, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
+import type { Board, CalendarEvent, DeletedUser, Department, Diagram, GamePlay, Member, Org, Poll, PollResponse, PresenceSegment, Session, ShareGrant, Sheet, Task, User } from '../../types'
 import * as fileStore from './store-file'
 import * as pgStore from './store-pg'
 
@@ -34,13 +34,15 @@ export type DB = {
   sheets: Sheet[]
   diagrams: Diagram[]
   plays: GamePlay[]
+  polls: Poll[]
+  responses: PollResponse[]
 }
 
 export type Table = keyof DB
-export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets', 'diagrams', 'plays']
+export const TABLES: Table[] = ['users', 'orgs', 'departments', 'members', 'tasks', 'sessions', 'presence', 'push', 'events', 'deleted', 'boards', 'grants', 'sheets', 'diagrams', 'plays', 'polls', 'responses']
 
 export const emptyDB = (): DB => ({
-  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [], diagrams: [], plays: [],
+  users: [], orgs: [], departments: [], members: [], tasks: [], sessions: [], presence: [], push: [], events: [], deleted: [], boards: [], grants: [], sheets: [], diagrams: [], plays: [], polls: [], responses: [],
 })
 
 export type Condition = string | number | null | (string | number)[] | { gte?: number; lte?: number }

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { CaretLeftIcon, CaretRightIcon, PlusIcon } from '@phosphor-icons/react'
 import { useMinute } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
+import { CreateLocked, useCan } from '../components/layout/useCan'
 import { dayTitle, DAY_MS, eventsBase, eventsOn, hhmm, monthGrid, useEvents } from '../lib/calendar'
 import { startOfDay } from '../lib/stats'
 import { EVENT_KINDS, type CalendarEvent } from '../types'
@@ -18,6 +19,8 @@ const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 function Calendar() {
   const now = useMinute()
   const org = useOrg()
+  // marcar reuniões na empresa pode estar reservado (Definições → Permissões)
+  const canCreate = useCan('reunioes')
   const params = useSearchParams()
   const initial = startOfDay(Number(params.get('dia')) || now)
   const [day, setDay] = useState(initial)
@@ -51,10 +54,13 @@ function Calendar() {
             {org?.isManager ? 'As tuas reuniões e as da tua equipa' : org ? 'Agenda reuniões com colegas ou compromissos teus' : 'Reuniões e compromissos, com aviso 5 minutos antes'}
           </p>
         </div>
-        <button onClick={() => setForm({ event: null })} className="btn btn-primary shrink-0">
-          <PlusIcon size={18} /> <span className="hidden sm:inline">Agendar</span>
-        </button>
+        {canCreate && (
+          <button onClick={() => setForm({ event: null })} className="btn btn-primary shrink-0">
+            <PlusIcon size={18} /> <span className="hidden sm:inline">Agendar</span>
+          </button>
+        )}
       </header>
+      <CreateLocked feature="reunioes" />
 
       <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:space-y-0">
         <section className="card p-3 sm:p-4">
@@ -83,7 +89,7 @@ function Calendar() {
                 <button
                   key={d}
                   onClick={() => setDay(d)}
-                  onDoubleClick={() => { setDay(d); setForm({ event: null }) }}
+                  onDoubleClick={() => { setDay(d); if (canCreate) setForm({ event: null }) }}
                   aria-label={`${dayTitle(d)}${list.length ? `, ${list.length} evento${list.length === 1 ? '' : 's'}` : ''}`}
                   aria-pressed={selected}
                   className={`flex min-h-14 flex-col items-stretch rounded-xl border-2 p-1 text-left transition-colors cursor-pointer lg:min-h-24 ${
@@ -127,7 +133,7 @@ function Calendar() {
           <section>
             <div className="mb-2 flex items-baseline justify-between">
               <h2 className="text-lg font-black capitalize text-ink">{day === today ? 'Hoje' : dayTitle(day)}</h2>
-              <button onClick={() => setForm({ event: null })} className="text-sm font-extrabold uppercase tracking-wide text-accent cursor-pointer">+ Agendar</button>
+              {canCreate && <button onClick={() => setForm({ event: null })} className="text-sm font-extrabold uppercase tracking-wide text-accent cursor-pointer">+ Agendar</button>}
             </div>
             {!loaded ? (
               <ListSkeleton rows={3} />

@@ -12,6 +12,7 @@ import type { GameId } from '../../types'
 import Mascot from '../../components/ui/Mascot'
 import Spinner from '../../components/ui/Spinner'
 import BreakOverLock from '../../components/games/BreakOverLock'
+import { FeatureGate } from '../../components/layout/useCan'
 
 const loading = () => <div className="flex min-h-[60dvh] items-center justify-center"><Spinner /></div>
 
@@ -61,7 +62,7 @@ function usePlayTime(game: GameId | null) {
   }, [game, orgId])
 }
 
-export default function GamePage() {
+function GamePageContent() {
   const { jogo } = useParams<{ jogo: string }>()
   usePlayTime(isGameId(jogo) ? jogo : null)
   if (!isGameId(jogo)) {
@@ -75,4 +76,9 @@ export default function GamePage() {
   }
   const Game = GAMES[jogo]
   return <BreakOverLock><Game /></BreakOverLock>
+}
+
+/** A empresa pode tirar esta página a algumas pessoas (Definições → Permissões) */
+export default function GamePage() {
+  return <FeatureGate feature="jogos"><GamePageContent /></FeatureGate>
 }

@@ -1,4 +1,4 @@
-import { body, canManage, fail, handle, requireMember } from '../../../../lib/server/api'
+import { body, canManage, fail, handle, requireFeature, requireMember } from '../../../../lib/server/api'
 import { mutate, newId, read } from '../../../../lib/server/store'
 import { checkAttendees, checkRoom, clashText, cleanEvent, notifyMembers, roomClashes, type EventInput } from '../../../../lib/server/events'
 import type { CalendarEvent } from '../../../../types'
@@ -24,6 +24,7 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
 
 export const POST = handle<{ orgId: string }>(async (req, { orgId }) => {
   const { db, org, me, user } = await requireMember(orgId, { users: true })
+  requireFeature(db, org, me, 'reunioes')
   const input = await body<EventInput>(req)
   const fields = cleanEvent(input)
   const attendeeIds = checkAttendees(db, org, me, input.attendeeIds)

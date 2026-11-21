@@ -2,7 +2,10 @@ import { clerkClient } from '@clerk/nextjs/server'
 import { body, fail, handle } from '../../../../lib/server/api'
 import { confirmPassword, panelData, requirePanel } from '../../../../lib/server/panel'
 import { removeFiles } from '../../../../lib/server/files'
-import { mutate } from '../../../../lib/server/store'
+import { mutate, newId } from '../../../../lib/server/store'
+import { filesOf } from '../../../../lib/server/polls'
+import { pollImages } from '../../../../lib/polls'
+import { brandImages } from '../../../../lib/brand'
 import { userDetail } from '../../../../lib/server/panelDetail'
 import { panelQuery } from '../../../../lib/server/panelQuery'
 import { accountTypeOf } from '../../../../lib/account'
@@ -82,11 +85,16 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
         db.presence = db.presence.filter(p => p.orgId !== org.id)
         db.plays = db.plays.filter(p => p.orgId !== org.id)
         db.events = db.events.filter(e => e.orgId !== org.id)
-        const sharedIds = new Set([...db.boards, ...db.sheets, ...db.diagrams].filter(b => b.orgId === org.id).map(b => b.id))
+        const sharedIds = new Set([...db.boards, ...db.sheets, ...db.diagrams, ...db.polls].filter(b => b.orgId === org.id).map(b => b.id))
         db.boards = db.boards.filter(b => !sharedIds.has(b.id))
         db.sheets = db.sheets.filter(s => !sharedIds.has(s.id))
         db.diagrams = db.diagrams.filter(d => !sharedIds.has(d.id))
+        db.polls.filter(p => sharedIds.has(p.id)).forEach(p => files.push(...pollImages(p)))
+        db.polls = db.polls.filter(p => !sharedIds.has(p.id))
+        db.responses.filter(r => sharedIds.has(r.pollId)).forEach(r => files.push(...filesOf(r)))
+        db.responses = db.responses.filter(r => !sharedIds.has(r.pollId))
         db.grants = db.grants.filter(g => !sharedIds.has(g.resourceId))
+        files.push(...[org.brand, ...db.departments.filter(d => d.orgId === org.id).map(d => d.brand)].flatMap(brandImages))
         db.departments = db.departments.filter(d => d.orgId !== org.id)
         db.members = db.members.filter(x => x.orgId !== org.id)
         db.orgs = db.orgs.filter(o => o.id !== org.id)
@@ -114,12 +122,22 @@ export const DELETE = handle<{ userId: string }>(async (req, { userId }) => {
     db.push = db.push.filter(p => p.userId !== userId)
     db.events = db.events.filter(e => e.ownerId !== userId)
     // quadros, planilhas e diagramas pessoais apagam-se; os da empresa ficam (passam para o administrador da empresa)
-    const own = new Set([...db.boards, ...db.sheets, ...db.diagrams].filter(b => b.ownerId === userId && !b.orgId).map(b => b.id))
+    const own = new Set([...db.boards, ...db.sheets, ...db.diagrams, ...db.polls].filter(b => b.ownerId === userId && !b.orgId).map(b => b.id))
     db.boards = db.boards.filter(b => !own.has(b.id))
     db.sheets = db.sheets.filter(s => !own.has(s.id))
     db.diagrams = db.diagrams.filter(d => !own.has(d.id))
+    db.polls.filter(p => own.has(p.id)).forEach(p => files.push(...pollImages(p)))
+    db.polls = db.polls.filter(p => !own.has(p.id))
+    db.responses.filter(r => own.has(r.pollId)).forEach(r => files.push(...filesOf(r)))
+    db.responses = db.responses.filter(r => !own.has(r.pollId))
+    // as respostas que deu noutros inquéritos ficam, mas sem o nome
+    // nem o id fica: quem votou passa a um código sem dono e os votos nas ideias continuam a contar
+    db.responses.forEach(r => {
+      if (r.userId === userId || r.voter === userId) { r.userId = undefined; r.name = undefined; r.voter = `apagado:${newId()}` }
+      if (r.votes && userId in r.votes) { r.votes[`apagado:${newId()}`] = r.votes[userId]; delete r.votes[userId] }
+    })
     db.grants = db.grants.filter(g => !own.has(g.resourceId) && g.userId !== userId && g.email !== user.email)
-    for (const r of [...db.boards, ...db.sheets, ...db.diagrams]) {
+    for (const r of [...db.boards, ...db.sheets, ...db.diagrams, ...db.polls]) {
       if (r.ownerId === userId && r.orgId) {
         const admin = db.members.find(m => m.orgId === r.orgId && m.role === 'admin' && m.status === 'activo' && m.userId)
         if (admin?.userId) r.ownerId = admin.userId

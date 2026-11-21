@@ -11,6 +11,7 @@ import { readDiagramFile } from '../lib/diagrams'
 import { TEMPLATES, type TemplateId } from '../components/diagrams/templates'
 import { useApp } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
+import { CreateLocked, useCan } from '../components/layout/useCan'
 import type { DiagramSummary, ShareVisibility } from '../types'
 import { CardGridSkeleton } from '../components/ui/Skeleton'
 import { Busy } from '../components/ui/Spinner'
@@ -167,6 +168,8 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
 }
 
 export default function DiagramsPage() {
+  // no espaço da empresa, criar pode estar reservado a algumas pessoas (Definições → Permissões)
+  const canCreate = useCan('diagramas')
   const org = useOrg()
   const [diagrams, setDiagrams] = useState<DiagramSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -196,8 +199,10 @@ export default function DiagramsPage() {
           <h1 className="text-2xl font-black text-ink">Diagramas</h1>
           <p className="text-sm font-bold text-muted">Fluxogramas, organogramas, processos e esquemas, desenhados em equipa</p>
         </div>
-        <button onClick={() => setCreating(true)} className="btn btn-primary shrink-0 px-4 py-2.5"><PlusIcon size={18} /> <span className="max-sm:hidden">Novo diagrama</span></button>
+        {canCreate && <button onClick={() => setCreating(true)} className="btn btn-primary shrink-0 px-4 py-2.5"><PlusIcon size={18} /> <span className="max-sm:hidden">Novo diagrama</span></button>}
       </header>
+
+      <CreateLocked feature="diagramas" />
 
       {error && !diagrams && <p className="rounded-2xl bg-danger-light p-4 font-bold text-danger-dark">{error}</p>}
       {!diagrams && !error && <CardGridSkeleton count={6} height={190} />}
@@ -207,7 +212,7 @@ export default function DiagramsPage() {
           <Mascot size={96} />
           <h2 className="mt-3 text-xl font-black text-ink">Ainda não tens diagramas</h2>
           <p className="mt-1 max-w-sm font-semibold text-muted">Desenha um fluxo de trabalho, um organograma ou um processo, ou importa um ficheiro do draw.io, e partilha-o com quem precisa.</p>
-          <button onClick={() => setCreating(true)} className="btn btn-primary mt-5"><PlusIcon size={18} /> Novo diagrama</button>
+          {canCreate && <button onClick={() => setCreating(true)} className="btn btn-primary mt-5"><PlusIcon size={18} /> Novo diagrama</button>}
         </div>
       )}
       {org && <Section title={`Diagramas de ${org.org.name}`} hint="Os colegas vêem-nos aqui, salvo os privados." diagrams={orgDiagrams} />}

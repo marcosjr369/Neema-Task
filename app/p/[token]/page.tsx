@@ -8,11 +8,12 @@ import BoardCanvas from '../../components/boards/BoardCanvas'
 import CardDialog from '../../components/boards/CardDialog'
 import PublicSheet from '../../components/sheets/PublicSheet'
 import PublicDiagram from '../../components/diagrams/PublicDiagram'
+import PublicPoll from '../../components/polls/PublicPoll'
 import Mascot from '../../components/ui/Mascot'
 import { api, ApiError, errorText } from '../../lib/api'
 import { boardBackground } from '../../lib/boards'
 import { loginUrl } from '../../lib/account'
-import type { BoardPerson, BoardView, DiagramView, ShareKind, SheetView } from '../../types'
+import type { BoardPerson, BoardView, DiagramView, PollDetail, ShareKind, SheetView } from '../../types'
 import { Busy } from '../../components/ui/Spinner'
 
 type Res =
@@ -20,12 +21,14 @@ type Res =
   | { status: 'ok'; kind: 'board'; board: BoardView; people: BoardPerson[]; signedIn: boolean }
   | { status: 'ok'; kind: 'sheet'; sheet: SheetView; signedIn: boolean }
   | { status: 'ok'; kind: 'diagram'; diagram: DiagramView; signedIn: boolean }
+  | { status: 'ok'; kind: 'poll'; detail: PollDetail; signedIn: boolean }
   | { status: 'password' | 'private'; kind: ShareKind; signedIn: boolean; requested: boolean }
 
 const WORDS: Record<ShareKind, { the: string; this: string; private: string; place: string; open: string }> = {
   board: { the: 'o quadro', this: 'este quadro', private: 'Quadro privado', place: 'nos teus Quadros', open: 'Abrir quadro' },
   sheet: { the: 'a planilha', this: 'esta planilha', private: 'Planilha privada', place: 'nas tuas Planilhas', open: 'Abrir planilha' },
   diagram: { the: 'o diagrama', this: 'este diagrama', private: 'Diagrama privado', place: 'nos teus Diagramas', open: 'Abrir diagrama' },
+  poll: { the: 'o inquérito', this: 'este inquérito', private: 'Inquérito privado', place: 'nos teus Inquéritos', open: 'Abrir inquérito' },
 }
 
 const noop = () => undefined
@@ -34,7 +37,7 @@ function Center({ children }: { children: React.ReactNode }) {
   return <div className="flex min-h-dvh flex-col items-center justify-center bg-snow px-6 py-12 text-center">{children}</div>
 }
 
-/** Link de partilha: abre o quadro, a planilha ou o diagrama só para leitura, pede a senha, ou deixa pedir acesso */
+/** Link de partilha: abre o quadro, a planilha ou o diagrama só para leitura (ou responde ao inquérito), pede a senha, ou deixa pedir acesso */
 export default function SharedPage() {
   const { token } = useParams<{ token: string }>()
   const router = useRouter()
@@ -44,6 +47,8 @@ export default function SharedPage() {
   const [pwError, setPwError] = useState('')
   const [busy, setBusy] = useState(false)
   const [cardId, setCardId] = useState<string | null>(null)
+  // chave da senha (só em memória): os inquéritos precisam dela também para enviar a resposta
+  const [key, setKey] = useState<string | null>(null)
 
   const load = useCallback(async (k: string | null) => {
     try {
@@ -71,6 +76,7 @@ export default function SharedPage() {
     try {
       const { key: k } = await api<{ key: string }>(`/api/partilha/${token}`, { body: { password } })
       // a chave da senha fica só em memória (a app não guarda nada no browser)
+      setKey(k)
       await load(k)
     } catch (err) {
       setPwError(errorText(err, 'Não foi possível confirmar a senha. Tenta outra vez.'))
@@ -138,6 +144,7 @@ export default function SharedPage() {
     )
   }
 
+  if (res.kind === 'poll') return <PublicPoll token={token} detail={res.detail} signedIn={res.signedIn} shareKey={key} />
   if (res.kind === 'diagram') return <PublicDiagram diagram={res.diagram} signedIn={res.signedIn} />
   if (res.kind === 'sheet') return <PublicSheet sheet={res.sheet} signedIn={res.signedIn} />
 

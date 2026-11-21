@@ -1,8 +1,7 @@
 import {
   CalculatorIcon, CardsThreeIcon, GridFourIcon, HashIcon, PaletteIcon, TextAaIcon, WindIcon, XCircleIcon, type Icon,
 } from '@phosphor-icons/react'
-import type { GameId, GameStats } from '../../types'
-import { GAME_RULES, formatScore } from '../../lib/games'
+import type { GameId } from '../../types'
 
 export type GameGroup = 'classicos' | 'rapidos'
 
@@ -129,9 +128,3 @@ export const gameMeta = (id: GameId) => GAMES.find(g => g.id === id)!
 const DARK: Record<string, string> = { '#12B5A6': '#0B7F75', '#7B61FF': '#6247E8', '#FF8A3D': '#B8530F', '#4C7DFF': '#2F5FE6', '#EC5BA6': '#C93F87' }
 export const gameDark = (id: GameId) => DARK[gameMeta(id).color] ?? '#6247E8'
 
-/** Linha curta para o cartão: o recorde ou quantas vezes já jogou */
-export function statsLine(id: GameId, stats: GameStats | undefined) {
-  if (!stats) return 'Ainda não jogaste'
-  if (GAME_RULES[id].better === 'time') return `${stats.plays} ${stats.plays === 1 ? 'vez' : 'vezes'}`
-  return `Recorde: ${formatScore(id, stats.best)}`
-}

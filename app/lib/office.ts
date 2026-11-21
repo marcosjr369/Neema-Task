@@ -86,8 +86,6 @@ export function meetingRoom(m: Pick<Member, 'meeting'>, map: OfficeMap | undefin
   return map?.rooms.find(r => r.id === mt.roomId)
 }
 
-/** Está numa reunião (presencial ou online) agora */
-export const inMeeting = (m: Pick<Member, 'meeting'>, now = Date.now()) => !!m.meeting && now < m.meeting.until
 
 /**
  * Onde está a pessoa agora. Só conta quem está activo e online. Numa reunião presencial está na

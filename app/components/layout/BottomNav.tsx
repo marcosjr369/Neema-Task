@@ -8,6 +8,7 @@ import { useAccount } from '../../context/AccountContext'
 import { useApp } from '../../context/AppContext'
 import { useOrg } from '../../context/OrgContext'
 import { isActivePath, mobileMore, mobileNav, navModeOf, type NavGroup } from '../../lib/nav'
+import { useHiddenNav } from './useCan'
 import Modal from '../ui/Modal'
 import LogoutButton from '../account/LogoutButton'
 import { unseenFor, useUnseenShares, type UnseenCounts } from './useUnseenShares'
@@ -26,7 +27,8 @@ export default function BottomNav() {
   const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done' && org.canReview(t)).length ?? 0
   const reviewsHref = org?.isCompany ? '/empresa/tarefas' : '/empresa'
   const mode = navModeOf(org)
-  const more = mobileMore(mode, !!org)
+  const hidden = useHiddenNav()
+  const more = mobileMore(mode, !!org).map(g => ({ ...g, items: g.items.filter(i => !hidden.has(i.href)) })).filter(g => g.items.length)
   const moreItems = more.flatMap(g => g.items)
   const moreActive = moreItems.some(i => isActivePath(pathname, i.href, i.exact))
   const moreNews = moreItems.some(i => unseenFor(unseen, i.href) > 0)
@@ -35,7 +37,7 @@ export default function BottomNav() {
     <>
       <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t-2 border-line bg-white pb-[env(safe-area-inset-bottom)] sm:border-x-2 lg:hidden" aria-label="Navegação principal">
         <ul className="flex items-stretch justify-around px-1 py-1.5">
-          {mobileNav(mode).map(({ href, label, icon: Icon, color, exact }) => {
+          {mobileNav(mode).filter(i => !hidden.has(i.href)).map(({ href, label, icon: Icon, color, exact }) => {
             const active = isActivePath(pathname, href, exact)
             const dot = (href === '/foco' && timer) || (href === reviewsHref && reviews > 0)
             return (

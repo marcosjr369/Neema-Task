@@ -10,7 +10,7 @@ cp .env.example .env.local   # opcional: credenciais do Google
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000). Sem credenciais Google, o ecrã de entrada mostra um login só com nome e email (útil para testar com várias pessoas: usa janelas privadas ou browsers diferentes).
+Abre [http://localhost:3002](http://localhost:3002). Sem credenciais Google, o ecrã de entrada mostra um login só com nome e email (útil para testar com várias pessoas: usa janelas privadas ou browsers diferentes).
 
 ## Fluxo de entrada
 
@@ -41,8 +41,8 @@ O tipo escolhe-se uma vez e não se mistura (`User.accountType`):
 
 | Papel | Pode |
 |---|---|
-| Administrador | Tudo: funcionários, departamentos, relatórios, definições |
-| Supervisor | Atribuir tarefas e aprovar trabalho no(s) seu(s) departamento(s), ver o tempo da equipa |
+| Administrador | Tudo: funcionários, departamentos, relatórios, definições, permissões, aparência |
+| Supervisor | Atribuir tarefas e aprovar trabalho no(s) seu(s) departamento(s), ver o tempo da equipa, mudar a aparência dos seus departamentos |
 | Funcionário | As suas tarefas, cronómetro, anexos, estado, ranking e o próprio relatório |
 
 ### Fluxo das tarefas de empresa
@@ -66,20 +66,40 @@ Estados: a trabalhar, reunião, formação, pausa, almoço, ausente. O cronómet
   - Com a app fechada: notificação **push** enviada pelo servidor (precisa das chaves `VAPID_*` no `.env.local` e de activar em Perfil → Definições → "Lembretes com a app fechada"). No iPhone só funciona com a app instalada no ecrã principal (iOS 16.4+).
   - O servidor verifica a cada 5 minutos ([instrumentation.ts](instrumentation.ts)). Em alojamento sem servidor sempre ligado (ex.: Vercel), agenda `GET /api/cron/reminders` a cada 5 min com `Authorization: Bearer <CRON_SECRET>`.
 
+## Colaborar
+
+Recursos partilháveis com o mesmo modelo de partilha (empresa inteira ou privado; pessoais por link ou com senha; convites para ver/editar; pedidos de acesso): **Quadros** (listas e cartões), **Planilhas** (grelha com fórmulas, importa/exporta .xlsx e .csv), **Diagramas** (editor do diagrams.net) e **Inquéritos**.
+
+**Inquéritos** (`/inqueritos`): votação, eleição (voto secreto), formulário, concurso (candidaturas com ficheiros e júri opcional), ideias (propor e votar) e agendar (encontrar a melhor data). Começam em rascunho e publicam-se com aviso aos colegas.
+- Formulário ao estilo do Microsoft Forms: secções/páginas, ramificação ("Mostrar só se"), textos e imagens no meio, classificação com estrelas, NPS, ordenação, grelha (Likert), ficheiros, texto formatado e um separador **Aspeto** (cor, fundo, imagem de cabeçalho, letra).
+- Respostas anónimas a sério: quem votou guarda-se como um código cifrado (HMAC), por isso nem o dono nem os administradores sabem quem respondeu o quê.
+- Pessoas sem conta respondem pelo link (`/p/<token>`) quando o inquérito o permite.
+- Resultados ao vivo, participação da equipa com "Lembrar quem falta", exportação para Planilha ou CSV.
+
+## Personalizar a empresa
+
+Empresa → **Definições** tem três separadores:
+- **Geral**: nome, sector, domínio, meta diária, ranking de empresas.
+- **Permissões**: para cada funcionalidade (criar inquéritos, quadros, planilhas, diagramas, marcar reuniões, abrir inquéritos a pessoas de fora, jogos, ranking), quem pode usar: todos, chefias e administradores, só administradores, ou pessoas e departamentos escolhidos. Os administradores podem sempre tudo; o servidor recusa o que não é permitido ([permissions.ts](app/lib/permissions.ts)).
+- **Aparência**: logótipo, cores (principal, secundária, texto), tipo de letra, tamanho do texto e fundos (geral ou por página). A empresa define a base e cada departamento pode mudar uma parte (as chefias mudam a dos seus departamentos). A cor da Udacha é sempre a predefinida e há "Redefinir" para voltar ao design inicial ([brand.ts](app/lib/brand.ts)).
+
+As cores da app são variáveis CSS (`@theme` em [globals.css](app/globals.css), sem `inline`) que a aparência troca no `<html>`. **Depois de mexer no `globals.css`, reinicia o `npm run dev`**: o Turbopack pode continuar a servir a versão antiga.
+
 ## Estrutura
 
 ```
 app/
-  api/                 route handlers (auth, me, personal, orgs, files, ranking)
+  api/                 route handlers (só acessíveis pelo proxy /api/proxy, ver lib/server/routes.ts)
   components/
     layout/            AppShell, navegação lateral/inferior, barra de topo, painel direito
     ui/                Mascot, ícones (categorias/estados), Avatar, Modal, Confetti, Splash…
     tasks/             item, formulário e estado de revisão das tarefas
     focus/             mini-cronómetro, alerta de pausa, celebração
     account/           troca de espaço, estado de presença, consentimento
+    boards/ sheets/ diagrams/ polls/   editores dos recursos partilháveis
   context/             AccountContext (sessão, definições), AppContext (tarefas/tempo), OrgContext (empresa)
   lib/                 regras partilhadas (pontos, estatísticas, empresa) e lib/server (dados, auth, permissões)
-  empresa/ entrar/ perfil/ ranking/ tarefas/ foco/ estatisticas/   páginas
+  empresa/ entrar/ perfil/ ranking/ tarefas/ foco/ estatisticas/ quadros/ planilhas/ diagramas/ inqueritos/ p/   páginas
 ```
 
 Ícones: [Phosphor](https://phosphoricons.com) (traço "bold" por omissão, "duotone" nos destaques). As categorias e os estados de presença têm ícone próprio em `components/ui/icons.tsx`.

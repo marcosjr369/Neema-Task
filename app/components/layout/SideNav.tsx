@@ -9,7 +9,6 @@ import { useOrg } from '../../context/OrgContext'
 import { isActivePath, navGroups, navModeOf, type NavItem } from '../../lib/nav'
 import { COMPANY_ACCOUNT_LABEL } from '../../types'
 import { levelInfo, totalXp } from '../../lib/stats'
-import Mascot from '../ui/Mascot'
 import Avatar from '../ui/Avatar'
 import InstallCard from '../ui/InstallCard'
 import WorkspaceSwitcher from '../account/WorkspaceSwitcher'
@@ -17,6 +16,8 @@ import PresencePicker from '../account/PresencePicker'
 import { SeatButton } from '../office/SeatGate'
 import LogoutButton from '../account/LogoutButton'
 import { unseenFor, useUnseenShares } from './useUnseenShares'
+import { PoweredBy, SideLogo } from './CompanyLogo'
+import { useHiddenNav } from './useCan'
 
 function NavLink({ item, badge }: { item: NavItem; badge?: React.ReactNode }) {
   const pathname = usePathname()
@@ -50,6 +51,7 @@ export default function SideNav() {
   const reviews = org?.teamTasks.filter(t => t.review?.status === 'pending' && t.status === 'done' && org.canReview(t)).length ?? 0
   const { level } = levelInfo(totalXp(sessions, tasks, history))
   const unseen = useUnseenShares(!!user)
+  const hidden = useHiddenNav()
 
   const badgeFor = (href: string) => {
     if (href === '/foco' && timer) return <span className="ml-auto h-2.5 w-2.5 animate-pulse rounded-full bg-danger" aria-label="Cronómetro a correr" />
@@ -66,10 +68,7 @@ export default function SideNav() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto border-r-2 border-line bg-white px-4 py-5 lg:flex">
-      <Link href="/" className="mb-5 flex items-center gap-2 px-2">
-        <Mascot size={38} />
-        <span className="text-xl font-black tracking-tight text-brand">udacha</span>
-      </Link>
+      <SideLogo />
 
       <div className="space-y-2">
         <WorkspaceSwitcher />
@@ -82,7 +81,7 @@ export default function SideNav() {
       </button>
 
       <nav className="mt-5 space-y-5" aria-label="Navegação principal">
-        {navGroups(navModeOf(org), !!org).map(group => (
+        {navGroups(navModeOf(org), !!org).map(g => ({ ...g, items: g.items.filter(i => !hidden.has(i.href)) })).filter(g => g.items.length).map(group => (
           <div key={group.title}>
             <p className="mb-1.5 px-3 text-[11px] font-black uppercase tracking-[0.14em] text-muted">{group.title}</p>
             <ul className="space-y-1">
@@ -111,6 +110,7 @@ export default function SideNav() {
         <p className="px-2 text-xs font-semibold text-muted">
           Atalho: <kbd className="rounded border-2 border-line px-1.5 font-bold">N</kbd> nova tarefa
         </p>
+        <PoweredBy />
       </div>
     </aside>
   )

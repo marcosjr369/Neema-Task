@@ -1,4 +1,4 @@
-import { body, fail, handle, requireMember, requireUser } from '../../lib/server/api'
+import { body, fail, handle, requireMemberWith, requireUser } from '../../lib/server/api'
 import { DIAGRAM_LIMITS, EMPTY_DIAGRAM, cleanXml } from '../../lib/server/diagrams'
 import { accessOf, loadMine, summaryBase } from '../../lib/server/shared'
 import { shareToken } from '../../lib/server/sharing'
@@ -26,7 +26,8 @@ export const POST = handle(async req => {
   const title = String(input.title ?? '').trim().slice(0, DIAGRAM_LIMITS.title)
   if (!title) fail(400, 'Indica o nome do diagrama')
   const xml = input.xml ? cleanXml(input.xml) : EMPTY_DIAGRAM
-  const user = input.orgId ? (await requireMember(input.orgId)).user : await requireUser()
+  // na empresa, só quem tem permissão cria (Definições → Permissões)
+  const user = input.orgId ? (await requireMemberWith(input.orgId, 'diagramas')).user : await requireUser()
   const visibility: ShareVisibility = input.orgId ? (input.visibility === 'private' ? 'private' : 'org') : input.visibility === 'link' ? 'link' : 'private'
 
   const now = Date.now()

@@ -83,6 +83,9 @@ function secret() {
   return g.__neemaShareSecret
 }
 
+/** Código que não se consegue reverter sem o segredo do servidor (ex.: quem votou num inquérito anónimo) */
+export const hmac = (text: string) => crypto.createHmac('sha256', secret()).update(text).digest('base64url')
+
 const KEY_TTL = 12 * 3600 * 1000
 
 const sign = (resourceId: string, p: NonNullable<Sharing['password']>, exp: number) =>
@@ -104,17 +107,28 @@ export function validKey(resourceId: string, p: Sharing['password'], key: string
   return got.length === want.length && crypto.timingSafeEqual(got, want)
 }
 
-/** Tentativas de senha: 8 em cada 15 minutos por IP e recurso */
-export function passwordAttempt(req: Request, resourceId: string) {
-  const tries = (g.__neemaPwTries ??= new Map())
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || req.headers.get('x-real-ip') || '?'
-  const key = `${ip}:${resourceId}`
-  const now = Date.now()
-  let t = tries.get(key)
-  if (!t || now - t.start > 15 * 60 * 1000) {
-    t = { start: now, n: 0 }
-    tries.set(key, t)
-    if (tries.size > 5000) for (const [k, v] of tries) if (now - v.start > 15 * 60 * 1000) tries.delete(k)
-  }
-  if (++t.n > 8) fail(429, 'Demasiadas tentativas. Espera alguns minutos.')
+/**
+ * IP de quem pede. O x-real-ip é posto pela plataforma (Vercel) e o cliente não o consegue trocar;
+ * o primeiro valor do x-forwarded-for pode ser inventado, por isso só serve de recurso.
+ */
+export function clientIp(req: Request) {
+  return req.headers.get('x-real-ip')?.trim() || req.headers.get('x-forwarded-for')?.split(',').pop()?.trim() || '?'
 }
+
+/** No máximo "max" tentativas por janela, por IP e recurso (memória do servidor) */
+export function limitTries(req: Request, bucket: string, resourceId: string, max: number, windowMs: number, message: string) {
+  const all = (g.__neemaPwTries ??= new Map())
+  const key = `${bucket}:${clientIp(req)}:${resourceId}`
+  const now = Date.now()
+  let t = all.get(key)
+  if (!t || now - t.start > windowMs) {
+    t = { start: now, n: 0 }
+    all.set(key, t)
+    if (all.size > 5000) for (const [k, v] of all) if (now - v.start > 15 * 60 * 1000) all.delete(k)
+  }
+  if (++t.n > max) fail(429, message)
+}
+
+/** Tentativas de senha: 8 em cada 15 minutos por IP e recurso */
+export const passwordAttempt = (req: Request, resourceId: string) =>
+  limitTries(req, 'pw', resourceId, 8, 15 * 60 * 1000, 'Demasiadas tentativas. Espera alguns minutos.')

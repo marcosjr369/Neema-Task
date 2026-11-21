@@ -11,8 +11,9 @@ export default function CompanySectionPage() {
   const section = SECTIONS.find(s => s.id === secao && s.id !== 'geral')
 
   useEffect(() => {
-    if (!section) router.replace('/empresa')
-  }, [section, router])
+    if (secao === 'aparencia') router.replace('/empresa/definicoes?tab=aparencia')
+    else if (!section) router.replace('/empresa')
+  }, [section, secao, router])
 
   return section ? <CompanyPage section={section.id} /> : null
 }

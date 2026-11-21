@@ -26,6 +26,8 @@ import WelcomeTour from '../tutorial/WelcomeTour'
 import InviteDialog from '../account/InviteDialog'
 import { PresenceSync } from '../account/PresenceSync'
 import Splash from '../ui/Splash'
+import BrandTheme, { useBrandBackground } from './BrandTheme'
+import { CompanyLogoBar } from './CompanyLogo'
 
 // a página de entrada só é para quem não tem sessão: não pesa em quem já entrou
 const Landing = dynamic(() => import('../landing/Landing'), { loading: () => <Splash /> })
@@ -33,7 +35,7 @@ import Mascot from '../ui/Mascot'
 import { registerServiceWorker } from '../../lib/pwa'
 import { syncPush } from '../../lib/push'
 
-const WIDE = ['/mapa', '/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/tutorial', '/jogos']
+const WIDE = ['/mapa', '/tarefas', '/estatisticas', '/ranking', '/empresa', '/calendario', '/quadros', '/planilhas', '/diagramas', '/inqueritos', '/tutorial', '/jogos']
 /** páginas que ocupam a largura toda (o quadro desloca-se na horizontal) */
 const FULL = (p: string) => p === '/tarefas' || p.startsWith('/quadros/') || p.startsWith('/planilhas/') || p.startsWith('/diagramas/')
 const IMMERSIVE = ['/foco', '/entrar', '/convite']
@@ -49,6 +51,8 @@ function Shell({ children }: { children: ReactNode }) {
   const redirect = isCompany && PERSONAL_ONLY_PATHS.includes(pathname)
   const immersive = IMMERSIVE.some(p => pathname.startsWith(p))
   const wide = WIDE.some(p => pathname === p || pathname.startsWith(`${p}/`))
+  // fundo escolhido pela empresa para esta página (cor, fundo pronto ou imagem)
+  const pageBackground = useBrandBackground()
   const showFab = isCompany ? pathname === '/empresa' || pathname === '/empresa/tarefas' : pathname === '/' || pathname === '/tarefas'
 
   useEffect(() => {
@@ -81,13 +85,14 @@ function Shell({ children }: { children: ReactNode }) {
       ) : (
         <>
           <SideNav />
-          <div className="lg:pl-64">
+          <div className="lg:pl-64" style={pageBackground ? { background: pageBackground, backgroundAttachment: 'fixed' } : undefined}>
             <div
               className={`mx-auto flex lg:gap-8 lg:px-8 ${
                 FULL(pathname) ? 'lg:max-w-none' : wide ? 'lg:max-w-6xl 2xl:max-w-[1600px]' : 'lg:max-w-5xl xl:max-w-6xl 2xl:max-w-[1440px]'
               }`}
             >
-              <div className="relative mx-auto flex min-h-dvh w-full min-w-0 max-w-lg flex-col bg-white sm:border-x-2 sm:border-line lg:mx-0 lg:max-w-none lg:flex-1 lg:border-x-0">
+              <div className={`relative mx-auto flex min-h-dvh w-full min-w-0 max-w-lg flex-col sm:border-x-2 sm:border-line lg:mx-0 lg:max-w-none lg:flex-1 lg:border-x-0 ${pageBackground ? '' : 'bg-white'}`}>
+                <CompanyLogoBar />
                 <main className="flex-1 pb-40 lg:pb-12">{redirect ? null : children}</main>
               </div>
               {!wide && !isCompany && <RightPanel />}
@@ -115,6 +120,7 @@ function Shell({ children }: { children: ReactNode }) {
         </>
       )}
 
+      {org && <BrandTheme />}
       <TaskSheet />
       <BreakPrompt />
       <CelebrationOverlay />

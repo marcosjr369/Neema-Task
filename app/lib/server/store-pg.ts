@@ -64,6 +64,13 @@ create index if not exists plays_org_start on plays (org_id, start_at);
 create index if not exists diagrams_org on diagrams (org_id);
 create index if not exists diagrams_owner on diagrams (owner_id);
 create unique index if not exists diagrams_token on diagrams (token);
+create table if not exists polls (id text primary key, org_id text, owner_id text not null, token text, data jsonb not null);
+create index if not exists polls_org on polls (org_id);
+create index if not exists polls_owner on polls (owner_id);
+create unique index if not exists polls_token on polls (token);
+create table if not exists responses (id text primary key, poll_id text not null, voter text, data jsonb not null);
+create index if not exists responses_poll on responses (poll_id);
+create index if not exists responses_voter on responses (voter);
 create table if not exists grants (id text primary key, resource_id text not null, email text, user_id text, data jsonb not null);
 create index if not exists grants_resource on grants (resource_id);
 create index if not exists grants_email on grants (email);
@@ -85,10 +92,12 @@ alter table grants enable row level security;
 alter table sheets enable row level security;
 alter table diagrams enable row level security;
 alter table plays enable row level security;
+alter table polls enable row level security;
+alter table responses enable row level security;
 `
 
-// "__neemaSchema8": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
-const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema8?: Promise<void>; __neemaSlots?: Slots }
+// "__neemaSchema9": muda de nome quando o esquema ganha tabelas, para o servidor em execução as criar
+const g = globalThis as unknown as { __neemaSql?: Sql; __neemaSchema9?: Promise<void>; __neemaSlots?: Slots }
 
 const POOL_MAX = Number(process.env.DATABASE_POOL_MAX) || 5
 
@@ -136,11 +145,11 @@ function client(): Sql {
 }
 
 function ready(): Promise<void> {
-  g.__neemaSchema8 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
-    g.__neemaSchema8 = undefined
+  g.__neemaSchema9 ??= withSlot(() => client().unsafe(SCHEMA).then(() => undefined)).catch(err => {
+    g.__neemaSchema9 = undefined
     throw err
   })
-  return g.__neemaSchema8
+  return g.__neemaSchema9
 }
 
 function condition(sql: Sql, col: string, value: Condition) {

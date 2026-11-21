@@ -1,5 +1,5 @@
 import {
-  ArmchairIcon, CalendarBlankIcon, ChartBarIcon, FlowArrowIcon, KanbanIcon, ListChecksIcon, PuzzlePieceIcon, RocketLaunchIcon, TableIcon, TimerIcon, TrophyIcon,
+  ArmchairIcon, PaletteIcon, CalendarBlankIcon, ChartBarIcon, CheckSquareIcon, FlowArrowIcon, KanbanIcon, ListChecksIcon, PuzzlePieceIcon, RocketLaunchIcon, TableIcon, TimerIcon, TrophyIcon,
   UsersThreeIcon, type Icon,
 } from '@phosphor-icons/react'
 import type { NavMode } from './nav'
@@ -9,7 +9,7 @@ import type { NavMode } from './nav'
  * e as mesmas fases em texto. As fases e as cenas andam a par: a fase N é o passo N da cena.
  */
 
-export type LessonId = 'inicio' | 'tarefas' | 'foco' | 'calendario' | 'quadros' | 'planilhas' | 'diagramas' | 'estatisticas' | 'ranking' | 'jogos' | 'equipa' | 'espacos'
+export type LessonId = 'inicio' | 'tarefas' | 'foco' | 'calendario' | 'quadros' | 'planilhas' | 'diagramas' | 'inqueritos' | 'estatisticas' | 'ranking' | 'jogos' | 'equipa' | 'aparencia' | 'espacos'
 
 export type Lesson = {
   id: LessonId
@@ -42,7 +42,7 @@ export const LESSONS: Lesson[] = [
     href: '/',
     modes: ALL,
     steps: [
-      { title: 'O menu', text: 'À esquerda (no telemóvel, em baixo) tens todas as secções: Tarefas, Foco, Calendário, Quadros, Planilhas, Diagramas e o teu progresso.' },
+      { title: 'O menu', text: 'À esquerda (no telemóvel, em baixo) tens todas as secções: Tarefas, Foco, Calendário, Quadros, Planilhas, Diagramas, Inquéritos e o teu progresso.' },
       { title: 'Criar depressa', text: 'Carrega na tecla N em qualquer página para criar uma tarefa nova. No telemóvel, usa o botão redondo com o +.' },
       { title: 'O teu dia', text: 'O painel da direita mostra o tempo focado hoje, a tua sequência de dias e o teu nível.' },
       { title: 'Ajuda sempre à mão', text: 'Podes voltar a este tutorial quando quiseres, no menu, em Tutorial.' },
@@ -145,6 +145,22 @@ export const LESSONS: Lesson[] = [
     ],
   },
   {
+    id: 'inqueritos',
+    title: 'Inquéritos',
+    summary: 'Votações, eleições, formulários, concursos, ideias e datas',
+    icon: CheckSquareIcon,
+    color: '#4C7DFF',
+    light: '#E6EDFF',
+    href: '/inqueritos',
+    modes: ALL,
+    steps: [
+      { title: 'Escolher o tipo', text: 'Em Novo inquérito, escolhe Votação, Eleição, Formulário, Concurso, Ideias ou Agendar. "Usar o exemplo" já traz tudo preenchido.' },
+      { title: 'Perguntas e aspeto', text: 'Em Perguntas, junta escolhas, estrelas, NPS, grelhas, secções, textos e imagens; "Mostrar só se" cria ramificações. Em Aspeto escolhes cor, fundo, imagem de cabeçalho e tipo de letra.' },
+      { title: 'Publicar', text: 'Carrega em Publicar e liga "Avisar os colegas". Para pessoas de fora, liga "Aceitar respostas pelo link, sem conta" em Definições.' },
+      { title: 'Resultados', text: 'Acompanha os Resultados ao vivo e a Participação. Usa "Lembrar quem falta" ou "Abrir em Planilha".' },
+    ],
+  },
+  {
     id: 'estatisticas',
     title: 'Estatísticas',
     summary: 'Ver onde vai o teu tempo e como estás a evoluir',
@@ -205,7 +221,23 @@ export const LESSONS: Lesson[] = [
       { title: 'Convidar', text: 'Em Funcionários, carrega em Convidar para a equipa e envia o email ou copia o link de convite.' },
       { title: 'Departamentos', text: 'Em Departamentos vês a estrutura da empresa em árvore. Carrega no + debaixo de um departamento para criar um subdepartamento e escolhe o chefe e os adjuntos.' },
       { title: 'Atribuir e aprovar', text: 'Em Tarefas da equipa atribuis trabalho. As tarefas que precisam de aprovação esperam pelo teu Aprovar.' },
-      { title: 'Relatórios', text: 'Acompanha o tempo, as tarefas e a presença da equipa em Relatórios e Recordes.' },
+      { title: 'Relatórios e permissões', text: 'Acompanha a equipa em Relatórios e Recordes. Em Definições → Permissões escolhes quem pode criar inquéritos, quadros, reuniões, usar os jogos…' },
+    ],
+  },
+  {
+    id: 'aparencia',
+    title: 'Aparência da empresa',
+    summary: 'Logótipo, cores, letra e fundos com a cara da empresa',
+    icon: PaletteIcon,
+    color: '#EC5BA6',
+    light: '#FCE6F2',
+    href: '/empresa/definicoes?tab=aparencia',
+    modes: ['manager', 'admin', 'company'],
+    steps: [
+      { title: 'Logótipo', text: 'Em Empresa → Definições → Aparência, os administradores enviam o logótipo: aparece no topo do menu de todos.' },
+      { title: 'Cores', text: 'Escolhe a Cor principal e a Cor secundária. A app inteira muda logo, para veres antes de guardar.' },
+      { title: 'Letra e tamanho', text: 'Escolhe o tipo de letra e o Tamanho do texto que combinam com a empresa.' },
+      { title: 'Fundos e departamentos', text: 'Põe um fundo em todas as páginas ou em cada uma. As chefias mudam só o seu departamento; o resto vem da empresa. Carrega em Guardar.' },
     ],
   },
   {

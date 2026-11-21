@@ -13,6 +13,7 @@ import Avatar from '../components/ui/Avatar'
 import Mascot from '../components/ui/Mascot'
 import type { OrgRankEntry, RankEntry, RankMetric } from '../types'
 import { ListSkeleton } from '../components/ui/Skeleton'
+import { FeatureGate } from '../components/layout/useCan'
 
 type Period = 'hoje' | 'semana' | 'mes' | 'sempre'
 type Scope = 'pessoas' | 'empresas'
@@ -113,7 +114,7 @@ function OrgList({ list, metric }: { list: OrgRankEntry[] | null; metric: RankMe
   )
 }
 
-export default function RankingPage() {
+function RankingPageContent() {
   const { user } = useAccount()
   const now = useMinute()
   const org = useOrg()
@@ -314,4 +315,9 @@ export default function RankingPage() {
       </div>
     </div>
   )
+}
+
+/** A empresa pode tirar esta página a algumas pessoas (Definições → Permissões) */
+export default function RankingPage() {
+  return <FeatureGate feature="ranking"><RankingPageContent /></FeatureGate>
 }

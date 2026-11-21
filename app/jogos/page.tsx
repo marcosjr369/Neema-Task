@@ -11,6 +11,7 @@ import { useRestSuggestion } from '../components/games/RestSuggestion'
 import { formatScore } from '../lib/games'
 import { formatDuration } from '../lib/stats'
 import type { GameStats } from '../types'
+import { FeatureGate } from '../components/layout/useCan'
 
 /** O jogo em destaque: grande, na cor do jogo, com a animação a correr */
 function Featured({ g, stats, reason }: { g: GameMeta; stats?: GameStats; reason: string }) {
@@ -54,7 +55,7 @@ function Tile({ g, stats, i }: { g: GameMeta; stats?: GameStats; i: number }) {
   )
 }
 
-export default function GamesPage() {
+function GamesPageContent() {
   const { user } = useAccount()
   const org = useOrg()
   const { today, onBreak, show, game } = useRestSuggestion()
@@ -92,4 +93,9 @@ export default function GamesPage() {
       })}
     </div>
   )
+}
+
+/** A empresa pode tirar esta página a algumas pessoas (Definições → Permissões) */
+export default function GamesPage() {
+  return <FeatureGate feature="jogos"><GamesPageContent /></FeatureGate>
 }

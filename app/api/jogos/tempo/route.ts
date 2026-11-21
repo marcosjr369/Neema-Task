@@ -1,4 +1,4 @@
-import { body, fail, handle, requireUser } from '../../../lib/server/api'
+import { body, fail, handle, requireFeature, requireUser } from '../../../lib/server/api'
 import { mutate, newId } from '../../../lib/server/store'
 import { PLAY_MAX_SECONDS, PLAY_MERGE_GAP, PLAY_MIN_SECONDS, isGameId } from '../../../lib/games'
 import type { GameId, GamePlay } from '../../../types'
@@ -27,10 +27,14 @@ export const POST = handle(async req => {
     await Promise.all([
       l.load('plays', { user_id: user.id, start_at: { gte: now - 26 * 60 * 60 * 1000 } }),
       orgId ? l.load('members', { org_id: orgId, user_id: user.id }) : undefined,
+      orgId ? l.load('orgs', { id: orgId }) : undefined,
+      orgId ? l.load('departments', { org_id: orgId }) : undefined,
     ])
   }, db => {
     // só conta para a empresa se a pessoa for mesmo funcionária activa dessa empresa
     const member = orgId ? db.members.find(m => m.orgId === orgId && m.userId === user.id && m.status === 'activo') : undefined
+    const org = member ? db.orgs.find(o => o.id === member.orgId) : undefined
+    if (member && org) requireFeature(db, org, member, 'jogos')
     const last = db.plays
       .filter(p => p.userId === user.id && p.game === game && p.orgId === member?.orgId)
       .sort((a, b) => b.end - a.end)[0]

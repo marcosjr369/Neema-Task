@@ -1,0 +1,25 @@
+/*
+ * Formulários com tema: a cor escolhida em "Aspeto" chega pela variável --pc.
+ * (as cores do Tailwind ficam fixas no CSS; por isso o tema usa estas classes próprias)
+ */
+.pf {
+  --pc: #7B61FF;
+  --pc-soft: color-mix(in srgb, var(--pc) 12%, #ffffff);
+  --pc-mid: color-mix(in srgb, var(--pc) 35%, #ffffff);
+  --pc-dark: color-mix(in srgb, var(--pc) 72%, #000000);
+}
+.pf-on { border-color: var(--pc) !important; background: var(--pc-soft) !important; }
+.pf-fill { border-color: var(--pc) !important; background: var(--pc) !important; color: #fff !important; }
+.pf-half { border-color: var(--pc-mid) !important; background: var(--pc-soft) !important; color: var(--pc-dark) !important; }
+.pf-text { color: var(--pc); }
+.pf-dark { color: var(--pc-dark); }
+.pf-bar { background: var(--pc); }
+.pf-btn { background: var(--pc) !important; border-color: var(--pc-dark) !important; color: #fff !important; }
+.pf .input:focus, .pf textarea:focus, .pf select:focus { border-color: var(--pc); outline: none; }
+.pf-hover:hover { background: var(--pc-soft); }
+.pf-top { border-top: 8px solid var(--pc); }
+.pf-rich a { color: var(--pc-dark); text-decoration: underline; }
+.pf-icon-on { color: var(--pc); }
+@keyframes pf-page { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.pf-page { animation: pf-page 0.35s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .pf-page { animation: none; } }

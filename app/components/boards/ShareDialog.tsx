@@ -29,25 +29,39 @@ function Option({ active, icon, title, text, onClick }: { active: boolean; icon:
   )
 }
 
-const W = {
-  quadro: { the: 'o quadro', of: 'do quadro', in: 'o quadro em Quadros' },
-  planilha: { the: 'a planilha', of: 'da planilha', in: 'a planilha em Planilhas' },
-  diagrama: { the: 'o diagrama', of: 'do diagrama', in: 'o diagrama em Diagramas' },
+type Words = {
+  label: string; plural: string; the: string; of: string; in: string
+  /** o que cada papel deixa fazer (convites e colegas da empresa) */
+  roles: Record<ShareRole, string>; org: Record<ShareRole, string>; who: string; linkText: string; defaultRole: ShareRole
+}
+const SAME = { roles: ROLE_TEXT, org: { edit: 'podem editar', view: 'só podem ver' }, who: 'Quem pode ver', defaultRole: 'edit' as ShareRole }
+const W: Record<'quadro' | 'planilha' | 'diagrama' | 'inquerito', Words> = {
+  quadro: { ...SAME, label: 'quadro', plural: 'quadros', the: 'o quadro', of: 'do quadro', in: 'o quadro em Quadros', linkText: 'Vê o quadro sem precisar de conta nem de código. Só quem convidares pode editar.' },
+  planilha: { ...SAME, label: 'planilha', plural: 'planilhas', the: 'a planilha', of: 'da planilha', in: 'a planilha em Planilhas', linkText: 'Vê a planilha sem precisar de conta nem de código. Só quem convidares pode editar.' },
+  diagrama: { ...SAME, label: 'diagrama', plural: 'diagramas', the: 'o diagrama', of: 'do diagrama', in: 'o diagrama em Diagramas', linkText: 'Vê o diagrama sem precisar de conta nem de código. Só quem convidares pode editar.' },
+  inquerito: {
+    label: 'inquérito', plural: 'inquéritos', the: 'o inquérito', of: 'do inquérito', in: 'o inquérito em Inquéritos', who: 'Quem pode responder',
+    roles: { view: 'Pode responder', edit: 'Pode gerir' }, org: { view: 'respondem', edit: 'respondem e gerem' }, defaultRole: 'view',
+    linkText: 'Responde sem precisar de conta. Só quem convidares para gerir vê as respostas de cada pessoa.',
+  },
 }
 
-export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName, onClose, onChanged }: {
+export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName, onClose, onChanged, extra }: {
   /** ex.: /api/quadros/<id>/share */
   endpoint: string
-  noun?: 'quadro' | 'planilha' | 'diagrama'
+  noun?: 'quadro' | 'planilha' | 'diagrama' | 'inquerito'
   isOrg: boolean
   orgName?: string
   onClose: () => void
   onChanged: () => void
+  /** opções próprias do tipo, logo a seguir ao link */
+  extra?: ReactNode
 }) {
   const { showToast } = useApp()
   const [state, setState] = useState<ShareState | null>(null)
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<ShareRole>('edit')
+  const w = W[noun]
+  const [role, setRole] = useState<ShareRole>(w.defaultRole)
   const [password, setPassword] = useState('')
   const [editingPw, setEditingPw] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -90,24 +104,24 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
   }
 
   return (
-    <Modal title={`Partilhar ${noun}`} onClose={onClose} wide>
+    <Modal title={`Partilhar ${w.label}`} onClose={onClose} wide>
       {!state || !s ? (
         <div role="status" aria-busy aria-label="A carregar" className="space-y-3">{[0, 1].map(i => <Sk key={i} className="h-16 rounded-2xl" />)}<Sk className="mt-4 h-11 rounded-xl" /><ListSkeleton rows={2} /></div>
       ) : (
         <div className="space-y-6">
           <section className="space-y-2">
-            <p className="label">Quem pode ver</p>
+            <p className="label">{w.who}</p>
             {isOrg ? (
               <>
                 <Option active={s.visibility === 'org'} icon={<UsersThreeIcon size={22} />} title={`Toda a empresa${orgName ? ` (${orgName})` : ''}`}
-                  text={`Todos os colegas vêem ${W[noun].the} na lista de ${noun}s.`} onClick={() => setVisibility('org')} />
+                  text={`Todos os colegas vêem ${w.the} na lista de ${w.plural}.`} onClick={() => setVisibility('org')} />
                 {s.visibility === 'org' && (
                   <div className="flex items-center gap-2 pl-11">
                     <span className="text-sm font-bold text-body">Os colegas</span>
                     <select className="input w-auto py-1.5 text-sm" value={s.orgRole ?? 'edit'} disabled={busy}
                       onChange={e => patch({ orgRole: e.target.value })}>
-                      <option value="edit">podem editar</option>
-                      <option value="view">só podem ver</option>
+                      <option value="edit">{w.org.edit}</option>
+                      <option value="view">{w.org.view}</option>
                     </select>
                   </div>
                 )}
@@ -117,7 +131,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
             ) : (
               <>
                 <Option active={s.visibility === 'link'} icon={<GlobeIcon size={22} />} title="Qualquer pessoa com o link"
-                  text={`Vê ${W[noun].the} sem precisar de conta nem de código. Só quem convidares pode editar.`} onClick={() => setVisibility('link')} />
+                  text={w.linkText} onClick={() => setVisibility('link')} />
                 <Option active={s.visibility === 'private'} icon={<LockIcon size={22} />} title="Privado"
                   text="Só quem convidares, ou quem souber a senha (se definires uma). Os outros podem pedir acesso." onClick={() => setVisibility('private')} />
               </>
@@ -125,9 +139,9 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
           </section>
 
           <section>
-            <p className="label">Link {W[noun].of}</p>
+            <p className="label">Link {w.of}</p>
             <div className="flex gap-2">
-              <input className="input py-2 text-sm" readOnly value={link} onFocus={e => e.target.select()} aria-label={`Link ${W[noun].of}`} />
+              <input className="input py-2 text-sm" readOnly value={link} onFocus={e => e.target.select()} aria-label={`Link ${w.of}`} />
               <button onClick={copy} className="btn btn-ghost px-3 py-2" aria-label="Copiar link"><CopyIcon size={18} /></button>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 text-xs font-bold text-muted">
@@ -142,6 +156,8 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
               </button>
             </div>
           </section>
+
+          {extra}
 
           {!isOrg && s.visibility === 'private' && (
             <section>
@@ -180,12 +196,12 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
                 </datalist>
               )}
               <select className="input py-2 sm:w-40" value={role} onChange={e => setRole(e.target.value as ShareRole)} aria-label="Permissão">
-                <option value="edit">Pode editar</option>
-                <option value="view">Pode ver</option>
+                <option value="edit">{w.roles.edit}</option>
+                <option value="view">{w.roles.view}</option>
               </select>
               <button className="btn btn-primary py-2 text-sm" disabled={busy || !email.trim()} aria-busy={busy}>Convidar</button>
             </form>
-            <p className="mt-1.5 text-xs font-semibold text-muted">Quem ainda não tem conta na Udacha cria-a com este email e encontra {W[noun].in}.</p>
+            <p className="mt-1.5 text-xs font-semibold text-muted">Quem ainda não tem conta na Udacha cria-a com este email e encontra {w.in}.</p>
           </section>
 
           {pending.length > 0 && (
@@ -199,8 +215,8 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
                       <span className="block truncate text-sm font-black text-ink">{g.name ?? g.email}</span>
                       <span className="block truncate text-xs font-semibold text-muted">{g.email}</span>
                     </span>
-                    <button className="chip py-1 text-xs" disabled={busy} onClick={() => grant({ grantId: g.id, role: 'view' }, 'Acesso dado')}>Dar &ldquo;ver&rdquo;</button>
-                    <button className="chip py-1 text-xs" disabled={busy} onClick={() => grant({ grantId: g.id, role: 'edit' }, 'Acesso dado')}>Dar &ldquo;editar&rdquo;</button>
+                    <button className="chip py-1 text-xs" disabled={busy} onClick={() => grant({ grantId: g.id, role: 'view' }, 'Acesso dado')}>Dar &ldquo;{w.roles.view.replace('Pode ', '')}&rdquo;</button>
+                    <button className="chip py-1 text-xs" disabled={busy} onClick={() => grant({ grantId: g.id, role: 'edit' }, 'Acesso dado')}>Dar &ldquo;{w.roles.edit.replace('Pode ', '')}&rdquo;</button>
                     <button className="rounded-lg p-1.5 text-muted hover:bg-white hover:text-danger cursor-pointer" aria-label="Recusar" disabled={busy} onClick={() => remove(g.id)}>
                       <TrashIcon size={16} />
                     </button>
@@ -225,7 +241,7 @@ export default function ShareDialog({ endpoint, noun = 'quadro', isOrg, orgName,
                     </span>
                     <select className="input w-auto py-1.5 text-sm" value={g.role} disabled={busy} aria-label={`Permissão de ${g.email}`}
                       onChange={e => grant({ grantId: g.id, role: e.target.value })}>
-                      {(Object.keys(ROLE_TEXT) as ShareRole[]).map(r => <option key={r} value={r}>{ROLE_TEXT[r]}</option>)}
+                      {(Object.keys(w.roles) as ShareRole[]).map(r => <option key={r} value={r}>{w.roles[r]}</option>)}
                     </select>
                     <button className="rounded-lg p-1.5 text-muted hover:bg-snow hover:text-danger cursor-pointer" aria-label={`Retirar acesso a ${g.email}`} disabled={busy} onClick={() => remove(g.id)}>
                       <TrashIcon size={16} />

@@ -1,6 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { GearSixIcon, PaletteIcon, ShieldCheckIcon } from '@phosphor-icons/react'
+import { ListSkeleton } from '../../components/ui/Skeleton'
 import { useApp } from '../../context/AppContext'
 import { useOrgRequired } from '../../context/OrgContext'
 import { api, errorText } from '../../lib/api'
@@ -8,7 +12,7 @@ import { ORG_SIZES, SECTORS } from '../../lib/org'
 import { DEFAULT_DAILY_GOAL_HOURS } from '../../lib/records'
 import { Busy } from '../../components/ui/Spinner'
 
-export default function Settings() {
+function GeneralSettings() {
   const org = useOrgRequired()
   const { showToast } = useApp()
   const [name, setName] = useState(org.org.name)
@@ -98,5 +102,48 @@ export default function Settings() {
         <Busy busy={busy} text="A guardar…">Guardar</Busy>
       </button>
     </form>
+  )
+}
+
+const Permissions = dynamic(() => import('./Permissions'), { loading: () => <ListSkeleton rows={6} /> })
+const Appearance = dynamic(() => import('./Appearance'), { loading: () => <ListSkeleton rows={6} /> })
+
+type Tab = 'geral' | 'permissoes' | 'aparencia'
+
+/**
+ * Definições da empresa. Os administradores vêem tudo; as chefias só a Aparência (dos seus departamentos).
+ * O separador fica no endereço (?tab=…) para se poder abrir directamente.
+ */
+export default function Settings() {
+  const org = useOrgRequired()
+  const router = useRouter()
+  const params = useSearchParams()
+  const tabs: { id: Tab; label: string; icon: typeof GearSixIcon }[] = org.isAdmin
+    ? [
+        { id: 'geral', label: 'Geral', icon: GearSixIcon },
+        { id: 'permissoes', label: 'Permissões', icon: ShieldCheckIcon },
+        { id: 'aparencia', label: 'Aparência', icon: PaletteIcon },
+      ]
+    : [{ id: 'aparencia', label: 'Aparência', icon: PaletteIcon }]
+  const asked = params.get('tab') as Tab | null
+  const tab = tabs.find(t => t.id === asked)?.id ?? tabs[0].id
+  const go = (t: Tab) => router.replace(`/empresa/definicoes?tab=${t}`, { scroll: false })
+
+  return (
+    <div>
+      {tabs.length > 1 && (
+        <nav className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b-2 border-line px-4 lg:mx-0 lg:px-0" aria-label="Definições">
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}
+              className={`-mb-0.5 inline-flex shrink-0 items-center gap-1.5 border-b-[3px] px-3 py-2 text-sm font-extrabold transition-colors cursor-pointer ${tab === t.id ? 'border-brand text-ink' : 'border-transparent text-muted hover:text-ink'}`}>
+              <t.icon size={17} weight={tab === t.id ? 'fill' : 'bold'} /> {t.label}
+            </button>
+          ))}
+        </nav>
+      )}
+      {tab === 'geral' && <GeneralSettings />}
+      {tab === 'permissoes' && <Permissions />}
+      {tab === 'aparencia' && <Appearance />}
+    </div>
   )
 }

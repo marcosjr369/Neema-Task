@@ -3,11 +3,12 @@ import { currentUser } from '../../../lib/server/auth'
 import { publicView } from '../../../lib/server/boards'
 import { publicSheetView } from '../../../lib/server/sheets'
 import { publicDiagramView } from '../../../lib/server/diagrams'
+import { pollDetail, pollScope, publicOpen } from '../../../lib/server/polls'
 import { accessOf, byToken, KIND, NOUN, peopleOf, resourceByToken, type SharedTable } from '../../../lib/server/shared'
 import { accessKey, checkPassword, grantOf, passwordAttempt, validKey } from '../../../lib/server/sharing'
 import { sendToUser } from '../../../lib/server/push'
 import { mutate, newId, read, type DB } from '../../../lib/server/store'
-import type { Board, Diagram, Sheet, User } from '../../../types'
+import type { Board, Diagram, Poll, Sheet, User } from '../../../types'
 
 /**
  * Entrada pelo link de partilha (/p/<token>) de um quadro, de uma planilha ou de um diagrama. Não exige sessão.
@@ -19,12 +20,12 @@ import type { Board, Diagram, Sheet, User } from '../../../types'
  */
 
 const MAX_PENDING = 50
-const TABLES: SharedTable[] = ['boards', 'sheets', 'diagrams']
+const TABLES: SharedTable[] = ['boards', 'sheets', 'diagrams', 'polls']
 const NOT_FOUND = 'Este link não existe ou foi desactivado'
 
 const optionalUser = () => currentUser().catch(() => null) as Promise<User | null>
 
-/** Procura o token nos quadros, nas planilhas e nos diagramas */
+/** Procura o token nos quadros, nas planilhas, nos diagramas e nos inquéritos */
 async function find(token: string, load: (table: SharedTable) => Promise<DB>) {
   for (const table of TABLES) {
     const db = await load(table)
@@ -41,7 +42,18 @@ export const GET = handle<{ token: string }>(async (req, { token }) => {
   if (accessOf(db, r, user)) return { status: 'member', kind, path: `${NOUN[table].path}/${r.id}` }
 
   const s = r.sharing
-  const open = !r.orgId && (s.visibility === 'link' || (s.visibility === 'private' && validKey(r.id, s.password, req.headers.get('x-share-key'))))
+  if (table === 'polls') {
+    // inquéritos: quem não tem acesso pela conta responde pelo link, se o inquérito o aceitar (também na empresa)
+    const poll = r as Poll
+    const unlocked = !poll.orgId && s.visibility === 'private' && validKey(poll.id, s.password, req.headers.get('x-share-key'))
+    if (poll.status !== 'draft' && (publicOpen(poll) || unlocked)) {
+      const full = await read(pollScope(poll.id))
+      const p = full.polls.find(x => x.id === poll.id) ?? fail(404, NOT_FOUND)
+      return { status: 'ok', kind, detail: pollDetail(full, p, { user, access: null }), signedIn: !!user }
+    }
+  }
+  // (um inquérito que não abriu acima não é tratado como quadro: segue para privado ou senha)
+  const open = table !== 'polls' && !r.orgId && (s.visibility === 'link' || (s.visibility === 'private' && validKey(r.id, s.password, req.headers.get('x-share-key'))))
   if (open) {
     if (table === 'diagrams') return { status: 'ok', kind, diagram: publicDiagramView(r as Diagram), signedIn: !!user }
     if (table === 'sheets') return { status: 'ok', kind, sheet: publicSheetView(r as Sheet), signedIn: !!user }

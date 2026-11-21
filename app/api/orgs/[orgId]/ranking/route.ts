@@ -1,4 +1,4 @@
-import { handle, requireMember } from '../../../../lib/server/api'
+import { handle, requireFeature, requireMember } from '../../../../lib/server/api'
 import { memberEntry, sortRanking } from '../../../../lib/server/views'
 import { rangeStats, withHistory } from '../../../../lib/points'
 import { teamMembers } from '../../../../lib/org'
@@ -8,6 +8,7 @@ export const GET = handle<{ orgId: string }>(async (req, { orgId }) => {
   const url = new URL(req.url)
   const from = Number(url.searchParams.get('from')) || 0
   const { db, org, me } = await requireMember(orgId, { tasks: true, sessions: { since: from } })
+  requireFeature(db, org, me, 'ranking')
   const metric = (url.searchParams.get('metric') as RankMetric) || 'points'
 
   const members = teamMembers(db.members, org).filter(m => m.orgId === orgId && m.status === 'activo')

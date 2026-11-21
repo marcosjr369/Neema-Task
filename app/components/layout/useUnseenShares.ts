@@ -6,10 +6,10 @@ import { api } from '../../lib/api'
 import type { ShareKind } from '../../types'
 
 export type UnseenCounts = Record<ShareKind, number>
-const NONE: UnseenCounts = { board: 0, sheet: 0, diagram: 0 }
+const NONE: UnseenCounts = { board: 0, sheet: 0, diagram: 0, poll: 0 }
 
 /** href do menu → tipo de recurso partilhável */
-export const SHARED_NAV: Record<string, ShareKind> = { '/quadros': 'board', '/planilhas': 'sheet', '/diagramas': 'diagram' }
+export const SHARED_NAV: Record<string, ShareKind> = { '/quadros': 'board', '/planilhas': 'sheet', '/diagramas': 'diagram', '/inqueritos': 'poll' }
 
 /*
  * Um só pedido para todos os menus (o lateral e o do telemóvel estão montados ao mesmo tempo):
@@ -25,7 +25,7 @@ function check() {
   api<UnseenCounts>('/api/me/novidades')
     .then(c => {
       const next = { ...NONE, ...c }
-      if (next.board === counts.board && next.sheet === counts.sheet && next.diagram === counts.diagram) return
+      if (next.board === counts.board && next.sheet === counts.sheet && next.diagram === counts.diagram && next.poll === counts.poll) return
       counts = next
       listeners.forEach(l => l())
     })

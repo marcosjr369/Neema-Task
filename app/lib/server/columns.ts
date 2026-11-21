@@ -24,6 +24,8 @@ export const COLUMNS: Record<Table, (r: Row) => Record<string, string | number |
   diagrams: r => shareable(r),
   grants: r => ({ id: r.id as string, resource_id: r.resourceId as string, email: (r.email as string) ?? null, user_id: (r.userId as string) ?? null }),
   plays: r => ({ id: r.id as string, user_id: r.userId as string, org_id: (r.orgId as string) ?? null, start_at: r.start as number }),
+  polls: r => shareable(r),
+  responses: r => ({ id: r.id as string, poll_id: r.pollId as string, voter: (r.voter as string) ?? null }),
 }
 
 function shareable(r: Row) {

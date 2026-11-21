@@ -10,6 +10,7 @@ import { api, errorText } from '../lib/api'
 import { readSheetFile, type ImportedTab } from '../lib/sheets/files'
 import { useApp } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
+import { CreateLocked, useCan } from '../components/layout/useCan'
 import type { SheetSummary, ShareVisibility } from '../types'
 import { ListSkeleton } from '../components/ui/Skeleton'
 import { Busy } from '../components/ui/Spinner'
@@ -140,6 +141,8 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
 }
 
 export default function SheetsPage() {
+  // no espaço da empresa, criar pode estar reservado a algumas pessoas (Definições → Permissões)
+  const canCreate = useCan('planilhas')
   const org = useOrg()
   const [sheets, setSheets] = useState<SheetSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -169,8 +172,10 @@ export default function SheetsPage() {
           <h1 className="text-2xl font-black text-ink">Planilhas</h1>
           <p className="text-sm font-bold text-muted">Folhas de cálculo partilhadas, com fórmulas, que podes importar e exportar para Excel</p>
         </div>
-        <button onClick={() => setCreating(true)} className="btn btn-primary shrink-0 px-4 py-2.5"><PlusIcon size={18} /> <span className="max-sm:hidden">Nova planilha</span></button>
+        {canCreate && <button onClick={() => setCreating(true)} className="btn btn-primary shrink-0 px-4 py-2.5"><PlusIcon size={18} /> <span className="max-sm:hidden">Nova planilha</span></button>}
       </header>
+
+      <CreateLocked feature="planilhas" />
 
       {error && !sheets && <p className="rounded-2xl bg-danger-light p-4 font-bold text-danger-dark">{error}</p>}
       {!sheets && !error && <ListSkeleton rows={4} />}
@@ -180,7 +185,7 @@ export default function SheetsPage() {
           <Mascot size={96} />
           <h2 className="mt-3 text-xl font-black text-ink">Ainda não tens planilhas</h2>
           <p className="mt-1 max-w-sm font-semibold text-muted">Cria uma em branco ou importa um ficheiro do Excel, e partilha-a com quem precisa de ver ou editar.</p>
-          <button onClick={() => setCreating(true)} className="btn btn-primary mt-5"><PlusIcon size={18} /> Nova planilha</button>
+          {canCreate && <button onClick={() => setCreating(true)} className="btn btn-primary mt-5"><PlusIcon size={18} /> Nova planilha</button>}
         </div>
       )}
       {org && <Section title={`Planilhas de ${org.org.name}`} hint="Os colegas vêem-nas aqui, salvo as privadas." sheets={orgSheets} />}

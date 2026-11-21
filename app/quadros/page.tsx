@@ -11,6 +11,7 @@ import { BOARD_COLORS, BOARD_IMAGES, boardBackground } from '../lib/boards'
 import { useAccount } from '../context/AccountContext'
 import { useApp } from '../context/AppContext'
 import { useOrg } from '../context/OrgContext'
+import { CreateLocked, useCan } from '../components/layout/useCan'
 import type { BoardSummary, ShareVisibility } from '../types'
 import { CardGridSkeleton, Sk } from '../components/ui/Skeleton'
 import { Busy } from '../components/ui/Spinner'
@@ -138,6 +139,8 @@ function CreateDialog({ orgId, orgName, onClose }: { orgId?: string; orgName?: s
 }
 
 export default function BoardsPage() {
+  // no espaço da empresa, criar pode estar reservado a algumas pessoas (Definições → Permissões)
+  const canCreate = useCan('quadros')
   const { user } = useAccount()
   const org = useOrg()
   const [boards, setBoards] = useState<BoardSummary[] | null>(null)
@@ -169,8 +172,10 @@ export default function BoardsPage() {
             {org ? 'Organiza o trabalho em listas e cartões, com a equipa ou com quem quiseres' : 'Organiza ideias e projectos em listas e cartões, e partilha-os'}
           </p>
         </div>
-        <button onClick={() => setCreating(true)} className="btn btn-primary shrink-0 px-4 py-2.5"><PlusIcon size={18} /> <span className="max-sm:hidden">Novo quadro</span></button>
+        {canCreate && <button onClick={() => setCreating(true)} className="btn btn-primary shrink-0 px-4 py-2.5"><PlusIcon size={18} /> <span className="max-sm:hidden">Novo quadro</span></button>}
       </header>
+
+      <CreateLocked feature="quadros" />
 
       {error && !boards && <p className="rounded-2xl bg-danger-light p-4 font-bold text-danger-dark">{error}</p>}
       {!boards && !error && <><Sk className="mb-3 h-5 w-48" /><CardGridSkeleton count={4} /></>}
@@ -186,10 +191,10 @@ export default function BoardsPage() {
           )}
           {org && (
             <Section title={`Quadros de ${org.org.name}`} hint="Os quadros da empresa: os colegas vêem-nos aqui, salvo os privados."
-              boards={orgBoards} onNew={() => setCreating(true)} />
+              boards={orgBoards} onNew={canCreate ? () => setCreating(true) : undefined} />
           )}
           {(!org || mine.length > 0) && (
-            <Section title="Os meus quadros" hint={org ? 'Quadros pessoais, fora da empresa.' : undefined} boards={mine} onNew={org ? undefined : () => setCreating(true)} />
+            <Section title="Os meus quadros" hint={org ? 'Quadros pessoais, fora da empresa.' : undefined} boards={mine} onNew={org || !canCreate ? undefined : () => setCreating(true)} />
           )}
           <Section title="Partilhados comigo" boards={shared} />
         </>

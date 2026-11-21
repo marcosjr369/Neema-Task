@@ -275,6 +275,10 @@ export type Org = {
   dailyGoalHours?: number
   /** mapa do escritório (planta em 3D com salas, corredores, mesas e cadeiras) */
   office?: OfficeMap
+  /** aparência da empresa (cores, logótipo, letra, fundos) */
+  brand?: BrandTheme
+  /** quem pode usar cada funcionalidade (sem regra: todos) */
+  permissions?: OrgPermissions
 }
 
 /*
@@ -346,6 +350,8 @@ export type Department = {
   /** Departamento superior na estrutura da empresa (vazio: logo abaixo da empresa) */
   parentId?: string
   description?: string
+  /** aparência só deste departamento (por cima da da empresa) */
+  brand?: BrandTheme
 }
 
 export type PresenceStatus = 'trabalho' | 'pausa' | 'almoco' | 'reuniao' | 'formacao' | 'ausente' | 'offline'
@@ -494,7 +500,7 @@ export type Sharing = {
 /** O que o browser recebe da partilha */
 export type SharingInfo = Omit<Sharing, 'password' | 'token'> & { token?: string; hasPassword: boolean }
 
-export type ShareKind = 'board' | 'sheet' | 'diagram'
+export type ShareKind = 'board' | 'sheet' | 'diagram' | 'poll'
 
 export type ShareGrant = {
   id: string
@@ -653,3 +659,282 @@ export type Diagram = {
 export type DiagramView = Omit<Diagram, 'sharing'> & { sharing: SharingInfo }
 
 export type DiagramSummary = Omit<BoardSummary, 'lists' | 'cards' | 'color' | 'background'> & { preview?: string }
+
+/* ─── Inquéritos (votações, eleições, formulários, concursos, ideias, datas) ── */
+
+/**
+ * vote: uma pergunta com opções · election: cargos com candidatos e voto em branco (voto secreto)
+ * form: formulário com vários campos · contest: candidaturas e depois votação (júri opcional)
+ * ideas: cada pessoa propõe ideias e vota nas que prefere · schedule: encontrar a melhor data
+ */
+export type PollType = 'vote' | 'election' | 'form' | 'contest' | 'ideas' | 'schedule'
+
+export type FieldKind =
+  | 'short' | 'long' | 'email' | 'phone' | 'number' | 'date' | 'time'
+  | 'single' | 'multi' | 'dropdown' | 'scale' | 'yesno' | 'file' | 'slots'
+  | 'nps' | 'ranking' | 'likert'
+  /** conteúdo (não são perguntas): secção/página nova, bloco de texto, imagem */
+  | 'section' | 'text' | 'image'
+
+/** Imagem enviada por quem gere (cabeçalho, fundo, pergunta ou bloco de imagem) */
+export type PollImage = { id: string; alt?: string }
+
+/** escala: números, estrelas, corações ou caras */
+export type ScaleStyle = 'numbers' | 'stars' | 'hearts' | 'faces'
+
+export type PollFont = 'sans' | 'serif' | 'mono' | 'round' | 'hand'
+
+/** Aspeto do formulário (como no Microsoft Forms): cor, fundo, cabeçalho e letra */
+export type PollTheme = {
+  color: string
+  /** none: branco · tint: cor clara do tema · id de um fundo pronto (THEME_BACKGROUNDS) · image: imagem enviada */
+  background: string
+  backgroundImage?: PollImage
+  header?: PollImage
+  font: PollFont
+  size: 'normal' | 'large'
+  align: 'left' | 'center'
+}
+
+export type PollOption = {
+  id: string
+  label: string
+  /** eleição: candidato que é uma pessoa da empresa (mostra a foto) */
+  userId?: string
+  /** agendar: AAAA-MM-DDTHH:mm */
+  at?: string
+}
+
+export type PollField = {
+  id: string
+  kind: FieldKind
+  title: string
+  help?: string
+  required?: boolean
+  options?: PollOption[]
+  /** multi: máximo de escolhas (0 = sem limite) · scale: valor máximo (5 ou 10) */
+  max?: number
+  /** single/multi: permite "Outra" com texto livre */
+  other?: boolean
+  /** eleição: permite voto em branco */
+  blank?: boolean
+  /** só aparece se a resposta a outro campo (de escolha) incluir esta opção (numa secção: a secção inteira) */
+  showIf?: { fieldId: string; optionId: string }
+  /** imagem da pergunta (ou do bloco de imagem) */
+  image?: PollImage
+  /** escala */
+  style?: ScaleStyle
+  /** likert: afirmações (linhas); as colunas são as opções */
+  rows?: PollOption[]
+  /** baralha as opções para cada pessoa */
+  shuffle?: boolean
+}
+
+export type PollStatus = 'draft' | 'open' | 'closed'
+
+/** Quando os participantes vêem os resultados (quem gere vê sempre) */
+export type ResultsWhen = 'always' | 'answered' | 'closed' | 'managers'
+
+export type PollSettings = {
+  /** ninguém (nem o dono) vê quem respondeu o quê */
+  anonymous: boolean
+  results: ResultsWhen
+  /** pessoas sem conta também respondem pelo link (não nas eleições) */
+  publicLink: boolean
+  /** uma resposta por pessoa (sem conta não dá para garantir: pede-se login) */
+  onePerPerson: boolean
+  /** pode mudar a resposta enquanto estiver aberto */
+  canChange: boolean
+  /** fecha sozinho a esta hora */
+  closesAt?: number
+  maxResponses?: number
+  /** mensagem depois de responder */
+  thanks?: string
+  /** avisa quem gere a cada resposta */
+  notify: boolean
+  /** concurso: fase actual */
+  phase?: 'submit' | 'vote'
+  /** concurso: só estas pessoas (ids de utilizador) votam, com nota de 1 a 10 */
+  jury?: string[]
+  /** concurso/ideias: votos por pessoa (0 = sem limite) */
+  votesPerPerson?: number
+}
+
+export type Poll = {
+  id: string
+  title: string
+  description?: string
+  type: PollType
+  orgId?: string
+  ownerId: string
+  createdAt: number
+  updatedAt: number
+  status: PollStatus
+  openedAt?: number
+  closedAt?: number
+  fields: PollField[]
+  settings: PollSettings
+  /** respostas e entradas recebidas (contador, para a lista) */
+  count: number
+  theme?: PollTheme
+  sharing: Sharing
+}
+
+export type PollView = Omit<Poll, 'sharing'> & { sharing: SharingInfo }
+
+export type PollFile = { id: string; name: string; size: number; type: string }
+
+export type SlotAnswer = 'yes' | 'maybe' | 'no'
+
+/** single/dropdown: id da opção · multi: ids · scale/number: número · yesno: boolean · slots: opção → sim/talvez/não */
+/** likert: linha → opção; agendar: data → sim/talvez/não */
+export type AnswerValue = string | string[] | number | boolean | Record<string, string> | PollFile
+
+export type IdeaStatus = 'new' | 'review' | 'approved' | 'done' | 'rejected'
+
+export type PollResponse = {
+  id: string
+  pollId: string
+  /** answer: resposta ao inquérito · entry: ideia ou candidatura a concurso */
+  kind: 'answer' | 'entry'
+  /** quem respondeu: id do utilizador, ou um código cifrado nos anónimos; vazio para quem não tem conta */
+  voter?: string
+  /** só quando não é anónimo */
+  userId?: string
+  /** nome de quem respondeu (visitantes podem indicá-lo) */
+  name?: string
+  answers: Record<string, AnswerValue>
+  /** texto livre de "Outra", por campo */
+  other?: Record<string, string>
+  /** entradas: título da ideia/candidatura e detalhes */
+  text?: string
+  details?: string
+  /** entradas: votos (id do utilizador → 1, ou nota do júri de 1 a 10). Nunca vai para o browser. */
+  votes?: Record<string, number>
+  status?: IdeaStatus
+  hidden?: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+/** Resumo de um campo nos resultados */
+export type FieldResult = {
+  fieldId: string
+  answered: number
+  /** escolhas, sim/não, eleições: votos por opção ("blank" = em branco, "other" = outra) */
+  counts?: Record<string, number>
+  /** escala e números */
+  avg?: number
+  min?: number
+  max?: number
+  /** texto, datas, email…: as respostas mais recentes */
+  texts?: string[]
+  others?: string[]
+  /** agendar: sim/talvez/não por opção */
+  slots?: Record<string, { yes: number; maybe: number; no: number }>
+  /** NPS: % promotores (9-10) menos % detractores (0-6) */
+  nps?: { score: number; promoters: number; passives: number; detractors: number }
+  /** ordenação: posição média de cada opção (1 = primeiro) */
+  ranks?: Record<string, number>
+  /** likert: linha → opção → votos */
+  grid?: Record<string, Record<string, number>>
+  /** opção vencedora (escolhas, eleições, agendar) */
+  winner?: string[]
+  files?: (PollFile & { responseId: string })[]
+}
+
+export type PollResults = { total: number; fields: FieldResult[] }
+
+/** Ideia ou candidatura como chega ao browser */
+export type PollEntry = {
+  id: string
+  text: string
+  details?: string
+  answers: Record<string, AnswerValue>
+  author?: string
+  authorPicture?: string
+  mine: boolean
+  status?: IdeaStatus
+  hidden?: boolean
+  /** votos (ou média do júri), se os resultados estiverem visíveis */
+  score?: number
+  votes?: number
+  /** o meu voto (1, ou a minha nota) */
+  myVote?: number
+  createdAt: number
+}
+
+export type PollSummary = Omit<BoardSummary, 'lists' | 'cards' | 'color' | 'background'> & {
+  type: PollType
+  status: PollStatus
+  count: number
+  closesAt?: number
+  answered: boolean
+}
+
+/** Um inquérito como a página o recebe (pollDetail no servidor) */
+export type PollDetail = {
+  poll: PollView
+  access: Access | null
+  phase: 'draft' | 'open' | 'closed'
+  me: {
+    answered: boolean
+    /** a minha resposta (só se a puder mudar) */
+    response?: { answers: Record<string, AnswerValue>; other?: Record<string, string>; createdAt: number }
+    answeredAt?: number
+    /** porque não pode responder agora */
+    block: string | null
+    entryBlock: string | null
+    isJury: boolean
+    entries: number
+    votesUsed: number
+  }
+  results?: PollResults
+  entries: PollEntry[]
+  turnout?: { total: number; answered: number; missing: { userId: string; name: string; picture?: string }[] }
+  people: BoardPerson[]
+  candidates?: Record<string, string>
+  orgName?: string
+  requests: number
+}
+
+/* ─── Aparência da empresa (cores, logótipo, letra e fundos) ─────────────── */
+
+/** Fundo de uma página: cor, fundo pronto (com a cor principal) ou imagem; "soften" clareia por cima (0–90 %) */
+export type BrandBackground = {
+  kind: 'color' | 'preset' | 'image'
+  /** cor (#RRGGBB) ou id do fundo pronto */
+  value?: string
+  image?: string
+  soften?: number
+}
+
+/**
+ * Aparência da empresa ou de um departamento. Tudo é opcional: o que fica vazio herda de cima
+ * (departamento → departamento superior → empresa → cores da Udacha).
+ */
+export type BrandTheme = {
+  primary?: string
+  secondary?: string
+  /** cor dos títulos e do texto */
+  text?: string
+  font?: string
+  textSize?: 'small' | 'normal' | 'large' | 'xlarge'
+  /** só na empresa */
+  logo?: string
+  /** fundo de todas as páginas */
+  background?: BrandBackground | null
+  /** fundo de páginas concretas (chave: BRAND_PAGES), por cima do geral; null = sem fundo nessa página */
+  pages?: Record<string, BrandBackground | null>
+  updatedAt?: number
+  updatedBy?: string
+}
+
+/* ─── Permissões por funcionalidade (Definições → Permissões) ─────────────── */
+
+export type FeatureKey = 'inqueritos' | 'quadros' | 'planilhas' | 'diagramas' | 'reunioes' | 'formulariosPublicos' | 'jogos' | 'ranking'
+
+/** all: todos · managers: chefias e administradores · admins: só administradores · some: pessoas e departamentos escolhidos */
+export type FeatureRule = { mode: 'all' | 'managers' | 'admins' | 'some'; memberIds?: string[]; departmentIds?: string[] }
+
+export type OrgPermissions = Partial<Record<FeatureKey, FeatureRule>>
